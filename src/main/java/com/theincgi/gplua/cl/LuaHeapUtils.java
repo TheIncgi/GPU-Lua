@@ -6,24 +6,62 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.concurrent.atomic.AtomicInteger;
 
+import com.theincgi.gplua.Main;
+
 public class LuaHeapUtils {
 	
+	public static void createGlobals() {
+		LuaTable g = new LuaTable();
+		LuaTable math = new LuaTable();
+		
+		g.hashed.put("_VERSION", Main.VERSION);
+		g.hashed.put("math", math);
+//		log
+//		exp
+//		acos
+//		atan
+//		ldexp
+//		deg
+//		rad
+//		tan
+//		cos
+//		cosh
+//		random
+//		frexp
+//		randomseed
+//		ceil
+//		pi
+//		tanh
+//		floor
+//		abs
+//		max
+//		sqrt
+//		modf
+//		sinh
+//		huge
+//		asin
+//		min
+//		fmod
+//		pow
+//		atan2
+//		sin
+	}
 	
-	public void putBoolConstants(byte[] heap) {
+	public static void putBoolConstants(byte[] heap) {
 		heap[1] = BOOL;
 		heap[2] = 0x00; //false
 		heap[3] = BOOL;
 		heap[4] = 0x01; //true
 	}
 	
-	public void putGlobals(LuaTable globals, byte[] heap, HashMap<String, Integer> stringMap) {
-		globals.serializeTo(stringMap, heap, 3);
-	}
+//	public static void putGlobals(LuaTable globals, byte[] heap, HashMap<String, Integer> stringMap) {
+//		globals.serializeTo(stringMap, heap, 3);
+//	}
 	
 	public static byte[] serialize(String string) {
 		var bytes = string.getBytes();
 		byte[] out = new byte[bytes.length + 5];
-		out[0] = STRING; //string type
+		out[0] = STRING;
 		putInt(bytes.length, out, 1);
 		System.arraycopy(bytes, 0, out, 5, bytes.length);
 		return out;
