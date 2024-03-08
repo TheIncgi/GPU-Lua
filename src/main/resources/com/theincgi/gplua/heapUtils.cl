@@ -139,9 +139,9 @@ void _setMarkTag(uchar* heap, uint index, bool marked) {
 }
 
 void _markHeapArray(uchar* heap, uint maxHeap, uint index) {
-    uint size = getHeapInt(heap, index + 1);
+    uint capacity = getHeapInt(heap, index + 5);
     uint arrayStart = index + 9; //used, capacity skipped
-    for(uint i = 0; i < size; i++) {
+    for(uint i = 0; i < capacity; i++) {
         _markHeap(heap, maxHeap, getHeapInt(heap, arrayStart + i * 4));
     }
 }

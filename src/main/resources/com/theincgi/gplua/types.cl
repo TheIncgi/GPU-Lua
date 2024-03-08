@@ -1,7 +1,7 @@
 #ifndef TYPES_CL
 #define TYPES_CL
-#define T_INT -2
-#define T_NONE -1
+#define T_INT 254
+#define T_NONE 255
 #define T_NIL 0
 #define T_BOOL 1
 #define T_NUMBER 3 //double
