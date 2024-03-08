@@ -41,6 +41,11 @@ public class IntArray1D {
 		return buffer.write(queue, pointer, false);
 	}
 	
+	public int[] readData(CLQueue queue, CLEvent... waitFor) {
+		var ptr = buffer.read(queue, waitFor);
+		return ptr.getInts();
+	}
+	
 	public CLBuffer<Integer> arg() {
 		return buffer;
 	}

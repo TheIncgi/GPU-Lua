@@ -13,38 +13,97 @@ public class LuaHeapUtils {
 	public static void createGlobals() {
 		LuaTable g = new LuaTable();
 		LuaTable math = new LuaTable();
+		LuaTable string = new LuaTable();
+		LuaTable os = new LuaTable();
+		LuaTable table = new LuaTable();
+		LuaTable bit32 = new LuaTable();
 		
+		//about 1286 bytes will be used in just function definitions
+		//+ 13 per table entry + (0 or 5 + array part size * 4) + (0 or 9 + hash part size * 8)
+		//table object + hash entries will be about 1320
+		//in total at least 2606 bytes used
+		
+		int nID = 1;
 		g.hashed.put("_VERSION", Main.VERSION);
+		
+		g.hashed.put("assert", 			new NativeFunction(nID++));
+		g.hashed.put("collectgarbage", 	new NativeFunction(nID++));
+		g.hashed.put("error", 			new NativeFunction(nID++));
+		g.hashed.put("getmetatable", 	new NativeFunction(nID++));
+		g.hashed.put("ipairs", 			new NativeFunction(nID++));
+		g.hashed.put("next", 			new NativeFunction(nID++));
+		g.hashed.put("pairs", 			new NativeFunction(nID++));
+		g.hashed.put("pcall", 			new NativeFunction(nID++));
+		g.hashed.put("rawequal", 		new NativeFunction(nID++));
+		g.hashed.put("rawget", 			new NativeFunction(nID++));
+		g.hashed.put("rawlen", 			new NativeFunction(nID++));
+		g.hashed.put("rawset", 			new NativeFunction(nID++));
+		g.hashed.put("select", 			new NativeFunction(nID++));
+		g.hashed.put("setmetatable", 	new NativeFunction(nID++));
+		g.hashed.put("tonumber", 		new NativeFunction(nID++));
+		g.hashed.put("tostring", 		new NativeFunction(nID++));
+		g.hashed.put("type", 			new NativeFunction(nID++));
+		g.hashed.put("xpcall", 			new NativeFunction(nID++));
+		
 		g.hashed.put("math", math);
-//		log
-//		exp
-//		acos
-//		atan
-//		ldexp
-//		deg
-//		rad
-//		tan
-//		cos
-//		cosh
-//		random
-//		frexp
-//		randomseed
-//		ceil
-//		pi
-//		tanh
-//		floor
-//		abs
-//		max
-//		sqrt
-//		modf
-//		sinh
-//		huge
-//		asin
-//		min
-//		fmod
-//		pow
-//		atan2
-//		sin
+		g.hashed.put("string", string);
+		g.hashed.put("os", os);
+		g.hashed.put("table", table);
+		g.hashed.put("bit32", bit32);
+		
+		
+		
+		//math
+		for(var func : new String[] {
+			"log",
+			"exp",
+			"acos",
+			"atan",
+			"ldexp",
+			"deg",
+			"rad",
+			"tan",
+			"cos",
+			"cosh",
+			"random",
+			"frexp",
+			"randomseed",
+			"ceil",
+			"tanh",
+			"floor",
+			"abs",
+			"max",
+			"sqrt",
+			"modf",
+			"sinh",
+			"asin",
+			"min",
+			"fmod",
+			"pow",
+			"atan2",
+			"sin"
+		}) {
+			math.hashed.put(func, new NativeFunction(nID++));
+		}
+		
+		//string
+		for(var func : new String[] {
+			"sub",
+			"find",
+			"rep",
+			"match",
+			"gmatch",
+			"char",
+			"reverse",
+			"upper",
+			"len",
+			"gsub",
+			"byte",
+			"format",
+			"lower"
+		}) {
+			math.hashed.put(func, new NativeFunction(nID++));
+		}
 	}
 	
 	public static void putBoolConstants(byte[] heap) {
