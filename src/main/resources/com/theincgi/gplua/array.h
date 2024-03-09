@@ -13,6 +13,7 @@ href arrayGet( uchar* heap, href heapIndex, int index );
 void arraySet( uchar* heap, href heapIndex, int index, href val );
 
 //if the next space in memory is free, claim some of that
-uint grow( uchar* heap, href heapIndex, uint maxGrowth );
+// uint grow( uchar* heap, href heapIndex, uint maxGrowth );
+href arrayResize( uchar* heap, uint maxHeapSize, href heapIndex, uint newCapacity );
 
 #endif

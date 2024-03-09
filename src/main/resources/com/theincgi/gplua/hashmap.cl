@@ -101,6 +101,41 @@ href hashmapGet(uchar* heap, href mapIndex, href key) {
     return 0;
 }
 
+href hashmapStringGet(uchar* heap, href mapIndex, string str, uint strLen) {
+    uint hash = hashString( str, strLen );
+    href keysPart = getHeapInt( heap, mapIndex + 1);
+    href valsPart = getHeapInt( heap, mapIndex + 5);
+    uint capacity = arrayCapacity( heap, keysPart );
+    uint hashIndex = mapIndex % capacity;
+
+    for(uint i = hashIndex, j = 0; j < MAP_MAX_SEARCH; i = (i + 1) % capacity, j++) { //i = search location (array index) | j = search count
+
+        //string equals
+        href heapKey = arrayGet(heap, keysPart, i);
+        
+        if(heap[heapKey] != T_STRING)
+            continue; //not even a string
+        
+        uint heapStrLen = getHeapInt(heap, heapKey + 1);
+        if( heapStrLen != strLen )
+            continue; //length mismatch
+
+        bool match = true;
+        for(uint s = 0; s < strLen; s++) {
+            if(heap[heapKey + 5 + s] != str[s]) {
+                match = false;
+                break;
+            }
+        }
+        if( !match )
+            continue;
+
+        
+        return heapKey;
+    }
+    return 0;
+}
+
 //no logic is implemented for scaling down to check that the elements will fit in the shrunk map
 //new capacity may be larger than requested 
 bool resizeHashmap(uchar* heap, uint maxHeapSize, href mapIndex,  uint newCapacity) {

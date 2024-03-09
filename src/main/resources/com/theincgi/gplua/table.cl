@@ -75,7 +75,13 @@ href tableRawGet( uchar* heap, href heapIndex, href key ) {
 }
 
 bool tableResizeArray( uchar* heap, uint maxHeapSize, href tableIndex, uint newSize ) {
-
+    href oldArray = tableGetArrayPart( heap, tableIndex );
+    href newArray = arrayResize( heap, maxHeapSize, oldArray, newSize );
+    if( newArray == 0 )
+        return false;
+    if(oldArray != newArray)
+        putHeapInt( heap, tableIndex + 1, newArray );
+    return true;
 }
 
 bool tableRawSet( uchar* heap, uint maxHeapSize, href tableIndex, href key, href value ) {

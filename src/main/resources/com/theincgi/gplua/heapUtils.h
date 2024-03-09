@@ -38,6 +38,7 @@ uint _hashCode(uchar* bytes, int offset, int length);
 
 //return the hash code for an int object without needing it on the heap
 uint hashInt( int value );
+uint hashString( string str, uint len );
 uint heapHash(uchar* heap, href obj);
 void freeHeap(uchar* heap, uint maxHeap, href index, bool mergeMarked);
 
@@ -48,6 +49,7 @@ void _markHeapHashmap(uchar* heap, uint maxHeap, href index);
 void _markHeapClosure(uchar* heap, uint maxHeap, href index);
 void _markHeapSubstring(uchar* heap, uint maxHeap, href index);
 void _markHeapTable(uchar* heap, uint maxHeap, href index);
+void _markNativeFunc(uchar* heap, uint maxHeap, href index);
 
 void markHeap( uint* luaStack, uchar* heap, uint maxHeap, href globalsIndex );
 void sweepHeap( uchar* heap, uint maxHeap );

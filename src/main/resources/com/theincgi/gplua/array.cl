@@ -81,6 +81,7 @@ void arraySet( uchar* heap, href heapIndex, int index, href val ) {
 //if the array can be resized in place, does that, returns heapIndex
 //else, returns new href to the copied array
 //old array will be freed if so
+//returns 0 if the array can not be resized
 href arrayResize( uchar* heap, uint maxHeapSize, href heapIndex, uint newCapacity ) {
     uint oldCapacity = arrayCapacity( heap, heapIndex );
     uint growthCapacity = heapObjectGrowthLimit( heap, maxHeapSize, heapIndex );
@@ -92,6 +93,8 @@ href arrayResize( uchar* heap, uint maxHeapSize, href heapIndex, uint newCapacit
     }
 
     href newArray = _allocateArray( heap, maxHeapSize, newCapacity ); //new, but without setting values to 0
+    if( newArray == 0 )
+        return 0;
     uint copyLimit = oldCapacity < newCapacity ? newCapacity : oldCapacity; //min
 
     href oldArrayStart = heapIndex + 9;
@@ -114,11 +117,9 @@ href arrayResize( uchar* heap, uint maxHeapSize, href heapIndex, uint newCapacit
             heap[ newArrayRef + 2 ] = 0;
             heap[ newArrayRef + 3 ] = 0;
         }
-
-        
     }
 
-    freeHeap(heap, heapIndex); //checkMe
+    freeHeap(heap, maxHeapSize, heapIndex, false);
 
     return newArray;
 }

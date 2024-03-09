@@ -96,8 +96,27 @@ uint _hashCode(uchar* bytes, int offset, int length) {
 uint hashInt( int value ) {
     uchar buf[5];
     buf[0] = T_INT;
-    heapPutInt( &buf, value );
-    return _hashCode( &buf, 0, 5);
+    putHeapInt( buf, 1, value );
+    return _hashCode( buf, 0, 5);
+}
+
+uint hashString( string str, uint len ) {
+    uchar buf[5];
+    buf[0] = T_STRING;
+    uint size = 0;
+    putHeapInt( buf, 1, len );
+    uint length = len + 6;
+
+    int h = length;  /* seed */
+    int step = (length>>5)+1;  /* if string is too long, don't hash all its chars */
+    for (int l1=length; l1>=step; l1-=step) {  /* compute hash */
+        int byteIndex = l1-1;
+        uchar byteVal = ( 0 <= byteIndex && byteIndex < 5 ) ?
+            buf[byteIndex] :
+            (byteIndex == length-1 ? 0 : str[byteIndex - 5]);
+        h = h ^ ((h<<5)+(h>>2)+(((int) byteVal ) & 0x0FF ));
+    }
+    return h;
 }
 
 uint heapHash(uchar* heap, href obj) {
@@ -175,6 +194,11 @@ void _markHeapTable(uchar* heap, uint maxHeap, href index) {
     _markHeap(heap, maxHeap, metatable);
 }
 
+void _markNativeFunc(uchar* heap, uint maxHeap, href index) {
+    href label = getHeapInt( heap, index + 5 );
+    _markHeap(heap, maxHeap, label);
+}
+
 //index points to the object, not the tag
 void _markHeap( uchar* heap, uint maxHeap, href index) {
     if(index == 0)
@@ -193,10 +217,13 @@ void _markHeap( uchar* heap, uint maxHeap, href index) {
         case T_NUMBER:
         case T_STRING:
         case T_USERDATA: //is there even any?
-        case T_NATIVE_FUNC:
         case T_FUNC:
         default:
             _setMarkTag(heap, tagPos, true); //marked
+            break;
+        case T_NATIVE_FUNC:
+            _setMarkTag(heap, tagPos, true); //marked
+            _markNativeFunc(heap, maxHeap, index);
             break;
         case T_ARRAY:
             _setMarkTag(heap, tagPos, true); //marked
