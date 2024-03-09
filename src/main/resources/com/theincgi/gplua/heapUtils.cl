@@ -57,14 +57,22 @@ uint heapObjectLength(uchar* heap, href index) {
     return getHeapInt( heap, index - 4 )-4;
 }
 
-// more free memory after object
-// only changes allocation, not something like resizing hashmap
-bool heapCanGrowObject( uchar* heap, href index ) {
+// amount of free memory after object that can be used to expand
+// only for changes to allocation, not something like resizing hashmap
+uint heapObjectGrowthLimit( uchar* heap, uint maxHeapSize, href index ) {
     href thisTagPos = index - 4;
     uint thisTag = getHeapInt( heap, thisTagPos );
     href nextTagPos = thisTagPos + thisTag;
     uint nextTag = getHeapInt( heap, nextTagPos );
-    //TODO
+    
+    if((nextTag & USE_FLAG) > 0) 
+        return 0;
+
+    uint nextSize = nextTag & SIZE_MASK;
+    //TODO determine if next tag is end of heap, and include logic when expanding
+    //so there aren't any empty chunks (4)
+
+    return 0; //dummy value
 }
 
 /** Compute the hash code of a sequence of bytes within a byte array using

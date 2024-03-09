@@ -3,7 +3,10 @@
 
 #include"common.cl"
 
-href allocateArray(uchar* heap, uint maxHeap, uint size);
+href newArray(uchar* heap, uint maxHeap, uint capacity );
+href _allocateArray(uchar* heap, uint maxHeap, uint size);
+
+void arrayClear(uchar* heap, href heapIndex);
 uint arraySize( uchar* heap, href index );
 uint arrayCapacity( uchar* heap, href index );
 href arrayGet( uchar* heap, href heapIndex, int index );
