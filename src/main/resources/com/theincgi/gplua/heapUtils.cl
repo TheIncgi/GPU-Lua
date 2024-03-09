@@ -1,31 +1,8 @@
-#ifndef HEAP_UTILS_CL
-#define HEAP_UTILS_CL
+#include"heapUtils.h"
+#include"common.cl"
 #include"types.cl"
-//See Algorithms: https://gee.cs.oswego.edu/dl/html/malloc.html
-//This implementation uses Boundray Tags
-//Heap[0] is not used, the value is always 0 which is also the NIL type
-//
-//Mark and Sweep is used for garbage collection: https://www.geeksforgeeks.org/mark-and-sweep-garbage-collection-algorithm/
-//max chunk size is 1GB when using 30bits of space, likely plenty for normal use
-//
-//Memory:
-//  0 | NIL
-//  1 | [used:1][mark:!][Chunk size:30]
-//  2 | <heap value>
-//  N | [used:1][mark:!][Chunk size:30]
-// N+1| <heap value>
-// ...
-//
-//chunk size includes it self
-//adding [current index] + [chunk size] will give you the index of the next boundry tag
 
-//                  AABBCCDD
-#define  USE_FLAG 0x80000000
-#define MARK_FLAG 0x40000000
-#define SIZE_MASK 0x3FFFFFFF
-#define HEAP_RESERVE 5
-
-int getHeapInt(uchar* heap, uint index) {
+int getHeapInt(uchar* heap, href index) {
     return 
         heap[index    ] << 24 |
         heap[index + 1] << 16 |
@@ -33,7 +10,7 @@ int getHeapInt(uchar* heap, uint index) {
         heap[index + 3];
 }
 
-void putHeapInt(uchar* heap, uint index, uint value) {
+void putHeapInt(uchar* heap, href index, uint value) {
     heap[index    ] = value >> 24 & 0xFF; //bit shift is higher priority than bitwise AND in c++, I checked
     heap[index + 1] = value >> 16 & 0xFF;
     heap[index + 2] = value >>  8 & 0xFF;
@@ -54,7 +31,7 @@ void initHeap(uchar* heap, uint maxHeap) {
 //the second left most bit will be the `mark` flag for gc
 //allocation index of 0 indicates failure
 //returns index of first byte in the new chunk on success
-uint allocateHeap(uchar* heap, uint maxHeap, uint size) {
+href allocateHeap(uchar* heap, uint maxHeap, uint size) {
     if(size > SIZE_MASK)
         return 0;
 
@@ -75,33 +52,15 @@ uint allocateHeap(uchar* heap, uint maxHeap, uint size) {
     return 0; //not enough memory
 }
 
-//size is number of uints
-uint allocateArray(uchar* heap, uint maxHeap, uint size) {
-    uint byteSize = 9 + size * 4;
-    uint array = allocateHeap( heap, maxHeap, byteSize );
-    
-    //allocation check
-    if(array == 0)
-        return 0;
-    
-    heap[array] = T_ARRAY;
-    putHeapInt( heap, array + 1,    0 );   //current length
-    putHeapInt( heap, array + 5, size );   //capacity
-    for( int i = array + 9; i < array + byteSize; i++ ) {
-        heap[i] = 0;
-    }
-    return array;
-}
-
 //allocated space NOT including the boundry tag
-uint heapObjectLength(uchar* heap, uint index) {
+uint heapObjectLength(uchar* heap, href index) {
     return getHeapInt( heap, index - 4 )-4;
 }
 
 //index refers to the point given by allocateHeap
 //the chunk boundry tag will be 4 bytes before that
 //max heap used to auto connect unused regions
-void freeHeap(uchar* heap, uint maxHeap, uint index, bool mergeMarked) {
+void freeHeap(uchar* heap, uint maxHeap, href index, bool mergeMarked) {
     uint tag = getHeapInt( heap, index );
     uint chunkSize = SIZE_MASK & tag;
 
@@ -129,54 +88,52 @@ void freeHeap(uchar* heap, uint maxHeap, uint index, bool mergeMarked) {
     putHeapInt( heap, index, chunkSize );
 }
 
-void _markHeap( uchar* heap, uint maxHeap, uint index);
-
-void _setMarkTag(uchar* heap, uint index, bool marked) {
+void _setMarkTag(uchar* heap, href index, bool marked) {
     if( marked )
         putHeapInt( heap, index, getHeapInt(heap, index) | MARK_FLAG );
     else
         putHeapInt( heap, index, getHeapInt(heap, index) & (SIZE_MASK | USE_FLAG) ); //unmark
 }
 
-void _markHeapArray(uchar* heap, uint maxHeap, uint index) {
+void _markHeapArray(uchar* heap, uint maxHeap, href index) {
     uint capacity = getHeapInt(heap, index + 5);
-    uint arrayStart = index + 9; //used, capacity skipped
+    href arrayStart = index + 9; //used, capacity skipped
     for(uint i = 0; i < capacity; i++) {
         _markHeap(heap, maxHeap, getHeapInt(heap, arrayStart + i * 4));
     }
 }
-void _markHeapHashmap(uchar* heap, uint maxHeap, uint index) {
-   uint keysPart = getHeapInt( heap, index + 1 );
-   uint valsPart = getHeapInt( heap, index + 5);
+void _markHeapHashmap(uchar* heap, uint maxHeap, href index) {
+   href keysPart = getHeapInt( heap, index + 1 );
+   href valsPart = getHeapInt( heap, index + 5);
    _markHeap(heap, maxHeap, keysPart);
    _markHeap(heap, maxHeap, valsPart);
 }
-void _markHeapClosure(uchar* heap, uint maxHeap, uint index) {
-    uint upvalArray = getHeapInt(heap, index + 1);
-    uint envTable = getHeapInt(heap, index + 5);
+void _markHeapClosure(uchar* heap, uint maxHeap, href index) {
+    href upvalArray = getHeapInt(heap, index + 1);
+    href envTable = getHeapInt(heap, index + 5);
     _markHeap(heap, maxHeap, upvalArray);
     _markHeap(heap, maxHeap, envTable);
 }
-void _markHeapSubstring(uchar* heap, uint maxHeap, uint index) {
-    uint stringRef = getHeapInt( heap, index + 1 );
+void _markHeapSubstring(uchar* heap, uint maxHeap, href index) {
+    href stringRef = getHeapInt( heap, index + 1 );
     //+5 start, +9 len
     _markHeap( heap, maxHeap, stringRef ); //mark parent string
 }
-void _markHeapTable(uchar* heap, uint maxHeap, uint index) {
-    uint arrayPart = getHeapInt(heap, index + 1);
-    uint hashedPart = getHeapInt(heap, index + 5);
-    uint metatable = getHeapInt(heap, index + 9);
+void _markHeapTable(uchar* heap, uint maxHeap, href index) {
+    href arrayPart = getHeapInt(heap, index + 1);
+    href hashedPart = getHeapInt(heap, index + 5);
+    href metatable = getHeapInt(heap, index + 9);
     _markHeap(heap, maxHeap, arrayPart);
     _markHeap(heap, maxHeap, hashedPart);
     _markHeap(heap, maxHeap, metatable);
 }
 
 //index points to the object, not the tag
-void _markHeap( uchar* heap, uint maxHeap, uint index) {
+void _markHeap( uchar* heap, uint maxHeap, href index) {
     if(index == 0)
         return;
     
-    uint tagPos = index - 4;
+    href tagPos = index - 4;
     uint tag = getHeapInt(heap, tagPos);
     if(tag & MARK_FLAG > 0)
         return; //already marked
@@ -217,12 +174,12 @@ void _markHeap( uchar* heap, uint maxHeap, uint index) {
     }
 }
 
-void markHeap( uint* luaStack, uchar* heap, uint maxHeap, uint globalsIndex ) {
-    uint frameBase = luaStack[0];
-    uint frameTop = luaStack[frameBase];
+void markHeap( uint* luaStack, uchar* heap, uint maxHeap, href globalsIndex ) {
+    sref frameBase = luaStack[0];
+    sref frameTop = luaStack[frameBase];
 
     while(true) {
-        for(uint r = frameBase + 2; r < frameTop; r++) {
+        for(sref r = frameBase + 2; r < frameTop; r++) {
             _markHeap( heap, maxHeap, luaStack[r] );
         }
         if(frameBase == 1)
@@ -237,7 +194,7 @@ void markHeap( uint* luaStack, uchar* heap, uint maxHeap, uint globalsIndex ) {
 }
 
 void sweepHeap( uchar* heap, uint maxHeap ) {
-    ulong index = HEAP_RESERVE;
+    href index = HEAP_RESERVE;
     uint tag = getHeapInt(heap, index);
     do {
         if((tag & SIZE_MASK) == 0 )
@@ -254,5 +211,3 @@ void sweepHeap( uchar* heap, uint maxHeap ) {
 
     }while( index <= maxHeap );
 }
-
-#endif

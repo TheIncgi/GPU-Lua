@@ -23,3 +23,4 @@
 hs_err_pid*
 replay_pid*
 /target/
+src/main/resources/com/theincgi/gplua/.vscode/c_cpp_properties.json

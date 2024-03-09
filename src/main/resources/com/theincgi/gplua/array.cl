@@ -1,21 +1,42 @@
-#ifndef ARRAY_CL
-#define ARRAY_CL
+#include"array.h"
+#include"common.cl"
+#include"heapUtils.h"
+#include"types.cl"
 
-#include"heapUtils.cl"
 
-uint arraySize( uchar* heap, uint index ) {
+//size is number of uints
+href allocateArray(uchar* heap, uint maxHeap, uint size) {
+    uint byteSize = 9 + size * 4;
+    href array = allocateHeap( heap, maxHeap, byteSize );
+    
+    //allocation check
+    if(array == 0)
+        return 0;
+    
+    heap[array] = T_ARRAY;
+    putHeapInt( heap, array + 1,    0 );   //current length
+    putHeapInt( heap, array + 5, size );   //capacity
+    for( int i = array + 9; i < array + byteSize; i++ ) {
+        heap[i] = 0;
+    }
+    return array;
+}
+
+//number of href that are stored
+uint arraySize( uchar* heap, href index ) {
     return getHeapInt( heap, index + 1);
 }
 
-uint arrayCapacity( uchar* heap, uint index ) {
+//number of href that can be stored
+uint arrayCapacity( uchar* heap, href index ) {
     return getHeapInt( heap, index + 5 );
 }
 
-uint arrayGet( uchar* heap, uint heapIndex, int index ) {
+href arrayGet( uchar* heap, href heapIndex, int index ) {
     return getHeapInt( heap, heapIndex + 9 + index * 4 );
 }
 
-void arraySet( uchar* heap, uint heapIndex, int index, int val ) {
+void arraySet( uchar* heap, href heapIndex, int index, href val ) {
     uint valPos = heapIndex + 9 + index * 4;
     uint size = arraySize( heap, heapIndex );
 
@@ -39,8 +60,3 @@ void arraySet( uchar* heap, uint heapIndex, int index, int val ) {
         putHeapInt( heap, heapIndex + 1, index + 1 );
     }
 }
-
-
-
-
-#endif

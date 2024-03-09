@@ -1,5 +1,5 @@
 #include types.cl
-#include"heapUtils.cl"
+#include"heapUtils.h"
 #include"hashmap.cl"
 #include"opUtils.cl"
 #include"stackUtils.cl"

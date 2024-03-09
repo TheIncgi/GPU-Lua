@@ -3,12 +3,12 @@
 
 #define MAP_MAX_SEARCH 10
 
-#include"heapUtils.cl"
+#include"heapUtils.h"
 #include"types.cl"
 #include"comparison.cl"
-#include"array.cl"
+#include"array.h"
 
-bool resizeHashmap(uchar* heap, uint maxHeapSize, uint oldHashMapUIndex,  uint newCapacity);
+bool resizeHashmap(uchar* heap, uint maxHeapSize, href oldHashMapUIndex,  uint newCapacity);
 
 /** Compute the hash code of a sequence of bytes within a byte array using
     * lua's rules for string hashes.  For long strings, not all bytes are hashed.
@@ -27,14 +27,14 @@ uint hashCode(uchar* bytes, int offset, int length) {
     return h;
 }
 
-uint newHashmap(uchar* heap, uint maxHeapSize, uint capacity) {
-    uint mapIndex = allocateHeap( heap, maxHeapSize, 13);
+href newHashmap(uchar* heap, uint maxHeapSize, uint capacity) {
+    href mapIndex = allocateHeap( heap, maxHeapSize, 13);
     if(mapIndex == 0) return 0;
 
-    uint keysIndex = allocateArray( heap, maxHeapSize, capacity);
+    href keysIndex = allocateArray( heap, maxHeapSize, capacity);
     if(keysIndex == 0) return 0;
 
-    uint valsIndex = allocateArray( heap, maxHeapSize, capacity);
+    href valsIndex = allocateArray( heap, maxHeapSize, capacity);
     if(valsIndex == 0) return 0;
 
     heap[mapIndex] = T_HASHMAP;
@@ -46,10 +46,10 @@ uint newHashmap(uchar* heap, uint maxHeapSize, uint capacity) {
     // putHeapInt( heap, valsIndex + 1, capacity); //mark as full use since values may be spread out
 }
 
-bool hashmapPut( uchar* heap, uint maxHeap, uint mapIndex, uint keyHeapIndex, uint valueHeapIndex ) {
+bool hashmapPut( uchar* heap, uint maxHeap, href mapIndex, href keyHeapIndex, href valueHeapIndex ) {
     uint keyHash  = hashCode( heap, keyHeapIndex, heapObjectLength(heap, keyHeapIndex)); 
-    uint keysPart = getHeapInt( heap, mapIndex + 1);
-    uint valsPart = getHeapInt( heap, mapIndex + 5);
+    href keysPart = getHeapInt( heap, mapIndex + 1);
+    href valsPart = getHeapInt( heap, mapIndex + 5);
     uint size     = arraySize( heap, keysPart );
     uint capacity = arrayCapacity( heap, keysPart );
     bool isErase  = valueHeapIndex == 0;
@@ -58,7 +58,7 @@ bool hashmapPut( uchar* heap, uint maxHeap, uint mapIndex, uint keyHeapIndex, ui
     bool foundEmpty = false;
     uint firstEmpty = 0;
     for(uint i = hashIndex, j = 0; j < MAP_MAX_SEARCH; i = (i + 1) % capacity, j++) {
-        uint globalKeyIndex = keysPart + i;
+        href globalKeyIndex = keysPart + i;
         if(heapEquals( heap, globalKeyIndex, keyHeapIndex)) { //value in stored keys == provided key
 
             if( isErase || arrayGet( heap, keysPart, i ) == 0) { //removing value or no key is present
@@ -102,20 +102,20 @@ bool hashmapPut( uchar* heap, uint maxHeap, uint mapIndex, uint keyHeapIndex, ui
 
 //no logic is implemented for scaling down to check that the elements will fit in the shrunk map
 //new capacity may be larger than requested 
-bool resizeHashmap(uchar* heap, uint maxHeapSize, uint mapIndex,  uint newCapacity) {
-    uint oldKeysPart = getHeapInt( heap, mapIndex + 1 );
-    uint oldValsPart = getHeapInt( heap, mapIndex + 5 );
+bool resizeHashmap(uchar* heap, uint maxHeapSize, href mapIndex,  uint newCapacity) {
+    href oldKeysPart = getHeapInt( heap, mapIndex + 1 );
+    href oldValsPart = getHeapInt( heap, mapIndex + 5 );
     uint oldCapacity = arrayCapacity( heap, oldKeysPart );
     
-    uint newKeysPart = allocateArray( heap, maxHeapSize, newCapacity );
+    href newKeysPart = allocateArray( heap, maxHeapSize, newCapacity );
     if(newKeysPart == 0) return false;
 
-    uint newValsPart = allocateArray( heap, maxHeapSize, newCapacity );
+    href newValsPart = allocateArray( heap, maxHeapSize, newCapacity );
     if(newValsPart == 0) return false;
 
     for(int i = 0; i < oldCapacity; i++) {
-        uint key = arrayGet( heap, oldKeysPart, i );
-        uint val = arrayGet( heap, oldValsPart, i );
+        href key = arrayGet( heap, oldKeysPart, i );
+        href val = arrayGet( heap, oldValsPart, i );
         if( key == 0 ) continue;
         uint keyHash  = hashCode( heap, key, heapObjectLength(heap, key));
         

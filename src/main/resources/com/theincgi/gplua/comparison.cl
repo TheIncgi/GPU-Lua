@@ -1,11 +1,12 @@
 #ifndef COMPARISON_CL
 #define COMPARISON_CL
+#include"common.cl"
 #include"types.cl"
-#include"heapUtils.cl"
+#include"heapUtils.h"
 
 
 
-bool heapEquals( uchar* heap, uint indexA, uint indexB ) {
+bool heapEquals( uchar* heap, href indexA, href indexB ) {
     uchar typeA = heap[indexA];
     uchar typeB = heap[indexB];
     
