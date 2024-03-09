@@ -1,5 +1,6 @@
 #ifndef TYPES_CL
 #define TYPES_CL
+//T_INT represents a signed int
 #define T_INT 254
 #define T_NONE 255
 #define T_NIL 0

@@ -57,6 +57,35 @@ uint heapObjectLength(uchar* heap, href index) {
     return getHeapInt( heap, index - 4 )-4;
 }
 
+/** Compute the hash code of a sequence of bytes within a byte array using
+    * lua's rules for string hashes.  For long strings, not all bytes are hashed.
+    * @param bytes  byte array containing the bytes.
+    * @param offset  offset into the hash for the first byte.
+    * @param length number of bytes starting with offset that are part of the string.
+    * @return hash for the string defined by bytes, offset, and length.
+    * <br>
+    * Sourced from LuaJ
+    */
+uint _hashCode(uchar* bytes, int offset, int length) {
+    int h = length;  /* seed */
+    int step = (length>>5)+1;  /* if string is too long, don't hash all its chars */
+    for (int l1=length; l1>=step; l1-=step)  /* compute hash */
+        h = h ^ ((h<<5)+(h>>2)+(((int) bytes[offset+l1-1] ) & 0x0FF ));
+    return h;
+}
+
+//return the hash code for an int object without needing it on the heap
+uint hashInt( int value ) {
+    uchar buf[5];
+    buf[0] = T_INT;
+    heapPutInt( &buf, value );
+    return _hashCode( &buf, 0, 5);
+}
+
+uint heapHash(uchar* heap, href obj) {
+    return _hashCode( heap, obj, heapObjectLength(heap, obj)); 
+}
+
 //index refers to the point given by allocateHeap
 //the chunk boundry tag will be 4 bytes before that
 //max heap used to auto connect unused regions

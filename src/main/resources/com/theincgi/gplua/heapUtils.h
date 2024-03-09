@@ -34,6 +34,11 @@ href allocateHeap(uchar* heap, uint maxHeap, uint size);
 
 
 uint heapObjectLength(uchar* heap, href index);
+uint _hashCode(uchar* bytes, int offset, int length);
+
+//return the hash code for an int object without needing it on the heap
+uint hashInt( int value );
+uint heapHash(uchar* heap, href obj);
 void freeHeap(uchar* heap, uint maxHeap, href index, bool mergeMarked);
 
 void _markHeap( uchar* heap, uint maxHeap, href index);

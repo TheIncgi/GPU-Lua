@@ -2,6 +2,7 @@
 #include"common.cl"
 #include"heapUtils.h"
 #include"array.h"
+#include"types.cl"
 
 //may return 0 if not enough memory
 uint newTable(uchar* heap, uint maxHeapSize) {
@@ -43,12 +44,59 @@ uint tableCreateArrayPart( uchar* heap, uint maxHeapSize, href tableHeapIndex ) 
     return arrayPart; //created
 }
 
-uint tableRawGet( uchar* heap, href heapIndex, href key ) {
+href tableRawGet( uchar* heap, href heapIndex, href key ) {
     href arrayPart = tableGetArrayPart( heap, heapIndex );
-    if( arrayPart == 0 )
-        return 0;
+    uchar keyType = heap[key];
+
+    if( keyType == T_INT && arrayPart != 0 ) {              //int and array part exists
+        uint size = arraySize( heap, arrayPart );
+        int keyIndex = getHeapInt( heap, key + 1 ) - 1;         //SIGNED int, convert from 1 to 0 indexed
+
+        if( 0 <= keyIndex && keyIndex < size ) {            //in bounds of the array part (else check hashed part)
+            return arrayGet( heap, arrayPart, keyIndex );   //found it in array part
+        }
+    }
+    
+    href hashedPart = tableGetHashedPart( heap, heapIndex );
+    return hashmapGet( heap, hashedPart, key );
 }
 
-bool tableRawSet( uchar* heap, uint maxHeapSize, href heapIndex, href key, href value ) {
+bool tableResizeArray( uchar* heap, uint maxHeapSize, href tableIndex, uint newSize ) {
 
+}
+
+bool tableRawSet( uchar* heap, uint maxHeapSize, href tableIndex, href key, href value ) {
+    uchar keyType = heap[key];
+    bool  erase   = heap[value] == 0;
+
+    if( keyType == T_INT ) {
+        int keyIndex = getHeapInt( heap, key + 1 ) - 1;     //signed, convert from 1 to 0 indexing
+        href arrayPart = tableGetArrayPart( heap, tableIndex );
+        
+        //initialize if index is in the first 4 slots
+        if( arrayPart == 0 && 0 <= keyIndex && keyIndex < 4)
+            arrayPart = tableCreateArrayPart( heap, maxHeapSize, tableIndex );
+
+        if( arrayPart != 0 ) {
+            uint capacity = tableCapacity( heap, arrayPart );
+
+            if( 0 <= key && key <= capacity ) {                 //in array range, including end (first empty)
+                if( key == capacity ) {                         //appending, may need to grow array
+                    //erase is skipped incase it's in the hash part
+                    if( !erase && tableResizeArray( heap, maxHeapSize, tableIndex, resizeRule( capacity ))) {
+                        arraySet( heap, arrayPart, keyIndex, value );
+                        return true;
+                    } //if resizing fails we'll try the hash part claiming out of memory
+                } else {
+                    arraySet( heap, arrayPart, keyIndex, value ); //in bounds
+                }
+            } //out of bounds? will use the hash
+        }
+    }
+
+    href hashedPart = tableCreateHashedPart( heap, maxHeapSize, tableIndex );
+    if( hashedPart == 0 )
+        return false; //out of memory
+
+    return hashmapPut( heap, maxHeapSize, hashedPart, key, value );
 }

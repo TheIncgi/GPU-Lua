@@ -18,4 +18,10 @@ typedef uint href;
 //href value = stack[ S ]
 typedef uint sref;
 
+uint resizeRule( uint oldSize ) {
+    uint times = oldSize * 2;
+    uint add   = oldSize + 128;
+    return times < add ? times : add; //min
+}
+
 #endif

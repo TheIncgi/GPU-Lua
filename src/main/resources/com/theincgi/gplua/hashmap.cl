@@ -4,28 +4,14 @@
 #define MAP_MAX_SEARCH 10
 
 #include"heapUtils.h"
+#include"common.cl"
 #include"types.cl"
 #include"comparison.cl"
 #include"array.h"
 
 bool resizeHashmap(uchar* heap, uint maxHeapSize, href oldHashMapUIndex,  uint newCapacity);
 
-/** Compute the hash code of a sequence of bytes within a byte array using
-    * lua's rules for string hashes.  For long strings, not all bytes are hashed.
-    * @param bytes  byte array containing the bytes.
-    * @param offset  offset into the hash for the first byte.
-    * @param length number of bytes starting with offset that are part of the string.
-    * @return hash for the string defined by bytes, offset, and length.
-    * <br>
-    * Sourced from LuaJ
-    */
-uint hashCode(uchar* bytes, int offset, int length) {
-    int h = length;  /* seed */
-    int step = (length>>5)+1;  /* if string is too long, don't hash all its chars */
-    for (int l1=length; l1>=step; l1-=step)  /* compute hash */
-        h = h ^ ((h<<5)+(h>>2)+(((int) bytes[offset+l1-1] ) & 0x0FF ));
-    return h;
-}
+
 
 href newHashmap(uchar* heap, uint maxHeapSize, uint capacity) {
     href mapIndex = allocateHeap( heap, maxHeapSize, 13);
@@ -47,7 +33,7 @@ href newHashmap(uchar* heap, uint maxHeapSize, uint capacity) {
 }
 
 bool hashmapPut( uchar* heap, uint maxHeap, href mapIndex, href keyHeapIndex, href valueHeapIndex ) {
-    uint keyHash  = hashCode( heap, keyHeapIndex, heapObjectLength(heap, keyHeapIndex)); 
+    uint keyHash  = heapHash( heap, keyHeapIndex ); 
     href keysPart = getHeapInt( heap, mapIndex + 1);
     href valsPart = getHeapInt( heap, mapIndex + 5);
     uint size     = arraySize( heap, keysPart );
@@ -59,7 +45,7 @@ bool hashmapPut( uchar* heap, uint maxHeap, href mapIndex, href keyHeapIndex, hr
     uint firstEmpty = 0;
     for(uint i = hashIndex, j = 0; j < MAP_MAX_SEARCH; i = (i + 1) % capacity, j++) {
         href globalKeyIndex = keysPart + i;
-        if(heapEquals( heap, globalKeyIndex, keyHeapIndex)) { //value in stored keys == provided key
+        if(heapEquals( heap, arrayGet(heap, keysPart, i), keyHeapIndex)) { //value in stored keys == provided key
 
             if( isErase || arrayGet( heap, keysPart, i ) == 0) { //removing value or no key is present
                 arraySet( heap, keysPart, i, isErase ? 0 : keyHeapIndex );     //add or remove key
@@ -84,7 +70,7 @@ bool hashmapPut( uchar* heap, uint maxHeap, href mapIndex, href keyHeapIndex, hr
     
     //resize until there's a close enough gap or fail
     while(true) {
-        if( !resizeHashmap( heap, maxHeap, mapIndex, capacity * 2 > capacity + 128 ? capacity + 128 : capacity * 2) ) // min(cap+128, cap*2)
+        if( !resizeHashmap( heap, maxHeap, mapIndex, resizeRule(capacity) )) // min(cap+128, cap*2)
             return false;
         
 
@@ -98,6 +84,21 @@ bool hashmapPut( uchar* heap, uint maxHeap, href mapIndex, href keyHeapIndex, hr
             }
         }
     }
+}
+
+href hashmapGet(uchar* heap, href mapIndex, href key) {
+    uint hash = heapHash( heap, key );
+    href keysPart = getHeapInt( heap, mapIndex + 1);
+    href valsPart = getHeapInt( heap, mapIndex + 5);
+    uint capacity = arrayCapacity( heap, keysPart );
+    uint hashIndex = mapIndex % capacity;
+
+    for(uint i = hashIndex, j = 0; j < MAP_MAX_SEARCH; i = (i + 1) % capacity, j++) { //i = search location (array index) | j = search count
+        if(heapEquals( heap, arrayGet(heap, keysPart, i), key)) { //value in stored keys == provided key
+            return arrayGet( heap, valsPart, i );
+        } 
+    }
+    return 0;
 }
 
 //no logic is implemented for scaling down to check that the elements will fit in the shrunk map
@@ -117,7 +118,7 @@ bool resizeHashmap(uchar* heap, uint maxHeapSize, href mapIndex,  uint newCapaci
         href key = arrayGet( heap, oldKeysPart, i );
         href val = arrayGet( heap, oldValsPart, i );
         if( key == 0 ) continue;
-        uint keyHash  = hashCode( heap, key, heapObjectLength(heap, key));
+        uint keyHash  = heapHash( heap, key );
         
         bool assigned = false;
         for(uint slot = keyHash % newCapacity, j = 0; j < MAP_MAX_SEARCH; slot = (slot + 1) % newCapacity, j++ ) {
@@ -135,7 +136,7 @@ bool resizeHashmap(uchar* heap, uint maxHeapSize, href mapIndex,  uint newCapaci
             freeHeap( heap, maxHeapSize, newKeysPart, false );
             freeHeap( heap, maxHeapSize, newValsPart, false );
             // min(cap+128, cap*2)
-            uint newerCapacity =  newCapacity * 2 > newCapacity + 128 ? newCapacity + 128 : newCapacity * 2;
+            uint newerCapacity =  resizeRule(newCapacity);
             return resizeHashmap( heap, maxHeapSize, mapIndex, newerCapacity);
         }
     }
