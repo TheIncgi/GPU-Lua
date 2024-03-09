@@ -84,7 +84,7 @@ bool hashmapPut( uchar* heap, uint maxHeap, uint mapIndex, uint keyHeapIndex, ui
     
     //resize until there's a close enough gap or fail
     while(true) {
-        if( !resizeHashmap( heap, maxHeap, mapIndex, capacity * 2 > 128 ? 128 : capacity * 2) ) // min(cap+128, cap*2)
+        if( !resizeHashmap( heap, maxHeap, mapIndex, capacity * 2 > capacity + 128 ? capacity + 128 : capacity * 2) ) // min(cap+128, cap*2)
             return false;
         
 
@@ -100,8 +100,53 @@ bool hashmapPut( uchar* heap, uint maxHeap, uint mapIndex, uint keyHeapIndex, ui
     }
 }
 
-bool resizeHashmap(uchar* heap, uint maxHeapSize, uint oldHashMapUIndex,  uint newCapacity) {
+//no logic is implemented for scaling down to check that the elements will fit in the shrunk map
+//new capacity may be larger than requested 
+bool resizeHashmap(uchar* heap, uint maxHeapSize, uint mapIndex,  uint newCapacity) {
+    uint oldKeysPart = getHeapInt( heap, mapIndex + 1 );
+    uint oldValsPart = getHeapInt( heap, mapIndex + 5 );
+    uint oldCapacity = arrayCapacity( heap, oldKeysPart );
+    
+    uint newKeysPart = allocateArray( heap, maxHeapSize, newCapacity );
+    if(newKeysPart == 0) return false;
 
+    uint newValsPart = allocateArray( heap, maxHeapSize, newCapacity );
+    if(newValsPart == 0) return false;
+
+    for(int i = 0; i < oldCapacity; i++) {
+        uint key = arrayGet( heap, oldKeysPart, i );
+        uint val = arrayGet( heap, oldValsPart, i );
+        if( key == 0 ) continue;
+        uint keyHash  = hashCode( heap, key, heapObjectLength(heap, key));
+        
+        bool assigned = false;
+        for(uint slot = keyHash % newCapacity, j = 0; j < MAP_MAX_SEARCH; slot = (slot + 1) % newCapacity, j++ ) {
+            uint slotKey = arrayGet( heap, newKeysPart, slot );
+            if( slot == 0 ) { //empty
+                arraySet( heap, newKeysPart, slot, key );
+                arraySet( heap, newValsPart, slot, val );
+                assigned = true;
+                break;
+            }
+        }
+
+        //too dense
+        if( !assigned ) {
+            freeHeap( heap, maxHeapSize, newKeysPart, false );
+            freeHeap( heap, maxHeapSize, newValsPart, false );
+            // min(cap+128, cap*2)
+            uint newerCapacity =  newCapacity * 2 > newCapacity + 128 ? newCapacity + 128 : newCapacity * 2;
+            return resizeHashmap( heap, maxHeapSize, mapIndex, newerCapacity);
+        }
+    }
+
+    putHeapInt( heap, mapIndex + 1, newKeysPart );
+    putHeapInt( heap, mapIndex + 5, newValsPart);
+
+    freeHeap( heap, maxHeapSize, oldKeysPart, false );
+    freeHeap( heap, maxHeapSize, oldValsPart, false );
+
+    return true;
 }
 
 #endif

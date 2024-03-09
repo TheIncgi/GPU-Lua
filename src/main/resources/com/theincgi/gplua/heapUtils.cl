@@ -158,9 +158,9 @@ void _markHeapClosure(uchar* heap, uint maxHeap, uint index) {
     _markHeap(heap, maxHeap, envTable);
 }
 void _markHeapSubstring(uchar* heap, uint maxHeap, uint index) {
-    //TODO
-
-    ;;;;;;;;;;;;;;;;;;;;;;;;;;aaa;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+    uint stringRef = getHeapInt( heap, index + 1 );
+    //+5 start, +9 len
+    _markHeap( heap, maxHeap, stringRef ); //mark parent string
 }
 void _markHeapTable(uchar* heap, uint maxHeap, uint index) {
     uint arrayPart = getHeapInt(heap, index + 1);
