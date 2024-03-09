@@ -57,6 +57,16 @@ uint heapObjectLength(uchar* heap, href index) {
     return getHeapInt( heap, index - 4 )-4;
 }
 
+// more free memory after object
+// only changes allocation, not something like resizing hashmap
+bool heapCanGrowObject( uchar* heap, href index ) {
+    href thisTagPos = index - 4;
+    uint thisTag = getHeapInt( heap, thisTagPos );
+    href nextTagPos = thisTagPos + thisTag;
+    uint nextTag = getHeapInt( heap, nextTagPos );
+    //TODO
+}
+
 /** Compute the hash code of a sequence of bytes within a byte array using
     * lua's rules for string hashes.  For long strings, not all bytes are hashed.
     * @param bytes  byte array containing the bytes.

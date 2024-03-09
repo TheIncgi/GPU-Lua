@@ -4,7 +4,7 @@
 #include"common.cl"
 
 href createGlobals( uchar* heap, uint maxHeap ) {
-
+    
 }
 
 

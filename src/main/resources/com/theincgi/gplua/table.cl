@@ -5,24 +5,23 @@
 #include"types.cl"
 
 //may return 0 if not enough memory
-uint newTable(uchar* heap, uint maxHeapSize) {
+href newTable(uchar* heap, uint maxHeapSize) {
     //no array, hash or metatable filled in on a new table
     return allocateHeap( heap, maxHeapSize, 13);
 }
 
-uint tableGetArrayPart( uchar* heap, href heapIndex ) {
+href tableGetArrayPart( uchar* heap, href heapIndex ) {
     return getHeapInt( heap, heapIndex + 1 );
 }
 
-uint tableGetHashedPart( uchar* heap, href heapIndex ) {
+href tableGetHashedPart( uchar* heap, href heapIndex ) {
     return getHeapInt( heap, heapIndex + 5 );
 }
 
-uint tableGetMetatable( uchar* heap, href heapIndex ) {
+href tableGetMetatable( uchar* heap, href heapIndex ) {
     return getHeapInt( heap, heapIndex + 9 );
 }
 
-//This return uint is the raw length, not a heap index like most other functions
 uint tableLen( uchar* heap, href heapIndex ) {
     href arrayPart = tableGetArrayPart( heap, heapIndex);
     if( arrayPart == 0 )
@@ -30,8 +29,8 @@ uint tableLen( uchar* heap, href heapIndex ) {
     return arraySize( heap, arrayPart );
 }
 
-uint tableCreateArrayPart( uchar* heap, uint maxHeapSize, href tableHeapIndex ) {
-    href current = tableGetArrayPart(heap, tableHeapIndex );
+href tableCreateArrayPart( uchar* heap, uint maxHeapSize, href tableHeapIndex ) {
+    href current = tableGetArrayPart( heap, tableHeapIndex );
     if( current != 0 )
         return current; //already exists
     
@@ -42,6 +41,20 @@ uint tableCreateArrayPart( uchar* heap, uint maxHeapSize, href tableHeapIndex ) 
 
     putHeapInt( heap, tableHeapIndex + 1, arrayPart );
     return arrayPart; //created
+}
+
+href tableCreateHashedPart( uchar* heap, uint maxHeapSize, href tableHeapIndex ) {
+    href current = tableGetHashedPart( heap, tableHeapIndex );
+    if( current != 0 )
+        return current; //already exists
+
+    href hashedPart = newHashmap( heap, maxHeapSize, HASHMAP_INIT_SIZE );
+    
+    if( hashedPart == 0 )
+        return false; //couldn't create map
+    
+    putHeapInt( heap, tableHeapIndex + 5, hashedPart );
+    return hashedPart; //created
 }
 
 href tableRawGet( uchar* heap, href heapIndex, href key ) {

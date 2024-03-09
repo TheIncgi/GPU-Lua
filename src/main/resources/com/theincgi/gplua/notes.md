@@ -6,3 +6,6 @@ Example: Array is 0 indexed
 # Types
 T_INT's value is signed
 Unless a type *needs* to be signed I've opted for the unsigned version for variables
+
+# TODO
+table resize array / array grow / object grow
