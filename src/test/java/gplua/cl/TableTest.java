@@ -123,7 +123,7 @@ class TableTest extends TestBase {
 		href hashedPart = tableCreateHashedPart( heap, maxHeapSize, myTable ); 
 		putHeapInt( errorOutput, 0, myTable );
 		putHeapInt( errorOutput, 4, hashedPart );
-		putHeapInt( errorOutput, 8, HASHMAP_INIT_SIZE );
+		putHeapInt( errorOutput, 8, HASHMAP_INIT_SIZE ); //warnings are from wrong type, but it's fine
 		""");
 		
 		var done = kernel.enqueueNDRange(queue, new int[] {1}, events.toArray(new CLEvent[events.size()]));
