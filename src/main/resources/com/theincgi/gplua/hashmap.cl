@@ -7,22 +7,21 @@
 #include"array.h"
 
 href newHashmap(uchar* heap, uint maxHeapSize, uint capacity) {
-    href mapIndex = allocateHeap( heap, maxHeapSize, 13);
+    href mapIndex = allocateHeap( heap, maxHeapSize, 9);
     if(mapIndex == 0) return 0;
 
-    href keysIndex = allocateArray( heap, maxHeapSize, capacity);
+    href keysIndex = newArray( heap, maxHeapSize, capacity);
     if(keysIndex == 0) return 0;
 
-    href valsIndex = allocateArray( heap, maxHeapSize, capacity);
+    href valsIndex = newArray( heap, maxHeapSize, capacity);
     if(valsIndex == 0) return 0;
 
     heap[mapIndex] = T_HASHMAP;
-    putHeapInt( heap, mapIndex + 4,          0); //current number of elements, used for quick checks to resize
-    putHeapInt( heap, mapIndex + 5, keysIndex );
-    putHeapInt( heap, mapIndex + 9, valsIndex );
+    // putHeapInt( heap, mapIndex + 4,          0);
+    putHeapInt( heap, mapIndex + 1, keysIndex );
+    putHeapInt( heap, mapIndex + 5, valsIndex );
 
-    // putHeapInt( heap, keysIndex + 1, capacity); //mark as full use since values may be spread out
-    // putHeapInt( heap, valsIndex + 1, capacity); //mark as full use since values may be spread out
+    return mapIndex;
 }
 
 bool hashmapPut( uchar* heap, uint maxHeap, href mapIndex, href keyHeapIndex, href valueHeapIndex ) {
@@ -136,10 +135,10 @@ bool resizeHashmap(uchar* heap, uint maxHeapSize, href mapIndex,  uint newCapaci
     href oldValsPart = getHeapInt( heap, mapIndex + 5 );
     uint oldCapacity = arrayCapacity( heap, oldKeysPart );
     
-    href newKeysPart = allocateArray( heap, maxHeapSize, newCapacity );
+    href newKeysPart = newArray( heap, maxHeapSize, newCapacity );
     if(newKeysPart == 0) return false;
 
-    href newValsPart = allocateArray( heap, maxHeapSize, newCapacity );
+    href newValsPart = newArray( heap, maxHeapSize, newCapacity );
     if(newValsPart == 0) return false;
 
     for(int i = 0; i < oldCapacity; i++) {

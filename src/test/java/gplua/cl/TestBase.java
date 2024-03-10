@@ -79,7 +79,7 @@ public class TestBase {
 		dis.skip(tagPos);
 		int tag = dis.readInt();
 		int size = chunkSize( tag );
-		var data = dis.readNBytes(size);
+		var data = dis.readNBytes(size - 4);
 		return new TaggedMemory(isUseFlag(tag), isMarkFlag(tag), data);
 	}
 	
