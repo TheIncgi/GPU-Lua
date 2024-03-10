@@ -23,6 +23,8 @@ public class CLBytecodeChecking {
 //		var file = srcURL.getFile();
 		
 		var srcCode = """
+			#include"example.h"
+			
 			#include"example.cl"
 			
 			__kernel void exec(
@@ -31,7 +33,8 @@ public class CLBytecodeChecking {
 				if( get_global_id(0) != 0 )
 					return;
 				
-				output[0] = exampleValue;
+//				output[0] = foo;
+				output[0] = example();
 				
 			}		
 			""";

@@ -1,9 +1,9 @@
 package com.theincgi.gplua.cl;
 
 public class LuaTypes {
-	public static final byte
-		INT = -2,
-		NONE = -1,
+	public static final int
+		INT = 254,
+		NONE = 255,
 		NIL = 0,
 		BOOL = 1,
 		NUMBER = 3, //double

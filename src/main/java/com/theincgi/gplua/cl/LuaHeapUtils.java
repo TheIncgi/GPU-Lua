@@ -127,7 +127,7 @@ public class LuaHeapUtils {
 	}
 	public static byte[] serialize(int i) {
 		var bytes = new byte[5];
-		bytes[0] = INT;
+		bytes[0] = (byte) INT;
 		putInt(i, bytes, 1);
 		return bytes;
 	}

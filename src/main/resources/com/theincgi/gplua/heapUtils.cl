@@ -18,9 +18,13 @@ void putHeapInt(uchar* heap, href index, uint value) {
 }
 
 void initHeap(uchar* heap, uint maxHeap) {
-    uint remainingHeap = maxHeap;
+    if(maxHeap < 5) return;
+    heap[1] = T_BOOL;
+    heap[3] = T_BOOL;
+    heap[4] = 1;
+    uint remainingHeap = maxHeap - HEAP_RESERVE;
     for(uint i = HEAP_RESERVE; i < maxHeap; i += SIZE_MASK) {
-        uint chunkSize = SIZE_MASK > remainingHeap ? SIZE_MASK : remainingHeap; //min(SIZE_MASK, remainingHeap) didn't want to use fmin
+        uint chunkSize = SIZE_MASK < remainingHeap ? SIZE_MASK : remainingHeap; //min(SIZE_MASK, remainingHeap) didn't want to use fmin
         putHeapInt(heap, i, chunkSize);
         remainingHeap -= chunkSize;
     }
@@ -35,16 +39,18 @@ href allocateHeap(uchar* heap, uint maxHeap, uint size) {
     if(size > SIZE_MASK)
         return 0;
 
+    uint sizeWithTag = size+4;
     uint index = HEAP_RESERVE;
-    while(index < (maxHeap-size-8)) { //not near end of heap, needs space for the tag before and after user data
-        uint tag = heap[index];
+    while(index < (maxHeap-(long)sizeWithTag-4)) { //not near end of heap, needs space for the tag before and after user data
+        uint tag = getHeapInt(heap, index);
 
         uint chunkSize = tag & SIZE_MASK;
-        if(chunkSize >= size &&         //size check
+        if(chunkSize >= sizeWithTag &&         //size check
             ((tag & USE_FLAG ) == 0)) { //not used check
-            heap[index] = size | USE_FLAG; //mark flag is 0 on a new chunk
-            heap[index + size] = chunkSize - size - 4; //remaining chunk is not in use
-            return index + 1; //point to the actual space that can be used
+             //use flag only, mark flag is 0 on a new chunk
+            putHeapInt(heap, index, sizeWithTag | USE_FLAG);
+            putHeapInt(heap, index+sizeWithTag, chunkSize - size - 4); //remaining chunk is not in use
+            return index + 4; //point to the actual space that can be used
         } else {
             index += chunkSize;
         }
@@ -133,7 +139,7 @@ void freeHeap(uchar* heap, uint maxHeap, href index, bool mergeMarked) {
     uint i = index + chunkSize;
     while( i < maxHeap ) {
         uint nextTag = getHeapInt(heap, i);
-        if(nextTag & USE_FLAG > 0) //next in use
+        if((nextTag & USE_FLAG) > 0) //next in use
             if(!mergeMarked || (mergeMarked && (nextTag & MARK_FLAG) == 0) ) //not merging marked or are merging, but not marked
                 break; //no merge on this tag
         
@@ -206,7 +212,7 @@ void _markHeap( uchar* heap, uint maxHeap, href index) {
     
     href tagPos = index - 4;
     uint tag = getHeapInt(heap, tagPos);
-    if(tag & MARK_FLAG > 0)
+    if((tag & MARK_FLAG) > 0)
         return; //already marked
 
     uchar type = heap[index];
