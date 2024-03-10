@@ -82,8 +82,8 @@ public class AllocationTest {
 	
 	public List<CLEvent> setBufferSizes( int heap, int err ) {
 		var eList = new ArrayList<CLEvent>();
-		eList.add(this.heap.fillEmpty(heap, queue));
-		eList.add(this.errOut.fillEmpty(err, queue));
+		eList.add(AllocationTest.heap.fillEmpty(heap, queue));
+		eList.add(AllocationTest.errOut.fillEmpty(err, queue));
 		eList.add(stackSizes.loadData(new int[] {heap, err}, queue));
 		return eList;
 	}
@@ -129,7 +129,7 @@ public class AllocationTest {
 		
 		var data = heap.readData(queue, done);
 		
-		System.out.println(Arrays.toString(data));
+		//System.out.println(Arrays.toString(data));
 		DataInputStream dis = new DataInputStream(new ByteArrayInputStream(data));
 		
 		dis.skip(5);
@@ -137,7 +137,7 @@ public class AllocationTest {
 		//Check tag 1
 		int tag = dis.readInt();
 		//System.out.println( "Tag 1: " + tag + " | 0x"+Integer.toHexString(tag) + " | " + Integer.toBinaryString(tag));
-		assertTrue(0 != (tag & USE_FLAG), "First tag must be in use");
+		assertTrue(isUseFlag(tag), "First tag must be in use");
 		assertEquals("First tag must not be marked", 0, tag & MARK_FLAG);
 		assertEquals("First tag size must be 10", 10, tag & SIZE_MASK); //tag size of 4 + request size
 		
@@ -145,7 +145,7 @@ public class AllocationTest {
 		dis.skip( 6 );
 		tag = dis.readInt();
 		//System.out.println( "Tag 2: " + tag + " | 0x"+Integer.toHexString(tag) + " | " + Integer.toBinaryString(tag));
-		assertTrue(0 == (tag & USE_FLAG), "First tag must not be in use");
+		assertFalse(isUseFlag(tag), "First tag must not be in use");
 		assertEquals("First tag must not be marked", 0, tag & MARK_FLAG);
 		assertEquals("First tag size must be 9", 9, tag & SIZE_MASK); //buffer size - 5 - (requested allocation size+4) | 24 - 5 - (6+4)
 		
@@ -175,7 +175,7 @@ public class AllocationTest {
 		//Check tag 1
 		int tag = dis.readInt();
 		//System.out.println( "Tag 1: " + tag + " | 0x"+Integer.toHexString(tag) + " | " + Integer.toBinaryString(tag));
-		assertTrue(0 == (tag & USE_FLAG), "First tag must not be in use");
+		assertFalse(isUseFlag(tag), "First tag must not be in use");
 		assertEquals("First tag must not be marked", 0, tag & MARK_FLAG);
 		assertEquals("Tag size wrong", 19, tag & SIZE_MASK); //buffer size - 5 - (requested allocation size+4) | 24 - 5 - (6+4)
 		
@@ -184,4 +184,80 @@ public class AllocationTest {
 		int allocatedIndex = dis.readInt();
 		assertEquals("Allocated index incorrect", 0, allocatedIndex); //reserve size of 5 + tag size of 4
 	} 
+
+	@Test
+	void free() throws IOException {
+		var events = setBufferSizes( 32, 512 );
+		setupProgram("""
+		initHeap( heap, maxHeapSize );
+		href objA = allocateHeap( heap, maxHeapSize, 5 );
+		href objB = allocateHeap( heap, maxHeapSize, 5 );
+		putHeapInt( errorOutput, 0, objA );
+		putHeapInt( errorOutput, 4, objB );
+		freeHeap( heap, maxHeapSize, objA, false );
+		""");
+		
+		var done = kernel.enqueueNDRange(queue, new int[] {1}, events.toArray(new CLEvent[events.size()]));
+		var data = heap.readData(queue, done);
+		
+		//System.out.println(Arrays.toString(data));
+		DataInputStream dis = new DataInputStream(new ByteArrayInputStream(data));
+		
+		dis.skip(5);
+		
+		//Check tag 1
+		int tag = dis.readInt();
+		//System.out.println( "Tag 1: " + tag + " | 0x"+Integer.toHexString(tag) + " | " + Integer.toBinaryString(tag));
+		assertFalse( isUseFlag(tag), "First tag must not be in use");
+		assertEquals("First tag must not be marked", 0, tag & MARK_FLAG);
+		assertEquals("Tag size wrong", 9, tag & SIZE_MASK); //buffer size - 5 - (requested allocation size+4) | 24 - 5 - (6+4)
+		
+		dis.skip(5);
+		tag = dis.readInt();
+		//System.out.println( "Tag 2: " + tag + " | 0x"+Integer.toHexString(tag) + " | " + Integer.toBinaryString(tag));
+		assertTrue(isUseFlag(tag), "Second tag must be in use");
+	}
+	
+	@Test
+	void freeAndMerge() throws IOException {
+		var events = setBufferSizes( 32, 512 );
+		setupProgram("""
+		initHeap( heap, maxHeapSize );
+		href objA = allocateHeap( heap, maxHeapSize, 5 );
+		href objB = allocateHeap( heap, maxHeapSize, 5 );
+		putHeapInt( errorOutput, 0, objA );
+		putHeapInt( errorOutput, 4, objB );
+		freeHeap( heap, maxHeapSize, objB, false );
+		freeHeap( heap, maxHeapSize, objA, false );
+		""");
+		
+		var done = kernel.enqueueNDRange(queue, new int[] {1}, events.toArray(new CLEvent[events.size()]));
+		var data = heap.readData(queue, done);
+		
+		System.out.println(Arrays.toString(data));
+		DataInputStream dis = new DataInputStream(new ByteArrayInputStream(data));
+		
+		dis.skip(5);
+		
+		//Check tag 1
+		int tag = dis.readInt();
+		System.out.println( "Tag 1: " + tag + " | 0x"+Integer.toHexString(tag) + " | " + Integer.toBinaryString(tag));
+		assertFalse( isUseFlag(tag), "First tag must not be in use");
+		assertEquals("First tag must not be marked", 0, tag & MARK_FLAG);
+		assertEquals("Tag size wrong", 27, tag & SIZE_MASK);
+		
+		dis.skip(5);
+		tag = dis.readInt();
+		System.out.println( "Tag 2: " + tag + " | 0x"+Integer.toHexString(tag) + " | " + Integer.toBinaryString(tag));
+		assertFalse(isUseFlag(tag), "Second tag must not be in use");
+		assertEquals("First tag must not be marked", 0, tag & MARK_FLAG);
+		assertEquals("Tag size wrong", 18, tag & SIZE_MASK); //merges with unused section 
+	}
+	
+	
+	boolean isUseFlag( int tag ) {
+		return (tag & USE_FLAG) != 0;
+	}
+
+
 }

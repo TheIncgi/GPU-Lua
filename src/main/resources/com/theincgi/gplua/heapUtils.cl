@@ -132,18 +132,19 @@ uint heapHash(uchar* heap, href obj) {
 //index refers to the point given by allocateHeap
 //the chunk boundry tag will be 4 bytes before that
 //max heap used to auto connect unused regions
-void freeHeap(uchar* heap, uint maxHeap, href index, bool mergeMarked) {
-    uint tag = getHeapInt( heap, index );
+void freeHeap(uchar* heap, uint maxHeap, href index, bool mergeUnmarked) {
+    href tagPos = index - 4;
+    uint tag = getHeapInt( heap, tagPos );
     uint chunkSize = SIZE_MASK & tag;
 
-    uint i = index + chunkSize;
+    href i = tagPos + chunkSize;
     while( i < maxHeap ) {
         uint nextTag = getHeapInt(heap, i);
         if((nextTag & USE_FLAG) > 0) //next in use
-            if(!mergeMarked || (mergeMarked && (nextTag & MARK_FLAG) == 0) ) //not merging marked or are merging, but not marked
+            if(!mergeUnmarked || (mergeUnmarked && (nextTag & MARK_FLAG) == 0) ) //not merging marked or are merging, but not marked
                 break; //no merge on this tag
         
-        uint nextSize = nextTag & SIZE_MASK + 4; //+4 from the tag that would be removed
+        uint nextSize = nextTag & SIZE_MASK;
         if( chunkSize + nextSize <= chunkSize )  //overflow check
             break; //overflow
         
@@ -155,9 +156,9 @@ void freeHeap(uchar* heap, uint maxHeap, href index, bool mergeMarked) {
         if( i + nextSize -4 <= i ) //another overflow check
             break;
 
-        i += nextSize - 4;
+        i += nextSize;
     }
-    putHeapInt( heap, index, chunkSize );
+    putHeapInt( heap, tagPos, chunkSize );
 }
 
 void _setMarkTag(uchar* heap, href index, bool marked) {
