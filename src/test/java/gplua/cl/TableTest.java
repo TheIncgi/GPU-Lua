@@ -220,15 +220,15 @@ class TableTest extends TestBase {
 		
 		href myKey = allocateHeap( heap, maxHeapSize, 5 );
 		heap[myKey] = T_INT;
-		putHeapInt( heap, myKey+1, TABLE_INIT_ARRAY_SIZE );
+		putHeapInt( heap, myKey+1, TABLE_INIT_ARRAY_SIZE + 1 ); //table is 1 indexed
 		
 		href myValue = allocateHeap( heap, maxHeapSize, 5 );
 		heap[myValue] = T_INT;
 		putHeapInt( heap, myValue+1, 0x11223344 );
 		
-		href newArrayPart = tableCreateArrayPart( heap, maxHeapSize, myTable );
-		 
 		tableRawSet( heap, maxHeapSize, myTable, myKey, myValue );
+		 
+		href newArrayPart = tableGetArrayPart( heap, myTable );
 		
 		putHeapInt( errorOutput, 0, myTable );
 		putHeapInt( errorOutput, 4, arrayPart );
@@ -264,15 +264,18 @@ class TableTest extends TestBase {
 		var hashedPart = readIntAt(tableInfo.data(), 5);
 		assertEquals(0, hashedPart, "hashed part created, may not have been able to resize array part");
 		
-		var arrayInfo = getChunkData(data, newArrayIndex);
+		var oldArrayInfo = getChunkData(data, arrayPart);
+		assertFalse(oldArrayInfo.inUse(), "old array part should not be in use after resize");
 		
-		var arraySize = readIntAt(arrayInfo.data(), 1);
-		assertEquals(initArraySize + 1, arraySize, "array size incorrect");
+		var arrayInfo = getChunkData(data, newArrayIndex);
 		
 		var arrayCapacity = readIntAt(arrayInfo.data(), 5);
 		assertEquals(expectedResize, arrayCapacity, "array capacity incorrect");
 		
-		var arrayV5Index = readIntAt(arrayInfo.data(), 9 + 4 * 5);
+		var arraySize = readIntAt(arrayInfo.data(), 1);
+		assertEquals(initArraySize + 1, arraySize, "array size incorrect");
+		
+		var arrayV5Index = readIntAt(arrayInfo.data(), 9 + 4 * initArraySize);
 		assertEquals(valueIndex, arrayV5Index, "first pointer of array should point to the int value on the heap");
 		
 		var storedValueChunk = getChunkData(data, arrayV5Index);

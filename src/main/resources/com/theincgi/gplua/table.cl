@@ -100,11 +100,11 @@ bool tableRawSet( uchar* heap, uint maxHeapSize, href tableIndex, href key, href
 
         if( arrayPart != 0 ) {
             uint capacity = arrayCapacity( heap, arrayPart );
-
-            if( 0 <= key && key <= capacity ) {                 //in array range, including end (first empty)
-                if( key == capacity ) {                         //appending, may need to grow array
+            if( 0 <= keyIndex && keyIndex <= capacity ) {                 //in array range, including end (first empty)
+                if( keyIndex == capacity ) {                         //appending, may need to grow array
                     //erase is skipped incase it's in the hash part
                     if( !erase && tableResizeArray( heap, maxHeapSize, tableIndex, resizeRule( capacity ))) {
+                        arrayPart = tableGetArrayPart( heap, tableIndex ); // may have changed
                         arraySet( heap, arrayPart, keyIndex, value );
                         return true;
                     } //if resizing fails we'll try the hash part claiming out of memory
