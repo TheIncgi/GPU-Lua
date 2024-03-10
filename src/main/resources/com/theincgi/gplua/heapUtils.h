@@ -34,6 +34,7 @@ href allocateHeap(uchar* heap, uint maxHeap, uint size);
 
 
 uint heapObjectLength(uchar* heap, href index);
+uint heapObjectGrowthLimit( uchar* heap, uint maxHeapSize, href index );
 uint _hashCode(uchar* bytes, int offset, int length);
 
 //return the hash code for an int object without needing it on the heap

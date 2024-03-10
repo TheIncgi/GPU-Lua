@@ -6,25 +6,14 @@ import static org.junit.jupiter.api.Assertions.*;
 import java.io.ByteArrayInputStream;
 import java.io.DataInputStream;
 import java.io.IOException;
-import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.List;
 
-import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import com.nativelibs4java.opencl.CLContext;
 import com.nativelibs4java.opencl.CLEvent;
-import com.nativelibs4java.opencl.CLKernel;
-import com.nativelibs4java.opencl.CLProgram;
-import com.nativelibs4java.opencl.CLQueue;
-import com.nativelibs4java.opencl.JavaCL;
-import com.nativelibs4java.opencl.CLMem.Usage;
-import com.theincgi.gplua.cl.ByteArray1D;
-import com.theincgi.gplua.cl.IntArray1D;
 import com.theincgi.gplua.cl.LuaTypes;
 
-public class AllocationTest {
+public class AllocationTest extends TestBase {
 	
 	public static final String header = 
 	"""
@@ -49,45 +38,20 @@ public class AllocationTest {
 	
 	public static final String footer = "\n}";
 	
-	public static final int USE_FLAG  = 0x80000000,
-							MARK_FLAG = 0x40000000,
-							SIZE_MASK = 0x3FFFFFFF;
-	
-	static CLProgram program;
-	static CLQueue queue;
-	static CLContext context;
-	static CLKernel kernel;
-	
-	static ByteArray1D heap, errOut;
-	static IntArray1D stackSizes;
 	
 	
 	@BeforeEach
 	void setup() {
-		System.out.println("\n==========SETUP==========");
-		context = JavaCL.createBestContext();
-		queue = context.createDefaultOutOfOrderQueue();
-		heap = new ByteArray1D(context, Usage.InputOutput);
-		errOut = new ByteArray1D(context, Usage.InputOutput);
-		stackSizes = new IntArray1D(context, Usage.Input);
+		super.setup();
 	}
 	
+	@Override
 	public void setupProgram( String src ) {
-		program = context.createProgram(header + src + footer);
-//		program.addInclude(System.getProperty("user.dir")+"/src/main/resources/com/theincgi/gplua");
-		program.addInclude("src/main/resources/com/theincgi/gplua");
-		program = program.build();
-		kernel = program.createKernel("exec");
-		kernel.setArgs(stackSizes.arg(), heap.arg(), errOut.arg());
+		super.setupProgram(header + src + footer);
 	}
 	
-	public List<CLEvent> setBufferSizes( int heap, int err ) {
-		var eList = new ArrayList<CLEvent>();
-		eList.add(AllocationTest.heap.fillEmpty(heap, queue));
-		eList.add(AllocationTest.errOut.fillEmpty(err, queue));
-		eList.add(stackSizes.loadData(new int[] {heap, err}, queue));
-		return eList;
-	}
+	
+	
 	
 	@Test
 	void heapInit() throws IOException {
@@ -295,9 +259,7 @@ public class AllocationTest {
 		assertEquals("Tag size wrong", 9, tag2 & SIZE_MASK); //merges with unused section 
 	}
 	
-	boolean isUseFlag( int tag ) {
-		return (tag & USE_FLAG) != 0;
-	}
+	
 
 
 }

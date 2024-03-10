@@ -277,7 +277,7 @@ void markHeap( uint* luaStack, uchar* heap, uint maxHeap, href globalsIndex ) {
 void sweepHeap( uchar* heap, uint maxHeap ) {
     href index = HEAP_RESERVE;
     uint tag = getHeapInt(heap, index);
-    
+
     do {
         if((tag & SIZE_MASK) == 0 )
             break; //should only happen at the end of the heap

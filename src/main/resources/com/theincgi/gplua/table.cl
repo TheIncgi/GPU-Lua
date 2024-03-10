@@ -2,12 +2,15 @@
 #include"common.cl"
 #include"heapUtils.h"
 #include"array.h"
+#include"hashmap.h"
 #include"types.cl"
 
 //may return 0 if not enough memory
 href newTable(uchar* heap, uint maxHeapSize) {
     //no array, hash or metatable filled in on a new table
-    return allocateHeap( heap, maxHeapSize, 13);
+    href index = allocateHeap( heap, maxHeapSize, 13);
+    heap[index] = T_TABLE;
+    return index;
 }
 
 href tableGetArrayPart( uchar* heap, href heapIndex ) {
@@ -34,7 +37,7 @@ href tableCreateArrayPart( uchar* heap, uint maxHeapSize, href tableHeapIndex ) 
     if( current != 0 )
         return current; //already exists
     
-    href arrayPart = allocateArray( heap, maxHeapSize, TABLE_INIT_ARRAY_SIZE );
+    href arrayPart = newArray( heap, maxHeapSize, TABLE_INIT_ARRAY_SIZE );
     
     if( arrayPart == 0 )
         return false; //couldn't create array
@@ -97,7 +100,7 @@ bool tableRawSet( uchar* heap, uint maxHeapSize, href tableIndex, href key, href
             arrayPart = tableCreateArrayPart( heap, maxHeapSize, tableIndex );
 
         if( arrayPart != 0 ) {
-            uint capacity = tableCapacity( heap, arrayPart );
+            uint capacity = arrayCapacity( heap, arrayPart );
 
             if( 0 <= key && key <= capacity ) {                 //in array range, including end (first empty)
                 if( key == capacity ) {                         //appending, may need to grow array

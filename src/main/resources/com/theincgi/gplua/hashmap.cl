@@ -1,17 +1,10 @@
-#ifndef HASHMAP_CL
-#define HASHMAP_CL
 
-#define MAP_MAX_SEARCH 10
-
+#include"hashmap.h"
 #include"heapUtils.h"
 #include"common.cl"
 #include"types.cl"
 #include"comparison.cl"
 #include"array.h"
-
-bool resizeHashmap(uchar* heap, uint maxHeapSize, href oldHashMapUIndex,  uint newCapacity);
-
-
 
 href newHashmap(uchar* heap, uint maxHeapSize, uint capacity) {
     href mapIndex = allocateHeap( heap, maxHeapSize, 13);
@@ -184,5 +177,3 @@ bool resizeHashmap(uchar* heap, uint maxHeapSize, href mapIndex,  uint newCapaci
 
     return true;
 }
-
-#endif
