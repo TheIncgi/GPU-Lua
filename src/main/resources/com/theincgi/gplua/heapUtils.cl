@@ -141,7 +141,7 @@ void freeHeap(uchar* heap, uint maxHeap, href index, bool mergeUnmarked) {
     while( i < maxHeap ) {
         uint nextTag = getHeapInt(heap, i);
         if((nextTag & USE_FLAG) > 0) //next in use
-            if(!mergeUnmarked || (mergeUnmarked && (nextTag & MARK_FLAG) == 0) ) //not merging marked or are merging, but not marked
+            if(!mergeUnmarked || (mergeUnmarked && (nextTag & MARK_FLAG) != 0) ) //not merging marked or are merging, but not marked
                 break; //no merge on this tag
         
         uint nextSize = nextTag & SIZE_MASK;
@@ -277,6 +277,7 @@ void markHeap( uint* luaStack, uchar* heap, uint maxHeap, href globalsIndex ) {
 void sweepHeap( uchar* heap, uint maxHeap ) {
     href index = HEAP_RESERVE;
     uint tag = getHeapInt(heap, index);
+    
     do {
         if((tag & SIZE_MASK) == 0 )
             break; //should only happen at the end of the heap
@@ -289,6 +290,6 @@ void sweepHeap( uchar* heap, uint maxHeap ) {
         }
 
         index += (tag & SIZE_MASK);
-
-    }while( index <= maxHeap );
+        tag = getHeapInt(heap, index);
+    }while( index < maxHeap-4 );
 }

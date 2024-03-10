@@ -11,6 +11,7 @@ import java.util.Arrays;
 import java.util.List;
 
 import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import com.nativelibs4java.opencl.CLContext;
 import com.nativelibs4java.opencl.CLEvent;
@@ -61,8 +62,8 @@ public class AllocationTest {
 	static IntArray1D stackSizes;
 	
 	
-	@BeforeAll
-	static void setup() {
+	@BeforeEach
+	void setup() {
 		System.out.println("\n==========SETUP==========");
 		context = JavaCL.createBestContext();
 		queue = context.createDefaultOutOfOrderQueue();
@@ -250,10 +251,49 @@ public class AllocationTest {
 		tag = dis.readInt();
 		System.out.println( "Tag 2: " + tag + " | 0x"+Integer.toHexString(tag) + " | " + Integer.toBinaryString(tag));
 		assertFalse(isUseFlag(tag), "Second tag must not be in use");
-		assertEquals("First tag must not be marked", 0, tag & MARK_FLAG);
+		assertEquals("Second tag must not be marked", 0, tag & MARK_FLAG);
 		assertEquals("Tag size wrong", 18, tag & SIZE_MASK); //merges with unused section 
 	}
 	
+	@Test
+	void markAndSweep() throws IOException {
+		var events = setBufferSizes( 32, 512 );
+		setupProgram("""
+		initHeap( heap, maxHeapSize );
+		href objA = allocateHeap( heap, maxHeapSize, 5 );
+		href objB = allocateHeap( heap, maxHeapSize, 5 );
+		putHeapInt( errorOutput, 0, objA );
+		putHeapInt( errorOutput, 4, objB );
+		
+		_setMarkTag( heap, objB-4, true ); //keep objB
+		
+		sweepHeap( heap, maxHeapSize );
+		""");
+		
+		var done = kernel.enqueueNDRange(queue, new int[] {1}, events.toArray(new CLEvent[events.size()]));
+		var data = heap.readData(queue, done);
+		
+		System.out.println(Arrays.toString(data));
+		DataInputStream dis = new DataInputStream(new ByteArrayInputStream(data));
+		
+		dis.skip(5);
+		
+		//Check tag 1
+		int tag1 = dis.readInt();
+		dis.skip(5);
+		int tag2 = dis.readInt();
+		System.out.println( "Tag 1: " + tag1 + " | 0x"+Integer.toHexString(tag1) + " | " + Integer.toBinaryString(tag1));
+		System.out.println( "Tag 2: " + tag2 + " | 0x"+Integer.toHexString(tag2) + " | " + Integer.toBinaryString(tag2));
+		//System.out.println("Debug: " + Arrays.toString(errOut.readData(queue)));
+		
+		assertFalse( isUseFlag(tag1), "First tag must not be in use");
+		assertEquals("First tag must not be marked", 0, tag1 & MARK_FLAG);
+		assertEquals("Tag size wrong", 9, tag1 & SIZE_MASK);
+		
+		assertTrue(isUseFlag(tag2), "Second tag must be in use");
+		assertEquals("Second tag must not be marked", 0, tag2 & MARK_FLAG);
+		assertEquals("Tag size wrong", 9, tag2 & SIZE_MASK); //merges with unused section 
+	}
 	
 	boolean isUseFlag( int tag ) {
 		return (tag & USE_FLAG) != 0;
