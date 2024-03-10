@@ -198,13 +198,85 @@ class TableTest extends TestBase {
 		var arrayInfo = getChunkData(data, arrayPart);
 		
 		var arraySize = readIntAt(arrayInfo.data(), 1);
+		assertEquals(1, arraySize, "array size incorrect");
+
 		var arrayV1Index = readIntAt(arrayInfo.data(), 9 /*+ 4 * 0*/);
+		assertEquals(valueIndex, arrayV1Index, "first pointer of array should point to the int value on the heap");
 		
 		var storedValueChunk = getChunkData(data, arrayV1Index);
 		var storedValue = readIntAt(storedValueChunk.data(), 1);
 		
-		assertEquals(1, arraySize, "array size incorrect");
-		assertEquals(valueIndex, arrayV1Index, "first pointer of array should point to the int value on the heap");
+		
+		assertEquals(0x11223344, storedValue, "stored value doesn't match");
+	}
+	
+	@Test
+	void insertOutOfTableArrayCapacity() throws IOException {
+		var events = setBufferSizes( 140, 512 );
+		setupProgram("""
+		initHeap( heap, maxHeapSize );
+		href myTable = newTable( heap, maxHeapSize );
+		href arrayPart = tableCreateArrayPart( heap, maxHeapSize, myTable ); 
+		
+		href myKey = allocateHeap( heap, maxHeapSize, 5 );
+		heap[myKey] = T_INT;
+		putHeapInt( heap, myKey+1, TABLE_INIT_ARRAY_SIZE );
+		
+		href myValue = allocateHeap( heap, maxHeapSize, 5 );
+		heap[myValue] = T_INT;
+		putHeapInt( heap, myValue+1, 0x11223344 );
+		
+		href newArrayPart = tableCreateArrayPart( heap, maxHeapSize, myTable );
+		 
+		tableRawSet( heap, maxHeapSize, myTable, myKey, myValue );
+		
+		putHeapInt( errorOutput, 0, myTable );
+		putHeapInt( errorOutput, 4, arrayPart );
+		putHeapInt( errorOutput, 8, myKey );
+		putHeapInt( errorOutput, 12, myValue );
+		putHeapInt( errorOutput, 16, TABLE_INIT_ARRAY_SIZE );
+		putHeapInt( errorOutput, 20, resizeRule( TABLE_INIT_ARRAY_SIZE ));
+		putHeapInt( errorOutput, 24, newArrayPart);
+		""");
+		
+		var done = kernel.enqueueNDRange(queue, new int[] {1}, events.toArray(new CLEvent[events.size()]));
+		var data = heap.readData(queue, done);
+		var log  = errOut.readData(queue);
+		DataInputStream dis = new DataInputStream(new ByteArrayInputStream(log));
+		
+		int tableIndex = dis.readInt();
+		assertNotEquals(0, tableIndex, "failed to allocate table, more memory or missing return?");
+		int arrayPart = dis.readInt();
+		assertNotEquals(0, arrayPart, "failed to allocate array part, more memory or missing return?");
+		int keyIndex = dis.readInt();
+		assertNotEquals(0, keyIndex, "failed to allocate the int key to put into the table");
+		int valueIndex = dis.readInt();
+		assertNotEquals(0, valueIndex, "failed to allocate the int value to put into the table");
+		int initArraySize = dis.readInt();
+		int expectedResize = dis.readInt();
+		assertTrue( initArraySize < expectedResize, "resized array isn't bigger" );
+		int newArrayIndex = dis.readInt();
+		
+		//keeps old array and defaults to hashed part
+		//assertNotEquals(0, newArrayIndex, "failed to allocate space for the resized array");
+		
+		var tableInfo = getChunkData(data, tableIndex);
+		var hashedPart = readIntAt(tableInfo.data(), 5);
+		assertEquals(0, hashedPart, "hashed part created, may not have been able to resize array part");
+		
+		var arrayInfo = getChunkData(data, newArrayIndex);
+		
+		var arraySize = readIntAt(arrayInfo.data(), 1);
+		assertEquals(initArraySize + 1, arraySize, "array size incorrect");
+		
+		var arrayCapacity = readIntAt(arrayInfo.data(), 5);
+		assertEquals(expectedResize, arrayCapacity, "array capacity incorrect");
+		
+		var arrayV5Index = readIntAt(arrayInfo.data(), 9 + 4 * 5);
+		assertEquals(valueIndex, arrayV5Index, "first pointer of array should point to the int value on the heap");
+		
+		var storedValueChunk = getChunkData(data, arrayV5Index);
+		var storedValue = readIntAt(storedValueChunk.data(), 1);
 		
 		assertEquals(0x11223344, storedValue, "stored value doesn't match");
 	}

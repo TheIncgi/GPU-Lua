@@ -90,13 +90,12 @@ bool tableResizeArray( uchar* heap, uint maxHeapSize, href tableIndex, uint newS
 bool tableRawSet( uchar* heap, uint maxHeapSize, href tableIndex, href key, href value ) {
     uchar keyType = heap[key];
     bool  erase   = heap[value] == 0;
-
     if( keyType == T_INT ) {
         int keyIndex = getHeapInt( heap, key + 1 ) - 1;     //signed, convert from 1 to 0 indexing
         href arrayPart = tableGetArrayPart( heap, tableIndex );
         
-        //initialize if index is in the first 4 slots
-        if( arrayPart == 0 && 0 <= keyIndex && keyIndex < 4)
+        //initialize if index is in the first TABLE_INIT_ARRAY_SIZE slots
+        if( arrayPart == 0 && 0 <= keyIndex && keyIndex < TABLE_INIT_ARRAY_SIZE)
             arrayPart = tableCreateArrayPart( heap, maxHeapSize, tableIndex );
 
         if( arrayPart != 0 ) {
