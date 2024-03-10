@@ -162,4 +162,50 @@ class TableTest extends TestBase {
 		assertEquals("keys of hashmap should have HASHMAP_INIT_SIZE capacity", initHashSize, keysSize);
 		assertEquals("vals of hashmap should have HASHMAP_INIT_SIZE capacity", initHashSize, valsSize);
 	}
+	
+	@Test
+	void insertIntoTableArrayCapacity() throws IOException {
+		var events = setBufferSizes( 140, 512 );
+		setupProgram("""
+		initHeap( heap, maxHeapSize );
+		href myTable = newTable( heap, maxHeapSize );
+		href arrayPart = tableCreateArrayPart( heap, maxHeapSize, myTable ); 
+		
+		href myValue = allocateHeap( heap, maxHeapSize, 5 );
+		heap[myValue] = T_INT;
+		putHeapInt( heap, myValue+1, 0x11223344 );
+		
+		arraySet( heap, arrayPart, 0, myValue );
+		
+		putHeapInt( errorOutput, 0, myTable );
+		putHeapInt( errorOutput, 4, arrayPart );
+		putHeapInt( errorOutput, 8, myValue );
+		""");
+		
+		var done = kernel.enqueueNDRange(queue, new int[] {1}, events.toArray(new CLEvent[events.size()]));
+		var data = heap.readData(queue, done);
+		var log  = errOut.readData(queue);
+		DataInputStream dis = new DataInputStream(new ByteArrayInputStream(log));
+		
+		int tableIndex = dis.readInt();
+		assertNotEquals(0, tableIndex, "failed to allocate table, more memory or missing return?");
+		int arrayPart = dis.readInt();
+		assertNotEquals(0, arrayPart, "failed to allocate array part, more memory or missing return?");
+		int valueIndex = dis.readInt();
+		assertNotEquals(0, valueIndex, "failed to allocate the int value to put into the array");
+		
+		//var tableInfo = getChunkData(data, tableIndex);
+		var arrayInfo = getChunkData(data, arrayPart);
+		
+		var arraySize = readIntAt(arrayInfo.data(), 1);
+		var arrayV1Index = readIntAt(arrayInfo.data(), 9 /*+ 4 * 0*/);
+		
+		var storedValueChunk = getChunkData(data, arrayV1Index);
+		var storedValue = readIntAt(storedValueChunk.data(), 1);
+		
+		assertEquals(1, arraySize, "array size incorrect");
+		assertEquals(valueIndex, arrayV1Index, "first pointer of array should point to the int value on the heap");
+		
+		assertEquals(0x11223344, storedValue, "stored value doesn't match");
+	}
 }
