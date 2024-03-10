@@ -48,6 +48,11 @@ public class ByteArray1D {
 		return buffer.write(queue, pointer, false);
 	}
 	
+	public byte[] readData(CLQueue queue, CLEvent... waitFor) {
+		var ptr = buffer.read(queue, waitFor);
+		return ptr.getBytes();
+	}
+	
 	public CLBuffer<Byte> arg() {
 		return buffer;
 	}

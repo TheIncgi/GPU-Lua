@@ -111,7 +111,7 @@ public class CLIncludeTest {
 		
 		var event = kernel.enqueueNDRange(queue, new int[] {1}, eventsArray);
 		
-		var data = kernelArgs.errorBuffer.readData(queue, event);
+		var data = kernelArgs.errorBuffer.readStrData(queue, event);
 		
 		//flat for debug
 		var flat = LuaSrcUtil.parseBytecode(LuaSrcUtil.readBytecode("print.out"));

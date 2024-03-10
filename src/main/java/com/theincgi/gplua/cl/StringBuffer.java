@@ -29,7 +29,7 @@ public class StringBuffer extends ByteArray1D {
 		return loadData(charList, queue);
 	}
 	
-	public String readData(CLQueue queue, CLEvent... waitFor) {
+	public String readStrData(CLQueue queue, CLEvent... waitFor) {
 		var ptr = buffer.read(queue, waitFor);
 		var bytes = ptr.getBytes();
 		var len = (bytes[0] << 8) | bytes[1];
