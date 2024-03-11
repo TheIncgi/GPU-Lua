@@ -113,7 +113,6 @@ href newNativeFunction( uchar* heap, uint maxHeapSize, uint id, href label ) {
     heap[nf] = T_NATIVE_FUNC;
     putHeapInt( heap, nf + 1, id );
     putHeapInt( heap, nf + 5, label );
-
     return nf;
 }
 
@@ -125,6 +124,7 @@ bool globals_registerNF(uchar* heap, uint maxHeapSize, href stringTable, href ta
         href nf = newNativeFunction(heap, maxHeapSize, id, label); 
         if (nf == 0) 
             return false;
+        
         if (!tableRawSet(heap, maxHeapSize, table, label, nf))
             return false;
         
@@ -161,7 +161,7 @@ href createMathModule( uchar* heap, uint maxHeapSize, href stringTable) {
     // if(!globals_registerNF(heap, maxHeapSize, stringTable, mathModule, NF_MATH_POW,             "pow")) return 0;
     // if(!globals_registerNF(heap, maxHeapSize, stringTable, mathModule, NF_MATH_ATAN2,           "atan2")) return 0;
     // if(!globals_registerNF(heap, maxHeapSize, stringTable, mathModule, NF_MATH_SIN,             "sin")) return 0;
-
+    
     return mathModule;
 }
 
@@ -178,10 +178,9 @@ href createGlobals( uchar* heap, uint maxHeapSize, href stringTable ) {
     moduleName = "math";
     moduleNameHref = heapString( heap, maxHeapSize, stringTable, moduleName );
     if( moduleNameHref == 0 ) return 0;
-
     moduleTableHref = createMathModule( heap, maxHeapSize, stringTable );
     if(moduleTableHref == 0) return 0;
-    
+
     tableRawSet( heap, maxHeapSize, globalsTable, moduleNameHref, moduleTableHref ); //OUT OF RESOURCES CAUSED AROUND HEREISH
 
     return globalsTable;

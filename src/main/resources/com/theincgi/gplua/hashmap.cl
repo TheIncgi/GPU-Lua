@@ -17,7 +17,6 @@ href newHashmap(uchar* heap, uint maxHeapSize, uint capacity) {
     if(valsIndex == 0) return 0;
 
     heap[mapIndex] = T_HASHMAP;
-    // putHeapInt( heap, mapIndex + 4,          0);
     putHeapInt( heap, mapIndex + 1, keysIndex );
     putHeapInt( heap, mapIndex + 5, valsIndex );
 
@@ -32,7 +31,6 @@ bool hashmapPut( uchar* heap, uint maxHeap, href mapIndex, href keyHeapIndex, hr
     uint capacity = arrayCapacity( heap, keysPart );
     bool isErase  = valueHeapIndex == 0;
     uint hashIndex = keyHash % capacity;
-
     bool foundEmpty = false;
     uint firstEmpty = 0;
     uint searchLimit = MAP_MAX_SEARCH < capacity ? MAP_MAX_SEARCH : capacity;
@@ -40,12 +38,9 @@ bool hashmapPut( uchar* heap, uint maxHeap, href mapIndex, href keyHeapIndex, hr
         uint i = (hashIndex + offset) % capacity;
         href globalKeyIndex = keysPart + i;
         if(heapEquals( heap, arrayGet(heap, keysPart, i), keyHeapIndex)) { //value in stored keys == provided key
-
-            //if( isErase || arrayGet( heap, keysPart, i ) == 0) { //removing value or no key is present
-                arraySet( heap, keysPart, i, isErase ? 0 : keyHeapIndex );     //add or remove key
-                arraySet( heap, valsPart, i, valueHeapIndex );                //set value
-                return true; //found and removed or set
-            //}    
+            arraySet( heap, keysPart, i, isErase ? 0 : keyHeapIndex );     //add or remove key
+            arraySet( heap, valsPart, i, valueHeapIndex );                //set value
+            return true; //found and removed or set
         } else if( !foundEmpty && arrayGet( heap, keysPart, i) == 0 ) {
             foundEmpty = true;
             firstEmpty = i;
@@ -55,12 +50,11 @@ bool hashmapPut( uchar* heap, uint maxHeap, href mapIndex, href keyHeapIndex, hr
     if( isErase )
         return true; //not found, nothing to remove
 
-
     if( foundEmpty ) {
         arraySet( heap, keysPart, firstEmpty, keyHeapIndex );
         arraySet( heap, valsPart, firstEmpty, valueHeapIndex );
         return true;
-    } 
+    }
     
     //resize until there's a close enough gap or fail
     while(true) {

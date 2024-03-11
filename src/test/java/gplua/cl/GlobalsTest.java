@@ -54,7 +54,7 @@ class GlobalsTest extends TestBase {
 	
 	@Test
 	void checkContents() throws IOException {
-		var events = setBufferSizes( 2512, 512 );
+		var events = setBufferSizes( 800, 512 );
 		long start = System.currentTimeMillis();
 		setupProgram("""
 		initHeap( heap, maxHeapSize );

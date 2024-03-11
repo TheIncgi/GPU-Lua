@@ -118,6 +118,6 @@ bool tableRawSet( uchar* heap, uint maxHeapSize, href tableIndex, href key, href
     href hashedPart = tableCreateHashedPart( heap, maxHeapSize, tableIndex );
     if( hashedPart == 0 )
         return false; //out of memory
-
+    
     return hashmapPut( heap, maxHeapSize, hashedPart, key, value );
 }

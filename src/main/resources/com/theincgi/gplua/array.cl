@@ -54,6 +54,10 @@ href arrayGet( uchar* heap, href heapIndex, int index ) {
 }
 
 void arraySet( uchar* heap, href heapIndex, int index, href val ) {
+    uint capacity = arrayCapacity(heap, heapIndex);
+    if(index >= capacity)
+        return; //out of bounds
+
     uint valPos = heapIndex + 9 + index * 4;
     uint size = arraySize( heap, heapIndex );
 
@@ -64,7 +68,6 @@ void arraySet( uchar* heap, href heapIndex, int index, href val ) {
             //reduce size by 1
             putHeapInt( heap, heapIndex + 1, size - 1 );
         } else { //find first nil
-            uint capacity = arrayCapacity( heap, heapIndex );
             uint newSize = capacity;
             for(int i = 0; i < capacity; i++) {
                 if(arrayGet( heap, heapIndex, i) == 0)

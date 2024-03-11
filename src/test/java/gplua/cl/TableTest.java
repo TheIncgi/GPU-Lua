@@ -396,7 +396,7 @@ class TableTest extends TestBase {
 		
 		var done = kernel.enqueueNDRange(queue, new int[] {1}, events.toArray(new CLEvent[events.size()]));
 		var data = heap.readData(queue, done);
-		dumpHeap(data);
+//		dumpHeap(data);
 		var log  = errOut.readData(queue);
 		DataInputStream dis = new DataInputStream(new ByteArrayInputStream(log));
 		
@@ -490,7 +490,7 @@ class TableTest extends TestBase {
 		
 		var done = kernel.enqueueNDRange(queue, new int[] {1}, events.toArray(new CLEvent[events.size()]));
 		var data = heap.readData(queue, done);
-		dumpHeap(data);
+//		dumpHeap(data);
 		var log  = errOut.readData(queue);
 		DataInputStream dis = new DataInputStream(new ByteArrayInputStream(log));
 		

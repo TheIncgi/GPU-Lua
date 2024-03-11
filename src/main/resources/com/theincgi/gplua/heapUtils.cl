@@ -36,16 +36,15 @@ void initHeap(uchar* heap, uint maxHeap) {
 //allocation index of 0 indicates failure
 //returns index of first byte in the new chunk on success
 href allocateHeap(uchar* heap, uint maxHeap, uint size) {
-    if(size > SIZE_MASK)
-        return 0;
-
     uint sizeWithTag = size+4;
     uint index = HEAP_RESERVE;
     while(index < (maxHeap-(long)sizeWithTag-4)) { //not near end of heap, needs space for the tag before and after user data
         uint tag = getHeapInt(heap, index);
 
         uint chunkSize = tag & SIZE_MASK;
-        if(chunkSize >= sizeWithTag &&         //size check
+        bool sizeOK = (chunkSize - 4 >= sizeWithTag) //tag safety margin, partial overlap will destroy the next tag
+                      || (chunkSize == sizeWithTag); //exact match, awesome
+        if(sizeOK &&         //size check
             ((tag & USE_FLAG ) == 0)) { //not used check
              //use flag only, mark flag is 0 on a new chunk
             putHeapInt(heap, index, sizeWithTag | USE_FLAG);
