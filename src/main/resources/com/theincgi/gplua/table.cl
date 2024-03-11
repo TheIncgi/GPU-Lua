@@ -89,7 +89,7 @@ bool tableResizeArray( uchar* heap, uint maxHeapSize, href tableIndex, uint newS
 
 bool tableRawSet( uchar* heap, uint maxHeapSize, href tableIndex, href key, href value ) {
     uchar keyType = heap[key];
-    bool  erase   = heap[value] == 0;
+    bool  erase   = value == 0;
     if( keyType == T_INT ) {
         int keyIndex = getHeapInt( heap, key + 1 ) - 1;     //signed, convert from 1 to 0 indexing
         href arrayPart = tableGetArrayPart( heap, tableIndex );

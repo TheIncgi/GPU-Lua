@@ -5,6 +5,9 @@ import static org.junit.jupiter.api.Assertions.*;
 import java.io.ByteArrayInputStream;
 import java.io.DataInputStream;
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.StringJoiner;
 
 import static org.junit.Assert.assertEquals;
 
@@ -451,6 +454,76 @@ class TableTest extends TestBase {
 				return;
 		}
 		fail("couldn't find x in keys");
+		
+	}
+	
+	@Test
+	void multiString() throws IOException {
+		var events = setBufferSizes( 256, 512 );
+		setupProgram("""
+		initHeap( heap, maxHeapSize );
+		href myTable = newTable( heap, maxHeapSize );
+		href hashedPart = tableCreateHashedPart( heap, maxHeapSize, myTable ); 
+		
+		string str1 = "ex1";
+		href hstr1 = heapString(heap, maxHeapSize, myTable, str1); 
+		
+		string str2 = "ex2";
+		href hstr2 = heapString(heap, maxHeapSize, myTable, str2); 
+		
+		string str3 = "ex3";
+		href hstr3 = heapString(heap, maxHeapSize, myTable, str3); 
+		
+		string str4 = "ex4";
+		href hstr4 = heapString(heap, maxHeapSize, myTable, str4); 
+		
+		string str5 = "ex5";
+		href hstr5 = heapString(heap, maxHeapSize, myTable, str5); 
+		
+		putHeapInt( errorOutput, 0, myTable );
+		putHeapInt( errorOutput, 4, hstr1 );
+		putHeapInt( errorOutput, 8, hstr2 );
+		putHeapInt( errorOutput, 12, hstr3 );
+		putHeapInt( errorOutput, 16, hstr4 );
+		putHeapInt( errorOutput, 20, hstr5 );
+		""");
+		
+		var done = kernel.enqueueNDRange(queue, new int[] {1}, events.toArray(new CLEvent[events.size()]));
+		var data = heap.readData(queue, done);
+		dumpHeap(data);
+		var log  = errOut.readData(queue);
+		DataInputStream dis = new DataInputStream(new ByteArrayInputStream(log));
+		
+		int tableIndex = dis.readInt(); // 0
+		int str1 = dis.readInt(); // 4
+		int str2 = dis.readInt(); // 8
+		int str3 = dis.readInt(); // 12
+		int str4 = dis.readInt(); // 16
+		int str5 = dis.readInt(); // 20
+		
+		var tableInfo = getChunkData(data, tableIndex);
+		var hashedInfo = getChunkData(data, tableInfo.tableHashedPart());
+		var keysInfo = getChunkData(data, hashedInfo.hashmapKeys());
+		
+		HashMap<Integer, String> notFound = new HashMap<>();
+		notFound.put(str1, "ex1");
+		notFound.put(str2, "ex2");
+		notFound.put(str3, "ex3");
+		notFound.put(str4, "ex4");
+		notFound.put(str5, "ex5");
+		
+		for(int i = 0; i < keysInfo.arrayCapacity(); i++) {
+			var ref = keysInfo.arrayRef(i);
+			if(ref == 0) continue;
+			notFound.remove(ref);
+		}
+		
+		if(!notFound.isEmpty()) {
+			var msg = new StringJoiner(", ");
+			for(var e : notFound.values())
+				msg.add(e);
+			fail("Couldn't find string entries for " + msg);
+		}
 		
 	}
 }

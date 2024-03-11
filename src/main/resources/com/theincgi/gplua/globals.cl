@@ -167,6 +167,10 @@ href createMathModule( uchar* heap, uint maxHeapSize, href stringTable) {
 
 href createGlobals( uchar* heap, uint maxHeapSize, href stringTable ) {
     href globalsTable = newTable( heap, maxHeapSize );
+    
+    if( globalsTable == 0 )
+        return 0;
+    
     string moduleName;
     href moduleNameHref;
     href moduleTableHref;
@@ -174,9 +178,11 @@ href createGlobals( uchar* heap, uint maxHeapSize, href stringTable ) {
     moduleName = "math";
     moduleNameHref = heapString( heap, maxHeapSize, stringTable, moduleName );
     if( moduleNameHref == 0 ) return 0;
+
     moduleTableHref = createMathModule( heap, maxHeapSize, stringTable );
     if(moduleTableHref == 0) return 0;
-    //tableRawSet( heap, maxHeapSize, globalsTable, moduleNameHref, moduleTableHref ); //OUT OF RESOURCES CAUSED AROUND HEREISH
+    
+    tableRawSet( heap, maxHeapSize, globalsTable, moduleNameHref, moduleTableHref ); //OUT OF RESOURCES CAUSED AROUND HEREISH
 
     return globalsTable;
 }

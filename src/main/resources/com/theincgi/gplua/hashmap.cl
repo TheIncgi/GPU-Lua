@@ -66,7 +66,7 @@ bool hashmapPut( uchar* heap, uint maxHeap, href mapIndex, href keyHeapIndex, hr
         if( !resizeHashmap( heap, maxHeap, mapIndex, resizeRule(capacity) )) // min(cap+128, cap*2)
             return false;
         
-        keysPart = getHeapInt( heap, mapIndex + 1 ); //OUT OF RESOURCES CAUSED AROUND HEREISH
+        keysPart = getHeapInt( heap, mapIndex + 1 );
         valsPart = getHeapInt( heap, mapIndex + 5 );
         if( keysPart == 0 || valsPart == 0)
             return false;
@@ -178,7 +178,7 @@ bool resizeHashmap(uchar* heap, uint maxHeapSize, href mapIndex, uint newCapacit
     }
 
     putHeapInt( heap, mapIndex + 1, newKeysPart );
-    putHeapInt( heap, mapIndex + 5, newValsPart);
+    putHeapInt( heap, mapIndex + 5, newValsPart );
 
     freeHeap( heap, maxHeapSize, oldKeysPart, false );
     freeHeap( heap, maxHeapSize, oldValsPart, false );
