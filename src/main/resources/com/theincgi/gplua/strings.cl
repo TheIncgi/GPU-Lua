@@ -5,7 +5,11 @@
 #include"heapUtils.h"
 #include"types.cl"
 
-href heapString(uchar* heap, uint maxHeapSize, href stringTable, string str, uint strLen) {
+href heapString(uchar* heap, uint maxHeapSize, href stringTable, string str) {
+    return _heapString( heap, maxHeapSize, stringTable, str, strLen(str));
+}
+
+href _heapString(uchar* heap, uint maxHeapSize, href stringTable, string str, uint strLen) {
     href hashedPart = tableCreateHashedPart( heap, maxHeapSize, stringTable );
     
     if( hashedPart == 0 )
@@ -29,7 +33,8 @@ href heapString(uchar* heap, uint maxHeapSize, href stringTable, string str, uin
 
     heap[ stringDataStart + strLen ] = 0; //null terminated, but not counted in length
 
-    tableRawSet( heap, maxHeapSize, stringTable, newString, newString ); //could be a HashSet probably
+    if( !tableRawSet( heap, maxHeapSize, stringTable, newString, newString )) //could be a HashSet probably
+        return 0;
 
     return newString;
 }

@@ -3,6 +3,7 @@
 
 #include"common.cl"
 
-href heapString(uchar* heap, uint maxHeapSize, href stringTable, string str, uint strLen);
+href heapString(uchar* heap, uint maxHeapSize, href stringTable, string str);
+href _heapString(uchar* heap, uint maxHeapSize, href stringTable, string str, uint strLen);
 
 #endif

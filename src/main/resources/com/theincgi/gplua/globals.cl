@@ -5,6 +5,7 @@
 #include"table.h"
 #include"heapUtils.h"
 #include"strings.h"
+#include"types.cl"
 
 typedef enum {
     NF_MATH_LOG = 1,
@@ -26,7 +27,7 @@ typedef enum {
     NF_MATH_ABS,
     NF_MATH_MAX,
     NF_MATH_SQRT,
-    NF_MATH_MDOF,
+    NF_MATH_MODF,
     NF_MATH_SINH,
     NF_MATH_ASIN,
     NF_MATH_MIN,
@@ -103,43 +104,80 @@ typedef enum {
 
 
 
-#define NF(table, id, name) \
-{ \
-        string nameConstant = "foo";\
-        href label = heapString(heap, maxHeapSize, stringTable, nameConstant, strLen(nameConstant));\
-        if (label == 0) \
-            return 0; \
-        href nf = newNativeFunction(heap, maxHeapSize, stringTable, id, label); \
-        if (nf == 0) \
-            return 0; \
-        if (!tableRawSet(heap, maxHeapSize, table, label, nf)) \
-            return 0; \
-}
-
-href newNativeFunction( uchar* heap, uint maxHeapSize, href stringTable, uint id, href label ) {
+href newNativeFunction( uchar* heap, uint maxHeapSize, uint id, href label ) {
     href nf = allocateHeap( heap, maxHeapSize, 9 );
     
     if(nf == 0)
         return 0;
 
+    heap[nf] = T_NATIVE_FUNC;
     putHeapInt( heap, nf + 1, id );
     putHeapInt( heap, nf + 5, label );
 
     return nf;
 }
 
+bool globals_registerNF(uchar* heap, uint maxHeapSize, href stringTable, href table, uint id, string name) {
+        string nameConstant = name;
+        href label = heapString(heap, maxHeapSize, stringTable, nameConstant);
+        if (label == 0) 
+            return false; 
+        href nf = newNativeFunction(heap, maxHeapSize, id, label); 
+        if (nf == 0) 
+            return false;
+        if (!tableRawSet(heap, maxHeapSize, table, label, nf))
+            return false;
+        return true; 
+}
+
 href createMathModule( uchar* heap, uint maxHeapSize, href stringTable) {
     href mathModule = newTable( heap, maxHeapSize );
     
-    NF(mathModule, NF_MATH_LOG, "log");
-    NF(mathModule, NF_MATH_EXP, "exp")
-
+    if(!globals_registerNF(heap, maxHeapSize, stringTable, mathModule, NF_MATH_LOG,              "log")) return 0;
+    if(!globals_registerNF(heap, maxHeapSize, stringTable, mathModule, NF_MATH_EXP,              "exp")) return 0;
+    if(!globals_registerNF(heap, maxHeapSize, stringTable, mathModule, NF_MATH_ACOS,            "acos")) return 0;
+    if(!globals_registerNF(heap, maxHeapSize, stringTable, mathModule, NF_MATH_ATAN,            "atan")) return 0;
+    // if(!globals_registerNF(heap, maxHeapSize, stringTable, mathModule, NF_MATH_LDEXP,           "ldexp")) return 0;
+    // if(!globals_registerNF(heap, maxHeapSize, stringTable, mathModule, NF_MATH_DEG,             "deg")) return 0;
+    // if(!globals_registerNF(heap, maxHeapSize, stringTable, mathModule, NF_MATH_RAD,             "rad")) return 0;
+    // if(!globals_registerNF(heap, maxHeapSize, stringTable, mathModule, NF_MATH_TAN,             "tan")) return 0;
+    // if(!globals_registerNF(heap, maxHeapSize, stringTable, mathModule, NF_MATH_COS,             "cos")) return 0;
+    // if(!globals_registerNF(heap, maxHeapSize, stringTable, mathModule, NF_MATH_COSH,            "cosh")) return 0;
+    // if(!globals_registerNF(heap, maxHeapSize, stringTable, mathModule, NF_MATH_RANDOM,          "random")) return 0;
+    // if(!globals_registerNF(heap, maxHeapSize, stringTable, mathModule, NF_MATH_FREXP,           "frexp")) return 0;
+    // if(!globals_registerNF(heap, maxHeapSize, stringTable, mathModule, NF_MATH_RANDOMSEED,      "randomseed")) return 0;
+    // if(!globals_registerNF(heap, maxHeapSize, stringTable, mathModule, NF_MATH_CEIL,            "ceil")) return 0;
+    // if(!globals_registerNF(heap, maxHeapSize, stringTable, mathModule, NF_MATH_TANH,            "tanh")) return 0;
+    // if(!globals_registerNF(heap, maxHeapSize, stringTable, mathModule, NF_MATH_FLOOR,           "floor")) return 0;
+    // if(!globals_registerNF(heap, maxHeapSize, stringTable, mathModule, NF_MATH_ABS,             "abs")) return 0;
+    // if(!globals_registerNF(heap, maxHeapSize, stringTable, mathModule, NF_MATH_MAX,             "max")) return 0;
+    // if(!globals_registerNF(heap, maxHeapSize, stringTable, mathModule, NF_MATH_SQRT,            "sqrt")) return 0;
+    // if(!globals_registerNF(heap, maxHeapSize, stringTable, mathModule, NF_MATH_MODF,            "modf")) return 0;
+    // if(!globals_registerNF(heap, maxHeapSize, stringTable, mathModule, NF_MATH_SINH,            "sinh")) return 0;
+    // if(!globals_registerNF(heap, maxHeapSize, stringTable, mathModule, NF_MATH_ASIN,            "asin")) return 0;
+    // if(!globals_registerNF(heap, maxHeapSize, stringTable, mathModule, NF_MATH_MIN,             "min")) return 0;
+    // if(!globals_registerNF(heap, maxHeapSize, stringTable, mathModule, NF_MATH_FMOD,            "fmod")) return 0;
+    // if(!globals_registerNF(heap, maxHeapSize, stringTable, mathModule, NF_MATH_POW,             "pow")) return 0;
+    // if(!globals_registerNF(heap, maxHeapSize, stringTable, mathModule, NF_MATH_ATAN2,           "atan2")) return 0;
+    // if(!globals_registerNF(heap, maxHeapSize, stringTable, mathModule, NF_MATH_SIN,             "sin")) return 0;
 
     return mathModule;
 }
 
-href createGlobals( uchar* heap, uint maxHeapSize ) {
+href createGlobals( uchar* heap, uint maxHeapSize, href stringTable ) {
     href globalsTable = newTable( heap, maxHeapSize );
+    string moduleName;
+    href moduleNameHref;
+    href moduleTableHref;
+
+    moduleName = "math";
+    moduleNameHref = heapString( heap, maxHeapSize, stringTable, moduleName );
+    if( moduleNameHref == 0 ) return 0;
+    moduleTableHref = createMathModule( heap, maxHeapSize, stringTable );
+    if(moduleTableHref == 0) return 0;
+    tableRawSet( heap, maxHeapSize, globalsTable, moduleNameHref, moduleTableHref );
+
+    return globalsTable;
 }
 
 

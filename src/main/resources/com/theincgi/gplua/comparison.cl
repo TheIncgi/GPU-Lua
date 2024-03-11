@@ -7,6 +7,9 @@
 
 
 bool heapEquals( uchar* heap, href indexA, href indexB ) {
+    if( indexA == indexB )
+        return true;
+    
     uchar typeA = heap[indexA];
     uchar typeB = heap[indexB];
     

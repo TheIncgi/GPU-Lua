@@ -296,7 +296,7 @@ class TableTest extends TestBase {
 		
 		string str = "example";
 		uint slen = strLen( str );
-		href hstr = heapString(heap, maxHeapSize, myTable, str, slen); 
+		href hstr = heapString(heap, maxHeapSize, myTable, str); 
 		uint hash = hashString( str, slen );
 		uint hashObj = heapHash( heap, hstr );
 		
@@ -348,8 +348,8 @@ class TableTest extends TestBase {
 		
 		string str = "example";
 		uint slen = strLen( str );
-		href hstr = heapString(heap, maxHeapSize, myTable, str, slen); 
-		href hstrCopy = heapString(heap, maxHeapSize, myTable, str, slen); //checks in hashmap
+		href hstr = heapString(heap, maxHeapSize, myTable, str); 
+		href hstrCopy = heapString(heap, maxHeapSize, myTable, str); //checks in hashmap
 		
 		putHeapInt( errorOutput, 0, myTable );
 		putHeapInt( errorOutput, 4, slen );
@@ -359,7 +359,7 @@ class TableTest extends TestBase {
 		
 		var done = kernel.enqueueNDRange(queue, new int[] {1}, events.toArray(new CLEvent[events.size()]));
 		var data = heap.readData(queue, done);
-		dumpHeap(data);
+		//dumpHeap(data);
 		var log  = errOut.readData(queue);
 		DataInputStream dis = new DataInputStream(new ByteArrayInputStream(log));
 		
@@ -371,6 +371,86 @@ class TableTest extends TestBase {
 		int hstrCopyIndex = dis.readInt(); // 12
 		
 		assertEquals(hstrIndex, hstrCopyIndex, "Duplicate strings should return the same index");
+		
+	}
+	
+	@Test
+	void duplicateEntry() throws IOException {
+		var events = setBufferSizes( 128, 512 );
+		setupProgram("""
+		initHeap( heap, maxHeapSize );
+		href myTable = newTable( heap, maxHeapSize );
+		
+		href x = allocateHeap( heap, maxHeapSize, 5 );
+		heap[x] = T_INT;
+		putHeapInt( heap, x + 1, 123 );
+		
+		tableRawSet( heap, maxHeapSize, myTable, x, x );
+		tableRawSet( heap, maxHeapSize, myTable, x, x );
+		
+		putHeapInt( errorOutput, 0, myTable );
+		""");
+		
+		var done = kernel.enqueueNDRange(queue, new int[] {1}, events.toArray(new CLEvent[events.size()]));
+		var data = heap.readData(queue, done);
+		dumpHeap(data);
+		var log  = errOut.readData(queue);
+		DataInputStream dis = new DataInputStream(new ByteArrayInputStream(log));
+		
+		int tableIndex = dis.readInt(); // 0
+		
+		var tableInfo = getChunkData(data, tableIndex);
+		var hashInfo = getChunkData(data, tableInfo.tableHashedPart());
+		var keysInfo = getChunkData(data, hashInfo.hashmapKeys());
+		
+		int matches = 0;
+		for(int i = 0; i < keysInfo.arrayCapacity(); i++) {
+			if( keysInfo.arrayRef(i) != 0)
+				matches ++;
+		}
+		assertEquals(1, matches, "found more than one entry in the hashmap");
+	}
+	
+	@Test
+	void resize() throws IOException {
+		var events = setBufferSizes( 256, 512 );
+		setupProgram("""
+		initHeap( heap, maxHeapSize );
+		href myMap = newHashmap( heap, maxHeapSize, 4 );
+		
+		href x = allocateHeap( heap, maxHeapSize, 5 );
+		heap[x] = T_INT;
+		putHeapInt( heap, x + 1, 123 );
+		
+		hashmapPut( heap, maxHeapSize, myMap, x, x );
+		
+		bool worked = resizeHashmap( heap, maxHeapSize, myMap, 8 );
+		
+		putHeapInt( errorOutput, 0, myMap );
+		putHeapInt( errorOutput, 4, x );
+		putHeapInt( errorOutput, 8, worked ? 1 : 0 );
+		""");
+		
+		var done = kernel.enqueueNDRange(queue, new int[] {1}, events.toArray(new CLEvent[events.size()]));
+		var data = heap.readData(queue, done);
+//		dumpHeap(data);
+		var log  = errOut.readData(queue);
+		DataInputStream dis = new DataInputStream(new ByteArrayInputStream(log));
+		
+		int mapIndex = dis.readInt(); // 0
+		int xIndex = dis.readInt(); // 4
+		int worked = dis.readInt(); // 8
+		
+		assertTrue(worked == 1, "resize failed");
+		
+		var mapInfo = getChunkData(data, mapIndex);
+		var keysInfo = getChunkData(data, mapInfo.hashmapKeys());
+		
+		for( int i = 0; i < keysInfo.arrayCapacity(); i++) {
+			if( keysInfo.arrayRef(i) == xIndex )
+				return;
+		}
+		fail("couldn't find x in keys");
 		
 	}
 }

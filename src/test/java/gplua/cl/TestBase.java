@@ -115,7 +115,7 @@ public class TestBase {
 			return readIntAt(data, offset);
 		}
 		int type() {
-			return data[0];
+			return ((int)data[0]) & 0xFF;
 		}
 		private void assertType(int type) {
 			if(type() != type)
@@ -264,7 +264,7 @@ public class TestBase {
 					break;
 				}
 				default:
-					throw new IllegalArgumentException("Unexpected value: " + type());
+					throw new IllegalArgumentException("Unexpected chunk type: " + type());
 				}
 			} catch (IOException e) {
 				e.printStackTrace();
