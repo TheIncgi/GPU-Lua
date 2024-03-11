@@ -127,6 +127,7 @@ bool globals_registerNF(uchar* heap, uint maxHeapSize, href stringTable, href ta
             return false;
         if (!tableRawSet(heap, maxHeapSize, table, label, nf))
             return false;
+        
         return true; 
 }
 
@@ -175,7 +176,7 @@ href createGlobals( uchar* heap, uint maxHeapSize, href stringTable ) {
     if( moduleNameHref == 0 ) return 0;
     moduleTableHref = createMathModule( heap, maxHeapSize, stringTable );
     if(moduleTableHref == 0) return 0;
-    tableRawSet( heap, maxHeapSize, globalsTable, moduleNameHref, moduleTableHref );
+    //tableRawSet( heap, maxHeapSize, globalsTable, moduleNameHref, moduleTableHref ); //OUT OF RESOURCES CAUSED AROUND HEREISH
 
     return globalsTable;
 }

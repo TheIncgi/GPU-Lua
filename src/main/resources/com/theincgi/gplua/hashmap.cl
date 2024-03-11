@@ -73,9 +73,9 @@ bool hashmapPut( uchar* heap, uint maxHeap, href mapIndex, href keyHeapIndex, hr
 
         capacity = arrayCapacity( heap, keysPart );
         uint searchLimit = MAP_MAX_SEARCH < capacity ? MAP_MAX_SEARCH : capacity;
-        hashIndex = keyHash % MAP_MAX_SEARCH;
+        hashIndex = keyHash % capacity;
         for(uint i = hashIndex, j = 0; j < searchLimit; i = (i + 1) % capacity, j++) {
-            if( arrayGet(heap, keysPart, i) == 0 ) {
+            if( arrayGet( heap, keysPart, i) == 0 ) {
                 arraySet( heap, keysPart, i, keyHeapIndex );     //add key
                 arraySet( heap, valsPart, i, valueHeapIndex );  //set value
                 return true; //found set
