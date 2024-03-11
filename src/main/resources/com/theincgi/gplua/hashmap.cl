@@ -99,7 +99,7 @@ href hashmapStringGet(uchar* heap, href mapIndex, string str, uint strLen) {
     href valsPart = getHeapInt( heap, mapIndex + 5);
     uint capacity = arrayCapacity( heap, keysPart );
     uint hashIndex = mapIndex % capacity;
-
+    
     for(uint i = hashIndex, j = 0; j < MAP_MAX_SEARCH; i = (i + 1) % capacity, j++) { //i = search location (array index) | j = search count
 
         //string equals
@@ -121,7 +121,6 @@ href hashmapStringGet(uchar* heap, href mapIndex, string str, uint strLen) {
         }
         if( !match )
             continue;
-
         
         return heapKey;
     }

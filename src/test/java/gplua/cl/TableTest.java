@@ -20,11 +20,13 @@ class TableTest extends TestBase {
 	"""
 	#include"heapUtils.h"
 	#include"table.h"
+	#include"strings.h"
 	
 	#include"table.cl"
 	#include"array.cl"
 	#include"hashmap.cl"
 	#include"heapUtils.cl"
+	#include"strings.cl"
 	
 	__kernel void exec(
 	    __global const uint* stackSizes,
@@ -273,7 +275,7 @@ class TableTest extends TestBase {
 		assertEquals(expectedResize, arrayCapacity, "array capacity incorrect");
 		
 		var arraySize = readIntAt(arrayInfo.data(), 1);
-		assertEquals(initArraySize + 1, arraySize, "array size incorrect");
+		assertEquals(0, arraySize, "array size incorrect, should be 0 since there's no elements 1..N-1");
 		
 		var arrayV5Index = readIntAt(arrayInfo.data(), 9 + 4 * initArraySize);
 		assertEquals(valueIndex, arrayV5Index, "first pointer of array should point to the int value on the heap");
@@ -282,5 +284,93 @@ class TableTest extends TestBase {
 		var storedValue = readIntAt(storedValueChunk.data(), 1);
 		
 		assertEquals(0x11223344, storedValue, "stored value doesn't match");
+	}
+	
+	@Test
+	void insertIntoHashmap() throws IOException {
+		var events = setBufferSizes( 128, 512 );
+		setupProgram("""
+		initHeap( heap, maxHeapSize );
+		href myTable = newTable( heap, maxHeapSize );
+		href hashedPart = tableCreateHashedPart( heap, maxHeapSize, myTable ); 
+		
+		string str = "example";
+		uint slen = strLen( str );
+		href hstr = heapString(heap, maxHeapSize, myTable, str, slen); 
+		uint hash = hashString( str, slen );
+		uint hashObj = heapHash( heap, hstr );
+		
+		
+		putHeapInt( errorOutput, 0, myTable );
+		putHeapInt( errorOutput, 4, slen );
+		putHeapInt( errorOutput, 8, hstr );
+		putHeapInt( errorOutput, 12, hash );
+		putHeapInt( errorOutput, 16, hashObj );
+		""");
+		
+		var done = kernel.enqueueNDRange(queue, new int[] {1}, events.toArray(new CLEvent[events.size()]));
+		var data = heap.readData(queue, done);
+		//dumpHeap(data);
+		var log  = errOut.readData(queue);
+		DataInputStream dis = new DataInputStream(new ByteArrayInputStream(log));
+		
+		int tableIndex = dis.readInt(); // 0
+		assertNotEquals(0, tableIndex, "failed to allocate table, more memory or missing return?");
+		int hstrLen = dis.readInt(); //4
+		assertEquals("example".length(), hstrLen);
+		int hstrIndex = dis.readInt(); // 8
+		long hash = ((long)dis.readInt()) & 0x00_00_00_00_FF_FF_FF_FFL; //12
+		long hashObj = ((long)dis.readInt()) & 0x00_00_00_00_FF_FF_FF_FFL; //16
+		
+		assertEquals(hash, hashObj, "The hash for string vs heap'd string should match");
+		
+		var tableInfo = getChunkData(data, tableIndex);
+		var hashedInfo = getChunkData(data, tableInfo.tableHashedPart());
+		var keysInfo = getChunkData(data, hashedInfo.hashmapKeys());
+		var valsInfo = getChunkData(data, hashedInfo.hashmapVals());
+		
+//		var keysSize = keysInfo.readInt(1);
+		var keysCapacity = keysInfo.arrayCapacity();
+		
+		int expectedHashSlot = (int)(hash % keysCapacity);
+		
+		var keyX = keysInfo.arrayRef(expectedHashSlot);
+		assertEquals(hstrIndex, keyX, "expected key of hashmap in expected slot to point to example string");
+	}
+	
+	@Test
+	void getStringFromHashmap() throws IOException {
+		var events = setBufferSizes( 128, 512 );
+		setupProgram("""
+		initHeap( heap, maxHeapSize );
+		href myTable = newTable( heap, maxHeapSize );
+		href hashedPart = tableCreateHashedPart( heap, maxHeapSize, myTable ); 
+		
+		string str = "example";
+		uint slen = strLen( str );
+		href hstr = heapString(heap, maxHeapSize, myTable, str, slen); 
+		href hstrCopy = heapString(heap, maxHeapSize, myTable, str, slen); //checks in hashmap
+		
+		putHeapInt( errorOutput, 0, myTable );
+		putHeapInt( errorOutput, 4, slen );
+		putHeapInt( errorOutput, 8, hstr );
+		putHeapInt( errorOutput, 12, hstrCopy );
+		""");
+		
+		var done = kernel.enqueueNDRange(queue, new int[] {1}, events.toArray(new CLEvent[events.size()]));
+		var data = heap.readData(queue, done);
+		dumpHeap(data);
+		var log  = errOut.readData(queue);
+		DataInputStream dis = new DataInputStream(new ByteArrayInputStream(log));
+		
+		int tableIndex = dis.readInt(); // 0
+		assertNotEquals(0, tableIndex, "failed to allocate table, more memory or missing return?");
+		int hstrLen = dis.readInt(); //4
+		assertEquals("example".length(), hstrLen);
+		int hstrIndex = dis.readInt(); // 8
+		int hstrCopyIndex = dis.readInt(); // 12
+		
+		assertEquals(hstrIndex, hstrCopyIndex, "Duplicate strings should return the same index");
+		
 	}
 }

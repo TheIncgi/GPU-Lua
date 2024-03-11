@@ -1,7 +1,9 @@
 #include"strings.h"
 #include"common.cl"
 #include"table.h"
-#include"hashmap.cl"
+#include"hashmap.h"
+#include"heapUtils.h"
+#include"types.cl"
 
 href heapString(uchar* heap, uint maxHeapSize, href stringTable, string str, uint strLen) {
     href hashedPart = tableCreateHashedPart( heap, maxHeapSize, stringTable );
@@ -26,6 +28,8 @@ href heapString(uchar* heap, uint maxHeapSize, href stringTable, string str, uin
     }
 
     heap[ stringDataStart + strLen ] = 0; //null terminated, but not counted in length
+
+    tableRawSet( heap, maxHeapSize, stringTable, newString, newString ); //could be a HashSet probably
 
     return newString;
 }

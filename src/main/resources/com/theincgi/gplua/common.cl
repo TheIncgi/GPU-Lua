@@ -27,12 +27,14 @@ uint resizeRule( uint oldSize ) {
 }
 
 uint strLen( string str ) {
-    int size;
+    int size = 0;
     while( size >= 0 ) {
         if( str[size] == 0 )
             break;
         size++;
     }
+    if(size <= 0)
+        return 0;
     return size;
 }
 

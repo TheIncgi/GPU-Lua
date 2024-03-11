@@ -73,7 +73,7 @@ void arraySet( uchar* heap, href heapIndex, int index, href val ) {
             }
             putHeapInt( heap, heapIndex + 1, newSize );
         }
-    } else if( arraySize( heap, heapIndex) <= index ) {
+    } else if( arraySize( heap, heapIndex) == index ) {
         putHeapInt( heap, heapIndex + 1, index + 1 );
     }
 }

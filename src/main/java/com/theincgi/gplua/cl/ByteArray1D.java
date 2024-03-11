@@ -24,6 +24,10 @@ public class ByteArray1D {
 		this.usage = usage;
 	}
 	
+	public void noData(long size) {
+		buffer = context.createByteBuffer(usage, size);
+	}
+	
 	public CLEvent fillEmpty(int size, CLQueue queue) {
 		if(buffer != null)
 			close();

@@ -60,7 +60,7 @@ href allocateHeap(uchar* heap, uint maxHeap, uint size) {
 
 //allocated space NOT including the boundry tag
 uint heapObjectLength(uchar* heap, href index) {
-    return getHeapInt( heap, index - 4 )-4;
+    return (getHeapInt( heap, index - 4 ) & SIZE_MASK) - 4;
 }
 
 // amount of free memory after object that can be used to expand
