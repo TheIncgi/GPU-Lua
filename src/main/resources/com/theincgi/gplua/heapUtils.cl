@@ -36,6 +36,16 @@ void initHeap(uchar* heap, uint maxHeap) {
 //allocation index of 0 indicates failure
 //returns index of first byte in the new chunk on success
 href allocateHeap(uchar* heap, uint maxHeap, uint size) {
+    //debug, records allocations
+    // uint debugPos; {
+    //     uint debugTag = getHeapInt(heap, 996);
+    //     putHeapInt(heap, 996, debugTag == 0 ? (17 | USE_FLAG) : (debugTag + 4));
+    //     heap[1000] = T_ARRAY;
+    //     debugPos = getHeapInt(heap, 1001);
+    //     putHeapInt(heap, 1001, 1 + debugPos);
+    //     putHeapInt(heap, 1005, 1 + debugPos);
+    // }
+
     uint sizeWithTag = size+4;
     uint index = HEAP_RESERVE;
     while(index < (maxHeap-(long)sizeWithTag-4)) { //not near end of heap, needs space for the tag before and after user data
@@ -47,8 +57,13 @@ href allocateHeap(uchar* heap, uint maxHeap, uint size) {
         if(sizeOK &&         //size check
             ((tag & USE_FLAG ) == 0)) { //not used check
              //use flag only, mark flag is 0 on a new chunk
+            // putHeapInt(heap, 1009 + debugPos * 4, index); //DEBUG
             putHeapInt(heap, index, sizeWithTag | USE_FLAG);
-            putHeapInt(heap, index+sizeWithTag, chunkSize - size - 4); //remaining chunk is not in use
+
+            if(chunkSize != sizeWithTag) //don't edit next tag for exact fit
+                putHeapInt(heap, index+sizeWithTag, chunkSize - size - 4); //remaining chunk is not in use
+
+
             return index + 4; //point to the actual space that can be used
         } else {
             index += chunkSize;
@@ -135,6 +150,17 @@ void freeHeap(uchar* heap, uint maxHeap, href index, bool mergeUnmarked) {
     href tagPos = index - 4;
     uint tag = getHeapInt( heap, tagPos );
     uint chunkSize = SIZE_MASK & tag;
+
+    // uint debugPos; { //debug record free
+    //     uint debugTag = getHeapInt(heap, 996);
+    //     putHeapInt(heap, 996, debugTag == 0 ? (17 | USE_FLAG) : (debugTag + 4));
+    //     heap[1000] = T_ARRAY;
+    //     debugPos = getHeapInt(heap, 1001);
+    //     putHeapInt(heap, 1001, 1 + debugPos);
+    //     putHeapInt(heap, 1005, 1 + debugPos);
+
+    //     putHeapInt(heap, 1009 + debugPos * 4, 0); //DEBUG
+    // }
 
     href i = tagPos + chunkSize;
     while( i < maxHeap ) {

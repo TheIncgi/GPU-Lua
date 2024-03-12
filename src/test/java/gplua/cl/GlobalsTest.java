@@ -10,6 +10,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import com.nativelibs4java.opencl.CLEvent;
+import com.theincgi.gplua.cl.LuaTypes;
 
 class GlobalsTest extends TestBase {
 	
@@ -54,7 +55,7 @@ class GlobalsTest extends TestBase {
 	
 	@Test
 	void checkContents() throws IOException {
-		var events = setBufferSizes( 800, 512 );
+		var events = setBufferSizes( 4096, 512 );
 		long start = System.currentTimeMillis();
 		setupProgram("""
 		initHeap( heap, maxHeapSize );
@@ -77,9 +78,43 @@ class GlobalsTest extends TestBase {
 		
 		int strTableIndex = dis.readInt();
 		int globalsIndex  = dis.readInt();
-		int nfTest        = dis.readInt();
+//		int nfTest        = dis.readInt();
+		
+		var debug = getChunkData(data, 1000);
+		System.out.println(debug);
 		
 		dumpHeap(data);
+		
+		var tableInfo = getChunkData(data, globalsIndex);
+		var globalHashIndex = tableInfo.tableHashedPart();
+		assertNotEquals(0, globalHashIndex);
+		
+		var globalsHash = getChunkData(data, globalHashIndex);
+		var keys = getChunkData(data, globalsHash.hashmapKeys());
+		var vals = getChunkData(data, globalsHash.hashmapVals());
+		
+		for(int i = 0; i< keys.arrayCapacity(); i++) {
+			var ref = keys.arrayRef(i);
+			if(ref == 0) continue;
+			var key = getChunkData(data, ref);
+			System.out.println("KEY: " + key);
+			var valRef = vals.arrayRef(i);
+			var val = getChunkData(data, valRef);
+			
+			if(val.type() == LuaTypes.TABLE) {
+				if(val.tableHashedPart() == 0) continue;
+				var moduleHash = getChunkData(data, val.tableHashedPart());
+				var modKeys = getChunkData(data, moduleHash.hashmapKeys());
+				var modVals = getChunkData(data, moduleHash.hashmapVals());
+				for(int j = 0; j < modKeys.arrayCapacity(); j++) {
+					var modRef = modKeys.arrayRef(j);
+					if(modRef == 0) continue;
+					var modKey = getChunkData(data, modRef);
+					System.out.println("  KEY: "+modKey);
+				}
+			}
+		}
+		
 		
 		assertTrue(true);
 	}

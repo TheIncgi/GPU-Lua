@@ -259,7 +259,66 @@ public class AllocationTest extends TestBase {
 		assertEquals("Tag size wrong", 9, tag2 & SIZE_MASK); //merges with unused section 
 	}
 	
-	
+	/**
+	 * This test is about a specifc bug that occured
+	 * @throws IOException 
+	 * */
+	@Test
+	void exactFitDoesntAlterNextTag() throws IOException {
+		var events = setBufferSizes( 800, 512 );
+		setupProgram("""
+		initHeap( heap, maxHeapSize );
+		
+		href a = allocateHeap( heap, maxHeapSize, 72 ); //some object(s)
+		href b = allocateHeap( heap, maxHeapSize, 29 - 4 ); //to be deleted
+		href c = allocateHeap( heap, maxHeapSize, 14 - 4 ); //end of test region
+		freeHeap( heap, maxHeapSize, b, false );            //works as expected
+		href d = allocateHeap( heap, maxHeapSize, 15 - 4 ); //some object that fits in b
+		href e = allocateHeap( heap, maxHeapSize, 14 - 4 ); //between d and c perfectly, puts a new tag for c?
+		//href f = allocateHeap( heap, maxHeapSize, 13 - 4 ); //in the bug this overwrites c which should be inUse
+		
 
+		errorOutput[0] = c;
+		""");
+		
+		var done = kernel.enqueueNDRange(queue, new int[] {1}, events.toArray(new CLEvent[events.size()]));
+		var data = heap.readData(queue, done);
+		
+		DataInputStream log = new DataInputStream(new ByteArrayInputStream(errOut.readData(queue)));
+		
+		var objC = log.read();
+		
+		var cTagPos = objC - 4;
+		int tag = readIntAt(data, cTagPos);
+		System.out.println(Integer.toHexString(tag)); //00 01 00 01
+		assertEquals(0x80_00_00_0e, tag);
+	}
 
+	@Test
+	void allocatesOnSequentialFree() throws IOException {
+		var events = setBufferSizes( 800, 512 );
+		setupProgram("""
+		initHeap( heap, maxHeapSize );
+		
+		href a = allocateHeap( heap, maxHeapSize, 10 ); //14 bytes with tag
+		href b = allocateHeap( heap, maxHeapSize, 10 ); //14 bytes with tag
+		href c = allocateHeap( heap, maxHeapSize, 10 );
+		freeHeap( heap, maxHeapSize, a, false );
+		freeHeap( heap, maxHeapSize, b, false );
+		href d = allocateHeap( heap, maxHeapSize, 24 ); //should go at a, 28 bytes with tag
+		
+		errorOutput[0] = a;
+		errorOutput[1] = d;
+		""");
+		
+		var done = kernel.enqueueNDRange(queue, new int[] {1}, events.toArray(new CLEvent[events.size()]));
+		var data = heap.readData(queue, done);
+		
+		DataInputStream log = new DataInputStream(new ByteArrayInputStream(errOut.readData(queue)));
+		
+		var objA = log.read();
+		var objD = log.read();
+		
+		assertEquals(objA, objD, "objD should fit where objA was");
+	}
 }
