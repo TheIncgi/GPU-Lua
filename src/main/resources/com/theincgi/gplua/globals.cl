@@ -143,7 +143,7 @@ href createMathModule( uchar* heap, uint maxHeapSize, href stringTable) {
     if(!globals_registerNF(heap, maxHeapSize, stringTable, mathModule, NF_MATH_RAD,             "rad")) return 0;
     if(!globals_registerNF(heap, maxHeapSize, stringTable, mathModule, NF_MATH_TAN,             "tan")) return 0;
     if(!globals_registerNF(heap, maxHeapSize, stringTable, mathModule, NF_MATH_COS,             "cos")) return 0;
-    if(!globals_registerNF(heap, maxHeapSize, stringTable, mathModule, NF_MATH_COSH,            "cosh")) return 0;
+    // if(!globals_registerNF(heap, maxHeapSize, stringTable, mathModule, NF_MATH_COSH,            "cosh")) return 0;
     // if(!globals_registerNF(heap, maxHeapSize, stringTable, mathModule, NF_MATH_RANDOM,          "random")) return 0;
     // if(!globals_registerNF(heap, maxHeapSize, stringTable, mathModule, NF_MATH_FREXP,           "frexp")) return 0;
     // if(!globals_registerNF(heap, maxHeapSize, stringTable, mathModule, NF_MATH_RANDOMSEED,      "randomseed")) return 0;

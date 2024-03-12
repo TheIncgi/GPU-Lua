@@ -80,8 +80,8 @@ class GlobalsTest extends TestBase {
 		int globalsIndex  = dis.readInt();
 //		int nfTest        = dis.readInt();
 		
-		var debug = getChunkData(data, 1000);
-		System.out.println(debug);
+//		var debug = getChunkData(data, 1000);
+//		System.out.println(debug);
 		
 		dumpHeap(data);
 		

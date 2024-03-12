@@ -9,3 +9,4 @@ Unless a type *needs* to be signed I've opted for the unsigned version for varia
 
 # TODO
 array grow in place
+freeHeap should probably skip chunk merging now that it occurs in allocateHeap
