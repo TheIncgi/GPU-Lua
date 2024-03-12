@@ -48,14 +48,32 @@ href allocateHeap(uchar* heap, uint maxHeap, uint size) {
 
     uint sizeWithTag = size+4;
     uint index = HEAP_RESERVE;
-    while(index < (maxHeap-(long)sizeWithTag-4)) { //not near end of heap, needs space for the tag before and after user data
+    long limit = (maxHeap-(long)sizeWithTag-4);
+    while(index < limit) { //not near end of heap, needs space for the tag before and after user data
         uint tag = getHeapInt(heap, index);
-
         uint chunkSize = tag & SIZE_MASK;
+        if( (tag & USE_FLAG) != 0 ) {
+            index += chunkSize;
+            continue;
+        }
+
+        href nextTagPos = index + chunkSize;
+        uint nextTag;
+        while( nextTagPos < limit ) {
+            nextTag = getHeapInt(heap, nextTagPos);
+            uint tagSize = nextTag & SIZE_MASK;
+            nextTagPos += tagSize;
+            
+            if( ((nextTag & USE_FLAG) == 0) && ((tagSize + (long)chunkSize) <= SIZE_MASK) ) {
+                chunkSize += tagSize;
+            } else {
+                break;
+            }
+        };
+
         bool sizeOK = (chunkSize - 4 >= sizeWithTag) //tag safety margin, partial overlap will destroy the next tag
                       || (chunkSize == sizeWithTag); //exact match, awesome
-        if(sizeOK &&         //size check
-            ((tag & USE_FLAG ) == 0)) { //not used check
+        if(sizeOK) {
              //use flag only, mark flag is 0 on a new chunk
             // putHeapInt(heap, 1009 + debugPos * 4, index); //DEBUG
             putHeapInt(heap, index, sizeWithTag | USE_FLAG);
@@ -66,7 +84,7 @@ href allocateHeap(uchar* heap, uint maxHeap, uint size) {
 
             return index + 4; //point to the actual space that can be used
         } else {
-            index += chunkSize;
+            index = nextTag;
         }
     }  
     return 0; //not enough memory
