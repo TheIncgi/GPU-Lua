@@ -10,3 +10,7 @@ Unless a type *needs* to be signed I've opted for the unsigned version for varia
 # TODO
 array grow in place
 freeHeap should probably skip chunk merging now that it occurs in allocateHeap
+
+# Heap bugs
+Used to visualize the heap as a timeline for different bugs that have occurred
+https://docs.google.com/spreadsheets/d/1gIW6N9aL-yJWyhZuJXCdp0qSnRiO8rpFif-tY023TTE/edit#gid=182770226
