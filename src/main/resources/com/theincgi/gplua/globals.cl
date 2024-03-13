@@ -98,7 +98,7 @@ typedef enum {
     NF_BIT32_BXOR,
     NF_BIT32_REPLACE,
     NF_BIT32_LSHIFT,
-    NF_BIT32_BTTEST,
+    NF_BIT32_BTEST,
     NF_BIT32_RROTATE
 } BitwiseFunctions;
 
@@ -165,6 +165,81 @@ href createMathModule( uchar* heap, uint maxHeapSize, href stringTable) {
     return mathModule;
 }
 
+href createStringModule( uchar* heap, uint maxHeapSize, href stringTable) {
+    href stringModule = newTable( heap, maxHeapSize );
+    
+    if(!globals_registerNF(heap, maxHeapSize, stringTable, stringModule, NF_STRING_SUB,              "sub")) return 0;
+    if(!globals_registerNF(heap, maxHeapSize, stringTable, stringModule, NF_STRING_FIND,             "find")) return 0;
+    if(!globals_registerNF(heap, maxHeapSize, stringTable, stringModule, NF_STRING_REP,              "rep")) return 0;
+    if(!globals_registerNF(heap, maxHeapSize, stringTable, stringModule, NF_STRING_MATCH,            "match")) return 0;
+    if(!globals_registerNF(heap, maxHeapSize, stringTable, stringModule, NF_STRING_GMATCH,           "gmatch")) return 0;
+    if(!globals_registerNF(heap, maxHeapSize, stringTable, stringModule, NF_STRING_CHAR,             "char")) return 0;
+    if(!globals_registerNF(heap, maxHeapSize, stringTable, stringModule, NF_STRING_REVERSE,          "reverse")) return 0;
+    if(!globals_registerNF(heap, maxHeapSize, stringTable, stringModule, NF_STRING_UPPER,            "upper")) return 0;
+    if(!globals_registerNF(heap, maxHeapSize, stringTable, stringModule, NF_STRING_LEN,              "len")) return 0;
+    if(!globals_registerNF(heap, maxHeapSize, stringTable, stringModule, NF_STRING_GSUB,             "gsub")) return 0;
+    if(!globals_registerNF(heap, maxHeapSize, stringTable, stringModule, NF_STRING_BYTE,             "byte")) return 0;
+    if(!globals_registerNF(heap, maxHeapSize, stringTable, stringModule, NF_STRING_FORMAT,           "format")) return 0;
+    if(!globals_registerNF(heap, maxHeapSize, stringTable, stringModule, NF_STRING_LOWER,            "lower")) return 0;
+    
+    return stringModule;
+}
+
+href createTableModule( uchar* heap, uint maxHeapSize, href stringTable) {
+    href tableModule = newTable( heap, maxHeapSize );
+    
+    if(!globals_registerNF(heap, maxHeapSize, stringTable, tableModule, NF_TABLE_REMOVE,        "remove")) return 0;
+    if(!globals_registerNF(heap, maxHeapSize, stringTable, tableModule, NF_TABLE_PACK,          "pack")) return 0;
+    if(!globals_registerNF(heap, maxHeapSize, stringTable, tableModule, NF_TABLE_CONCAT,        "concat")) return 0;
+    if(!globals_registerNF(heap, maxHeapSize, stringTable, tableModule, NF_TABLE_SORT,          "sort")) return 0;
+    if(!globals_registerNF(heap, maxHeapSize, stringTable, tableModule, NF_TABLE_INSERT,        "insert")) return 0;
+    if(!globals_registerNF(heap, maxHeapSize, stringTable, tableModule, NF_TABLE_UNPACK,        "unpack")) return 0;
+    if(!globals_registerNF(heap, maxHeapSize, stringTable, tableModule, NF_TABLE_PRESIZE,       "presize")) return 0;
+    
+    return tableModule;
+}
+
+href createBit32Module( uchar* heap, uint maxHeapSize, href stringTable) {
+    href bitModule = newTable( heap, maxHeapSize );
+    
+    if(!globals_registerNF(heap, maxHeapSize, stringTable, bitModule, NF_BIT32_BAND,            "band")) return 0;
+    if(!globals_registerNF(heap, maxHeapSize, stringTable, bitModule, NF_BIT32_LROTATE,         "lrotate")) return 0;
+    if(!globals_registerNF(heap, maxHeapSize, stringTable, bitModule, NF_BIT32_EXTRACT,         "extract")) return 0;
+    if(!globals_registerNF(heap, maxHeapSize, stringTable, bitModule, NF_BIT32_RSHIFT,          "rshift")) return 0;
+    if(!globals_registerNF(heap, maxHeapSize, stringTable, bitModule, NF_BIT32_BOR,             "bor")) return 0;
+    if(!globals_registerNF(heap, maxHeapSize, stringTable, bitModule, NF_BIT32_BNOT,            "bnot")) return 0;
+    if(!globals_registerNF(heap, maxHeapSize, stringTable, bitModule, NF_BIT32_ARSHIFT,         "arshift")) return 0;
+    if(!globals_registerNF(heap, maxHeapSize, stringTable, bitModule, NF_BIT32_BXOR,            "bxor")) return 0;
+    if(!globals_registerNF(heap, maxHeapSize, stringTable, bitModule, NF_BIT32_REPLACE,         "replace")) return 0;
+    if(!globals_registerNF(heap, maxHeapSize, stringTable, bitModule, NF_BIT32_LSHIFT,          "lshift")) return 0;
+    if(!globals_registerNF(heap, maxHeapSize, stringTable, bitModule, NF_BIT32_BTEST,           "btest")) return 0;
+    if(!globals_registerNF(heap, maxHeapSize, stringTable, bitModule, NF_BIT32_RROTATE,         "rrotate")) return 0;
+    
+    return bitModule;
+}
+
+bool createGlobalFunctions( uchar* heap, uint maxHeapSize, href globalsTable, href stringTable) {
+    if(!globals_registerNF(heap, maxHeapSize, stringTable, globalsTable, NF_GLOBAL_ASSERT,         "assert")) return false;
+    if(!globals_registerNF(heap, maxHeapSize, stringTable, globalsTable, NF_GLOBAL_COLLECTGARBAGE, "collectgarbage")) return false;
+    if(!globals_registerNF(heap, maxHeapSize, stringTable, globalsTable, NF_GLOBAL_ERROR,          "error")) return false;
+    if(!globals_registerNF(heap, maxHeapSize, stringTable, globalsTable, NF_GLOBAL_GETMETATABLE,   "getmetatable")) return false;
+    if(!globals_registerNF(heap, maxHeapSize, stringTable, globalsTable, NF_GLOBAL_IPAIRS,         "ipairs")) return false;
+    if(!globals_registerNF(heap, maxHeapSize, stringTable, globalsTable, NF_GLOBAL_NEXT,           "next")) return false;
+    if(!globals_registerNF(heap, maxHeapSize, stringTable, globalsTable, NF_GLOBAL_PAIRS,          "pairs")) return false;
+    if(!globals_registerNF(heap, maxHeapSize, stringTable, globalsTable, NF_GLOBAL_PCALL,          "pcall")) return false;
+    if(!globals_registerNF(heap, maxHeapSize, stringTable, globalsTable, NF_GLOBAL_RAWEQUAL,       "rawequal")) return false;
+    if(!globals_registerNF(heap, maxHeapSize, stringTable, globalsTable, NF_GLOBAL_RAWGET,         "rawget")) return false;
+    if(!globals_registerNF(heap, maxHeapSize, stringTable, globalsTable, NF_GLOBAL_RAWLEN,         "rawlen")) return false;
+    if(!globals_registerNF(heap, maxHeapSize, stringTable, globalsTable, NF_GLOBAL_RAWSET,         "rawset")) return false;
+    if(!globals_registerNF(heap, maxHeapSize, stringTable, globalsTable, NF_GLOBAL_SELECT,         "select")) return false;
+    if(!globals_registerNF(heap, maxHeapSize, stringTable, globalsTable, NF_GLOBAL_SETMETATABLE,   "setmetatable")) return false;
+    if(!globals_registerNF(heap, maxHeapSize, stringTable, globalsTable, NF_GLOBAL_TONUMBER,       "tonumber")) return false;
+    if(!globals_registerNF(heap, maxHeapSize, stringTable, globalsTable, NF_GLOBAL_TOSTRING,       "tostring")) return false;
+    if(!globals_registerNF(heap, maxHeapSize, stringTable, globalsTable, NF_GLOBAL_TYPE,           "type")) return false;
+    if(!globals_registerNF(heap, maxHeapSize, stringTable, globalsTable, NF_GLOBAL_XPCALL,         "xpcall")) return false;    
+    return true;
+}
+
 href createGlobals( uchar* heap, uint maxHeapSize, href stringTable ) {
     href globalsTable = newTable( heap, maxHeapSize );
     
@@ -179,9 +254,32 @@ href createGlobals( uchar* heap, uint maxHeapSize, href stringTable ) {
     moduleNameHref = heapString( heap, maxHeapSize, stringTable, moduleName );
     if( moduleNameHref == 0 ) return 0;
     moduleTableHref = createMathModule( heap, maxHeapSize, stringTable );
-    if(moduleTableHref == 0) return 0;
+    if( moduleTableHref == 0 ) return 0;
+    tableRawSet( heap, maxHeapSize, globalsTable, moduleNameHref, moduleTableHref );
 
-    tableRawSet( heap, maxHeapSize, globalsTable, moduleNameHref, moduleTableHref ); //OUT OF RESOURCES CAUSED AROUND HEREISH
+    moduleName = "string";
+    moduleNameHref = heapString( heap, maxHeapSize, stringTable, moduleName );
+    if( moduleNameHref == 0 ) return 0;
+    moduleTableHref = createStringModule( heap, maxHeapSize, stringTable );
+    if( moduleTableHref == 0 ) return 0;
+    tableRawSet( heap, maxHeapSize, globalsTable, moduleNameHref, moduleTableHref );
+
+    moduleName = "table";
+    moduleNameHref = heapString( heap, maxHeapSize, stringTable, moduleName );
+    if( moduleNameHref == 0 ) return 0;
+    moduleTableHref = createTableModule( heap, maxHeapSize, stringTable );
+    if( moduleTableHref == 0 ) return 0;
+    tableRawSet( heap, maxHeapSize, globalsTable, moduleNameHref, moduleTableHref );
+
+    moduleName = "bit32";
+    moduleNameHref = heapString( heap, maxHeapSize, stringTable, moduleName );
+    if( moduleNameHref == 0 ) return 0;
+    moduleTableHref = createBit32Module( heap, maxHeapSize, stringTable );
+    if( moduleTableHref == 0 ) return 0;
+    tableRawSet( heap, maxHeapSize, globalsTable, moduleNameHref, moduleTableHref );
+
+    if( !createGlobalFunctions( heap, maxHeapSize, globalsTable, stringTable ) )
+        return 0;
 
     return globalsTable;
 }

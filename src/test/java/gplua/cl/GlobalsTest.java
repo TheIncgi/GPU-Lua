@@ -73,7 +73,11 @@ class GlobalsTest extends TestBase {
 		
 		putHeapInt( log, 0, strTable );
 		putHeapInt( log, 4, globals );
-		""", 1512, 512, 1512);
+		""", 
+			8192, //heap 
+			32   //log 
+			,4096  //debug
+		);
 		long compiled = System.currentTimeMillis();
 		
 		var done = kernel.enqueueNDRange(queue, new int[] {1}, events.toArray(new CLEvent[events.size()]));
@@ -99,7 +103,7 @@ class GlobalsTest extends TestBase {
 		
 		var tableInfo = getChunkData(data, globalsIndex);
 		var globalHashIndex = tableInfo.tableHashedPart();
-		assertNotEquals(0, globalHashIndex);
+		assertNotEquals(0, globalHashIndex, "may have run out of memory, missing hashed part of globals");
 		
 		var globalsHash = getChunkData(data, globalHashIndex);
 		var keys = getChunkData(data, globalsHash.hashmapKeys());
@@ -122,7 +126,7 @@ class GlobalsTest extends TestBase {
 					var modRef = modKeys.arrayRef(j);
 					if(modRef == 0) continue;
 					var modKey = getChunkData(data, modRef);
-					System.out.println("  KEY: "+modKey);
+					System.out.println("    KEY: "+modKey);
 				}
 			}
 		}

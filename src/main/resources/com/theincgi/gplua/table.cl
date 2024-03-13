@@ -10,6 +10,8 @@ href newTable(uchar* heap, uint maxHeapSize) {
     //no array, hash or metatable filled in on a new table
     href index = allocateHeap( heap, maxHeapSize, 13);
     heap[index] = T_TABLE;
+    for(uint i = 1; i < 13; i++)
+        heap[index+i] = 0;
     return index;
 }
 
@@ -118,6 +120,6 @@ bool tableRawSet( uchar* heap, uint maxHeapSize, href tableIndex, href key, href
     href hashedPart = tableCreateHashedPart( heap, maxHeapSize, tableIndex );
     if( hashedPart == 0 )
         return false; //out of memory
-    
+
     return hashmapPut( heap, maxHeapSize, hashedPart, key, value );
 }
