@@ -60,8 +60,8 @@ class TableTest extends TestBase {
 	}
 	
 	@Override
-	public List<CLEvent> setupProgram( String src, int heapSize, int logSize, int heapDebugPos ) {
-		return super.setupProgram(header + src + footer, heapSize, logSize, heapDebugPos);
+	public List<CLEvent> setupProgram( String src, int heapSize, int logSize, int debugHeapSize ) {
+		return super.setupProgram(header + src + footer, heapSize, logSize, debugHeapSize);
 	}
 	
 	@Test

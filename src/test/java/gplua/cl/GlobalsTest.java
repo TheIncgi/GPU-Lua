@@ -57,8 +57,8 @@ class GlobalsTest extends TestBase {
 	}
 	
 	@Override
-	public List<CLEvent> setupProgram( String src, int heapSize, int logSize, int heapDebugPos ) {
-		return super.setupProgram(header + src + footer, heapSize, logSize, heapDebugPos);
+	public List<CLEvent> setupProgram( String src, int heapSize, int logSize, int debugHeapSize ) {
+		return super.setupProgram(header + src + footer, heapSize, logSize, debugHeapSize);
 	}
 	
 	
@@ -73,7 +73,7 @@ class GlobalsTest extends TestBase {
 		
 		putHeapInt( log, 0, strTable );
 		putHeapInt( log, 4, globals );
-		""", 4096, 512, 1512);
+		""", 1512, 512, 1512);
 		long compiled = System.currentTimeMillis();
 		
 		var done = kernel.enqueueNDRange(queue, new int[] {1}, events.toArray(new CLEvent[events.size()]));

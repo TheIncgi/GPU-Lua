@@ -55,14 +55,14 @@ public class TestBase {
 	}
 	
 	/**heap size reported to the kernel will be heapDebugPos*/
-	public List<CLEvent> setupProgram( String src, int heapSize, int errSize, int heapDebugPos ) {
+	public List<CLEvent> setupProgram( String src, int heapSize, int errSize, int debugHeapSize ) {
 		program = context.createProgram( src );
 //		program.addInclude(System.getProperty("user.dir")+"/src/main/resources/com/theincgi/gplua");
 		program.addInclude("src/main/resources/com/theincgi/gplua");
-		enableHeapDebugging(heapDebugPos);
+		enableHeapDebugging(heapSize);
 		program = program.build();
 		kernel = program.createKernel("exec");
-		var events = setBufferSizes(heapSize, errSize);
+		var events = setBufferSizes(heapSize + debugHeapSize, errSize);
 		kernel.setArgs(stackSizes.arg(), heap.arg(), errOut.arg());
 		return events;
 	}
@@ -140,10 +140,13 @@ public class TestBase {
 	
 	/**Call enableHeapDebugging before running
 	 * @param data 
+	 * @return 
 	 * @throws IOException */
-	public void visualizeHeapRecord(byte[] data) throws IOException {
+	public HeapVisualizer visualizeHeapRecord(byte[] data) throws IOException {
 		Objects.requireNonNull(heapDebugStart);
-		new HeapVisualizer(data, heapDebugStart + 4).show();
+		var hv = new HeapVisualizer(data, heapDebugStart + 4);
+		hv.show();
+		return hv;
 	}
 	
 	
