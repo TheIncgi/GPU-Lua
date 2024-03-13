@@ -8,9 +8,8 @@ T_INT's value is signed
 Unless a type *needs* to be signed I've opted for the unsigned version for variables
 
 # TODO
-array grow in place
 freeHeap should probably skip chunk merging now that it occurs in allocateHeap
 
-# Heap bugs
-Used to visualize the heap as a timeline for different bugs that have occurred
-https://docs.google.com/spreadsheets/d/1gIW6N9aL-yJWyhZuJXCdp0qSnRiO8rpFif-tY023TTE/edit#gid=182770226
+strings table should be treated as weak keys
+
+strings table can be a hash set since the value we look up is the reference to the string based on hash (currently duplicate as key = key)
