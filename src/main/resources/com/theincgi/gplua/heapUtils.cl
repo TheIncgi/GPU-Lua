@@ -2,6 +2,9 @@
 #include"common.cl"
 #include"types.cl"
 
+//#define DEBUG_ALLOCATION
+//#define DEBUG_ALLOCATION_START someNumber
+
 int getHeapInt(uchar* heap, href index) {
     return 
         heap[index    ] << 24 |
@@ -37,14 +40,17 @@ void initHeap(uchar* heap, uint maxHeap) {
 //returns index of first byte in the new chunk on success
 href allocateHeap(uchar* heap, uint maxHeap, uint size) {
     //debug, records allocations
-    // uint debugPos; {
-    //     uint debugTag = getHeapInt(heap, 996);
-    //     putHeapInt(heap, 996, debugTag == 0 ? (17 | USE_FLAG) : (debugTag + 4));
-    //     heap[1000] = T_ARRAY;
-    //     debugPos = getHeapInt(heap, 1001);
-    //     putHeapInt(heap, 1001, 1 + debugPos);
-    //     putHeapInt(heap, 1005, 1 + debugPos);
-    // }
+    #ifdef DEBUG_ALLOCATION
+        uint debugStart = DEBUG_ALLOCATION_START;
+        uint debugPos; {
+            uint debugTag = getHeapInt(heap, debugStart);
+            putHeapInt(heap, debugStart, debugTag == 0 ? (21 | USE_FLAG) : (debugTag + 8));
+            heap[debugStart+4] = T_ARRAY;
+            debugPos = getHeapInt(heap, debugStart + 5);
+            putHeapInt(heap, debugStart + 5, 2 + debugPos);
+            putHeapInt(heap, debugStart + 9, 2 + debugPos);
+        }
+    #endif
 
     uint sizeWithTag = size+4;
     uint index = HEAP_RESERVE;
@@ -75,7 +81,11 @@ href allocateHeap(uchar* heap, uint maxHeap, uint size) {
                       || (chunkSize == sizeWithTag); //exact match, awesome
         if(sizeOK) {
              //use flag only, mark flag is 0 on a new chunk
-            // putHeapInt(heap, 1009 + debugPos * 4, index); //DEBUG
+            #ifdef DEBUG_ALLOCATION
+                uint debugStart = DEBUG_ALLOCATION_START;
+                putHeapInt(heap, debugStart + 13 + debugPos * 4, index); //DEBUG
+                putHeapInt(heap, debugStart + 13 + debugPos * 4 + 4, sizeWithTag); //DEBUG
+            #endif
             putHeapInt(heap, index, sizeWithTag | USE_FLAG);
 
             if(chunkSize != sizeWithTag) //don't edit next tag for exact fit
@@ -84,7 +94,7 @@ href allocateHeap(uchar* heap, uint maxHeap, uint size) {
 
             return index + 4; //point to the actual space that can be used
         } else {
-            index = nextTag;
+            index = nextTagPos;
         }
     }  
     return 0; //not enough memory
@@ -169,16 +179,20 @@ void freeHeap(uchar* heap, uint maxHeap, href index, bool mergeUnmarked) {
     uint tag = getHeapInt( heap, tagPos );
     uint chunkSize = SIZE_MASK & tag;
 
-    // uint debugPos; { //debug record free
-    //     uint debugTag = getHeapInt(heap, 996);
-    //     putHeapInt(heap, 996, debugTag == 0 ? (17 | USE_FLAG) : (debugTag + 4));
-    //     heap[1000] = T_ARRAY;
-    //     debugPos = getHeapInt(heap, 1001);
-    //     putHeapInt(heap, 1001, 1 + debugPos);
-    //     putHeapInt(heap, 1005, 1 + debugPos);
+    #ifdef DEBUG_ALLOCATION
+        uint debugPos; { //debug record free
+            uint debugStart = DEBUG_ALLOCATION_START;
+            uint debugTag = getHeapInt(heap, debugStart);
+            putHeapInt(heap, debugStart, debugTag == 0 ? (21 | USE_FLAG) : (debugTag + 8));
+            heap[debugStart+4] = T_ARRAY;
+            debugPos = getHeapInt(heap, debugStart + 5);
+            putHeapInt(heap, debugStart + 5, 2 + debugPos);
+            putHeapInt(heap, debugStart + 9, 2 + debugPos);
 
-    //     putHeapInt(heap, 1009 + debugPos * 4, 0); //DEBUG
-    // }
+            putHeapInt(heap, debugStart + 13 + debugPos * 4, index - 4); //DEBUG
+            putHeapInt(heap, debugStart + 13 + debugPos * 4 + 4, 0); //DEBUG
+        }
+    #endif
 
     href i = tagPos + chunkSize;
     while( i < maxHeap ) {

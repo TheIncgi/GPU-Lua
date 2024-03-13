@@ -5,12 +5,15 @@ import static org.junit.jupiter.api.Assertions.*;
 import java.io.ByteArrayInputStream;
 import java.io.DataInputStream;
 import java.io.IOException;
+import java.util.List;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import com.nativelibs4java.opencl.CLEvent;
 import com.theincgi.gplua.cl.LuaTypes;
+
+import gplua.HeapVisualizer;
 
 class GlobalsTest extends TestBase {
 	
@@ -49,15 +52,20 @@ class GlobalsTest extends TestBase {
 	}
 	
 	@Override
-	public void setupProgram( String src ) {
-		super.setupProgram(header + src + footer);
+	public List<CLEvent> setupProgram( String src, int heapSize, int logSize ) {
+		return super.setupProgram(header + src + footer, heapSize, logSize);
 	}
+	
+	@Override
+	public List<CLEvent> setupProgram( String src, int heapSize, int logSize, int heapDebugPos ) {
+		return super.setupProgram(header + src + footer, heapSize, logSize, heapDebugPos);
+	}
+	
 	
 	@Test
 	void checkContents() throws IOException {
-		var events = setBufferSizes( 4096, 512 );
 		long start = System.currentTimeMillis();
-		setupProgram("""
+		var events = setupProgram("""
 		initHeap( heap, maxHeapSize );
 		href strTable = newTable( heap, maxHeapSize );
 		
@@ -65,10 +73,14 @@ class GlobalsTest extends TestBase {
 		
 		putHeapInt( log, 0, strTable );
 		putHeapInt( log, 4, globals );
-		""");
+		""", 4096, 512, 1512);
 		long compiled = System.currentTimeMillis();
+		
 		var done = kernel.enqueueNDRange(queue, new int[] {1}, events.toArray(new CLEvent[events.size()]));
 		var data = heap.readData(queue, done);
+		
+		visualizeHeapRecord(data);
+		
 		long result = System.currentTimeMillis();
 		var log  = errOut.readData(queue);
 		DataInputStream dis = new DataInputStream(new ByteArrayInputStream(log));

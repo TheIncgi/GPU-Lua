@@ -5,6 +5,7 @@ import java.io.DataInputStream;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 
 import com.nativelibs4java.opencl.CLContext;
 import com.nativelibs4java.opencl.CLEvent;
@@ -17,6 +18,8 @@ import com.theincgi.gplua.cl.ByteArray1D;
 import com.theincgi.gplua.cl.IntArray1D;
 import com.theincgi.gplua.cl.LuaTypes;
 
+import gplua.HeapVisualizer;
+
 public class TestBase {
 	CLProgram program;
 	CLQueue queue;
@@ -25,6 +28,7 @@ public class TestBase {
 	
 	ByteArray1D heap, errOut;
 	IntArray1D stackSizes;
+	private Integer heapDebugStart = null;
 	
 	public static final int USE_FLAG  = 0x80000000,
 							MARK_FLAG = 0x40000000,
@@ -39,21 +43,38 @@ public class TestBase {
 		stackSizes = new IntArray1D(context, Usage.Input);
 	}
 	
-	public void setupProgram( String src ) {
+	public List<CLEvent> setupProgram( String src, int heapSize, int errSize ) {
 		program = context.createProgram( src );
 //		program.addInclude(System.getProperty("user.dir")+"/src/main/resources/com/theincgi/gplua");
 		program.addInclude("src/main/resources/com/theincgi/gplua");
 		program = program.build();
 		kernel = program.createKernel("exec");
+		var events = setBufferSizes(heapSize, errSize);
 		kernel.setArgs(stackSizes.arg(), heap.arg(), errOut.arg());
+		return events;
 	}
 	
-	public List<CLEvent> setBufferSizes( int heap, int err ) {
+	/**heap size reported to the kernel will be heapDebugPos*/
+	public List<CLEvent> setupProgram( String src, int heapSize, int errSize, int heapDebugPos ) {
+		program = context.createProgram( src );
+//		program.addInclude(System.getProperty("user.dir")+"/src/main/resources/com/theincgi/gplua");
+		program.addInclude("src/main/resources/com/theincgi/gplua");
+		enableHeapDebugging(heapDebugPos);
+		program = program.build();
+		kernel = program.createKernel("exec");
+		var events = setBufferSizes(heapSize, errSize);
+		kernel.setArgs(stackSizes.arg(), heap.arg(), errOut.arg());
+		return events;
+	}
+	
+	private List<CLEvent> setBufferSizes( int heap, int err ) {
 		var eList = new ArrayList<CLEvent>();
 		this.heap.noData(heap);
-//		eList.add(this.heap.fillEmpty(heap, queue));
 		eList.add(errOut.fillEmpty(err, queue));
-		eList.add(stackSizes.loadData(new int[] {heap, err}, queue));
+		eList.add(stackSizes.loadData(new int[] {
+			heapDebugStart == null? heap : heapDebugStart, 
+			err
+		}, queue));
 		return eList;
 	}
 	
@@ -75,7 +96,7 @@ public class TestBase {
 		return dis.readInt();
 	}
 	
-	TaggedMemory getChunkData( byte[] heap, int allocationIndex ) throws IOException {
+	public static TaggedMemory getChunkData( byte[] heap, int allocationIndex ) throws IOException {
 		if(allocationIndex == 0)
 			return null;
 		DataInputStream dis = new DataInputStream(new ByteArrayInputStream(heap));
@@ -87,7 +108,7 @@ public class TestBase {
 		return new TaggedMemory(allocationIndex, isUseFlag(tag), isMarkFlag(tag), data);
 	}
 	
-	List<TaggedMemory> getAllChunks( byte[] heap ) throws IOException {
+	public static List<TaggedMemory> getAllChunks( byte[] heap ) throws IOException {
 		int i = 5;
 		var all = new ArrayList<TaggedMemory>();
 		while( i < heap.length-4 ) {
@@ -99,7 +120,7 @@ public class TestBase {
 		return all;
 	}
 	
-	void dumpHeap( byte[] heap ) throws IOException {
+	public static void dumpHeap( byte[] heap ) throws IOException {
 		System.out.println(" == HEAP == ");
 		
 		for(var chunk  : getAllChunks(heap)) {
@@ -108,13 +129,29 @@ public class TestBase {
 		}
 	}
 	
+	/**
+	 * Choose a number outside the range of the heap that will be used
+	 * */
+	private void enableHeapDebugging( int startHeapRecordAt ) {
+		this.heapDebugStart  = startHeapRecordAt;
+		program.defineMacro("DEBUG_ALLOCATION", "true");
+		program.defineMacro("DEBUG_ALLOCATION_START", ""+startHeapRecordAt);
+	}
+	
+	/**Call enableHeapDebugging before running
+	 * @param data 
+	 * @throws IOException */
+	public void visualizeHeapRecord(byte[] data) throws IOException {
+		Objects.requireNonNull(heapDebugStart);
+		new HeapVisualizer(data, heapDebugStart + 4).show();
+	}
 	
 	
-	record TaggedMemory(int allocationIndex, boolean inUse, boolean marked, byte[] data) {
-		int readInt(int offset) throws IOException {
+	public static record TaggedMemory(int allocationIndex, boolean inUse, boolean marked, byte[] data) {
+		public int readInt(int offset) throws IOException {
 			return readIntAt(data, offset);
 		}
-		int type() {
+		public int type() {
 			return ((int)data[0]) & 0xFF;
 		}
 		private void assertType(int type) {
@@ -122,57 +159,57 @@ public class TestBase {
 				throw new RuntimeException("Expected type with ID "+type+", got "+type());
 		}
 		
-		int arrayRef(int index) throws IOException {
+		public int arrayRef(int index) throws IOException {
 			assertType(LuaTypes.ARRAY);
 			return readInt( 9 + index * 4 );
 		}
 		
-		int arraySize() throws IOException {
+		public int arraySize() throws IOException {
 			assertType(LuaTypes.ARRAY);
 			return readInt( 1 );
 		}
 		
-		int arrayCapacity() throws IOException {
+		public int arrayCapacity() throws IOException {
 			assertType(LuaTypes.ARRAY);
 			return readInt( 5 );
 		}
 		
-		int tableArrayPart() throws IOException {
+		public int tableArrayPart() throws IOException {
 			assertType(LuaTypes.TABLE);
 			return readInt( 1 );
 		}
 		
-		int tableHashedPart() throws IOException {
+		public int tableHashedPart() throws IOException {
 			assertType(LuaTypes.TABLE);
 			return readInt( 5 );
 		}
 		
-		int tableMetatable() throws IOException {
+		public int tableMetatable() throws IOException {
 			assertType(LuaTypes.TABLE);
 			return readInt( 9 );
 		}
 		
-		int hashmapKeys() throws IOException {
+		public int hashmapKeys() throws IOException {
 			assertType(LuaTypes.HASHMAP);
 			return readInt( 1 );
 		}
 		
-		int hashmapVals() throws IOException {
+		public int hashmapVals() throws IOException {
 			assertType(LuaTypes.HASHMAP);
 			return readInt( 5 );
 		}
 		
-		int intValue() throws IOException {
+		public int intValue() throws IOException {
 			assertType(LuaTypes.INT);
 			return readInt( 1 );
 		}
 		
-		int stringLength() throws IOException {
+		public int stringLength() throws IOException {
 			assertType(LuaTypes.STRING);
 			return readInt( 1 );
 		}
 		
-		String stringValue() throws IOException {
+		public String stringValue() throws IOException {
 			assertType(LuaTypes.STRING);
 			return new String(data, 5, stringLength());
 		}

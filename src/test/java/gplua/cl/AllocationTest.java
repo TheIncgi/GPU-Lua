@@ -7,11 +7,14 @@ import java.io.ByteArrayInputStream;
 import java.io.DataInputStream;
 import java.io.IOException;
 import java.util.Arrays;
+import java.util.List;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import com.nativelibs4java.opencl.CLEvent;
 import com.theincgi.gplua.cl.LuaTypes;
+
+import gplua.HeapVisualizer;
 
 public class AllocationTest extends TestBase {
 	
@@ -46,19 +49,20 @@ public class AllocationTest extends TestBase {
 	}
 	
 	@Override
-	public void setupProgram( String src ) {
-		super.setupProgram(header + src + footer);
+	public List<CLEvent> setupProgram( String src, int heapSize, int logSize ) {
+		return super.setupProgram(header + src + footer, heapSize, logSize);
 	}
 	
-	
-	
+	@Override
+	public List<CLEvent> setupProgram( String src, int heapSize, int logSize, int heapDebugPos ) {
+		return super.setupProgram(header + src + footer, heapSize, logSize, heapDebugPos);
+	}
 	
 	@Test
 	void heapInit() throws IOException {
-		var events = setBufferSizes( 24, 512 );
-		setupProgram("""
+		var events = setupProgram("""
 		initHeap( heap, maxHeapSize );
-		""");
+		""", 24, 32);
 		
 		var done = kernel.enqueueNDRange(queue, new int[] {1}, events.toArray(new CLEvent[events.size()]));
 		
@@ -83,12 +87,11 @@ public class AllocationTest extends TestBase {
 	
 	@Test
 	void heapAllocate() throws IOException {
-		var events = setBufferSizes( 24, 512 );
-		setupProgram("""
+		var events = setupProgram("""
 		initHeap( heap, maxHeapSize );
 		href myObj = allocateHeap( heap, maxHeapSize, 6 );
 		putHeapInt( errorOutput, 0, myObj );
-		""");
+		""",24, 32);
 		
 		var done = kernel.enqueueNDRange(queue, new int[] {1}, events.toArray(new CLEvent[events.size()]));
 		
@@ -122,12 +125,11 @@ public class AllocationTest extends TestBase {
 	
 	@Test
 	void overAllocate() throws IOException {
-		var events = setBufferSizes( 24, 512 );
-		setupProgram("""
+		var events = setupProgram("""
 		initHeap( heap, maxHeapSize );
 		href myObj = allocateHeap( heap, maxHeapSize, 60 );
 		putHeapInt( errorOutput, 0, myObj );
-		""");
+		""", 24, 32);
 		
 		var done = kernel.enqueueNDRange(queue, new int[] {1}, events.toArray(new CLEvent[events.size()]));
 		var data = heap.readData(queue, done);
@@ -152,15 +154,14 @@ public class AllocationTest extends TestBase {
 
 	@Test
 	void free() throws IOException {
-		var events = setBufferSizes( 32, 512 );
-		setupProgram("""
+		var events = setupProgram("""
 		initHeap( heap, maxHeapSize );
 		href objA = allocateHeap( heap, maxHeapSize, 5 );
 		href objB = allocateHeap( heap, maxHeapSize, 5 );
 		putHeapInt( errorOutput, 0, objA );
 		putHeapInt( errorOutput, 4, objB );
 		freeHeap( heap, maxHeapSize, objA, false );
-		""");
+		""", 32, 32);
 		
 		var done = kernel.enqueueNDRange(queue, new int[] {1}, events.toArray(new CLEvent[events.size()]));
 		var data = heap.readData(queue, done);
@@ -185,8 +186,7 @@ public class AllocationTest extends TestBase {
 	
 	@Test
 	void freeAndMerge() throws IOException {
-		var events = setBufferSizes( 32, 512 );
-		setupProgram("""
+		var events = setupProgram("""
 		initHeap( heap, maxHeapSize );
 		href objA = allocateHeap( heap, maxHeapSize, 5 );
 		href objB = allocateHeap( heap, maxHeapSize, 5 );
@@ -194,7 +194,7 @@ public class AllocationTest extends TestBase {
 		putHeapInt( errorOutput, 4, objB );
 		freeHeap( heap, maxHeapSize, objB, false );
 		freeHeap( heap, maxHeapSize, objA, false );
-		""");
+		""", 32, 32);
 		
 		var done = kernel.enqueueNDRange(queue, new int[] {1}, events.toArray(new CLEvent[events.size()]));
 		var data = heap.readData(queue, done);
@@ -221,8 +221,7 @@ public class AllocationTest extends TestBase {
 	
 	@Test
 	void markAndSweep() throws IOException {
-		var events = setBufferSizes( 32, 512 );
-		setupProgram("""
+		var events = setupProgram("""
 		initHeap( heap, maxHeapSize );
 		href objA = allocateHeap( heap, maxHeapSize, 5 );
 		href objB = allocateHeap( heap, maxHeapSize, 5 );
@@ -232,7 +231,7 @@ public class AllocationTest extends TestBase {
 		_setMarkTag( heap, objB-4, true ); //keep objB
 		
 		sweepHeap( heap, maxHeapSize );
-		""");
+		""", 32, 32);
 		
 		var done = kernel.enqueueNDRange(queue, new int[] {1}, events.toArray(new CLEvent[events.size()]));
 		var data = heap.readData(queue, done);
@@ -265,8 +264,7 @@ public class AllocationTest extends TestBase {
 	 * */
 	@Test
 	void exactFitDoesntAlterNextTag() throws IOException {
-		var events = setBufferSizes( 800, 512 );
-		setupProgram("""
+		var events = setupProgram("""
 		initHeap( heap, maxHeapSize );
 		
 		href a = allocateHeap( heap, maxHeapSize, 72 ); //some object(s)
@@ -279,7 +277,7 @@ public class AllocationTest extends TestBase {
 		
 
 		errorOutput[0] = c;
-		""");
+		""", 800, 32);
 		
 		var done = kernel.enqueueNDRange(queue, new int[] {1}, events.toArray(new CLEvent[events.size()]));
 		var data = heap.readData(queue, done);
@@ -296,8 +294,7 @@ public class AllocationTest extends TestBase {
 
 	@Test
 	void allocatesOnSequentialFree() throws IOException {
-		var events = setBufferSizes( 800, 512 );
-		setupProgram("""
+		var events = setupProgram("""
 		initHeap( heap, maxHeapSize );
 		
 		href a = allocateHeap( heap, maxHeapSize, 10 ); //14 bytes with tag
@@ -309,7 +306,7 @@ public class AllocationTest extends TestBase {
 		
 		errorOutput[0] = a;
 		errorOutput[1] = d;
-		""");
+		""", 800, 32);
 		
 		var done = kernel.enqueueNDRange(queue, new int[] {1}, events.toArray(new CLEvent[events.size()]));
 		var data = heap.readData(queue, done);
@@ -320,5 +317,33 @@ public class AllocationTest extends TestBase {
 		var objD = log.read();
 		
 		assertEquals(objA, objD, "objD should fit where objA was");
+	}
+	
+	@Test
+	void allocatesAfterTinyGap() throws IOException {
+		var events = setupProgram("""
+		initHeap( heap, maxHeapSize );
+		
+		href a = allocateHeap( heap, maxHeapSize, 20 ); //some object
+		href b = allocateHeap( heap, maxHeapSize, 2 );  //tiny object
+		href c = allocateHeap( heap, maxHeapSize, 10 ); //some object
+		
+		freeHeap( heap, maxHeapSize, b, false ); //free the tiny object
+		
+		href d = allocateHeap( heap, maxHeapSize, 24 ); //too big for tiny gap
+		
+		errorOutput[0] = d;
+		""", 100, 32);
+		
+		var done = kernel.enqueueNDRange(queue, new int[] {1}, events.toArray(new CLEvent[events.size()]));
+		var data = heap.readData(queue, done);
+		
+		//new HeapVisualizer(data, 1000).show();
+		DataInputStream log = new DataInputStream(new ByteArrayInputStream(errOut.readData(queue)));
+		//dumpHeap(data);
+		
+		var objD = log.read();
+		
+		assertNotEquals(0, objD, "objD be allocated somewhere");
 	}
 }

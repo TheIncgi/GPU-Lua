@@ -7,6 +7,7 @@ import java.io.DataInputStream;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.StringJoiner;
 
 import static org.junit.Assert.assertEquals;
@@ -54,18 +55,22 @@ class TableTest extends TestBase {
 	}
 	
 	@Override
-	public void setupProgram( String src ) {
-		super.setupProgram(header + src + footer);
+	public List<CLEvent> setupProgram( String src, int heapSize, int logSize ) {
+		return super.setupProgram(header + src + footer, heapSize, logSize);
+	}
+	
+	@Override
+	public List<CLEvent> setupProgram( String src, int heapSize, int logSize, int heapDebugPos ) {
+		return super.setupProgram(header + src + footer, heapSize, logSize, heapDebugPos);
 	}
 	
 	@Test
-	void createTable( ) throws IOException {
-		var events = setBufferSizes( 32, 512 );
-		setupProgram("""
+	void createTable() throws IOException {
+		var events = setupProgram("""
 		initHeap( heap, maxHeapSize );
 		href myObj = newTable( heap, maxHeapSize );
 		putHeapInt( errorOutput, 0, myObj );
-		""");
+		""", 32, 32);
 		
 		var done = kernel.enqueueNDRange(queue, new int[] {1}, events.toArray(new CLEvent[events.size()]));
 		var data = heap.readData(queue, done);
@@ -84,15 +89,14 @@ class TableTest extends TestBase {
 	
 	@Test
 	void createTableWithArray( ) throws IOException {
-		var events = setBufferSizes( 128, 512 );
-		setupProgram("""
+		var events = setupProgram("""
 		initHeap( heap, maxHeapSize );
 		href myTable = newTable( heap, maxHeapSize );
 		href arrayPart = tableCreateArrayPart( heap, maxHeapSize, myTable ); 
 		putHeapInt( errorOutput, 0, myTable );
 		putHeapInt( errorOutput, 4, arrayPart );
 		putHeapInt( errorOutput, 8, TABLE_INIT_ARRAY_SIZE );
-		""");
+		""", 128, 32);
 		
 		var done = kernel.enqueueNDRange(queue, new int[] {1}, events.toArray(new CLEvent[events.size()]));
 		var data = heap.readData(queue, done);
@@ -121,15 +125,14 @@ class TableTest extends TestBase {
 	
 	@Test
 	void createTableWithHashmap( ) throws IOException {
-		var events = setBufferSizes( 128, 512 );
-		setupProgram("""
+		var events = setupProgram("""
 		initHeap( heap, maxHeapSize );
 		href myTable = newTable( heap, maxHeapSize );
 		href hashedPart = tableCreateHashedPart( heap, maxHeapSize, myTable ); 
 		putHeapInt( errorOutput, 0, myTable );
 		putHeapInt( errorOutput, 4, hashedPart );
 		putHeapInt( errorOutput, 8, HASHMAP_INIT_SIZE ); //warnings are from wrong type, but it's fine
-		""");
+		""", 128, 32);
 		
 		var done = kernel.enqueueNDRange(queue, new int[] {1}, events.toArray(new CLEvent[events.size()]));
 		var data = heap.readData(queue, done);
@@ -170,8 +173,7 @@ class TableTest extends TestBase {
 	
 	@Test
 	void insertIntoTableArrayCapacity() throws IOException {
-		var events = setBufferSizes( 140, 512 );
-		setupProgram("""
+		var events = setupProgram("""
 		initHeap( heap, maxHeapSize );
 		href myTable = newTable( heap, maxHeapSize );
 		href arrayPart = tableCreateArrayPart( heap, maxHeapSize, myTable ); 
@@ -185,7 +187,7 @@ class TableTest extends TestBase {
 		putHeapInt( errorOutput, 0, myTable );
 		putHeapInt( errorOutput, 4, arrayPart );
 		putHeapInt( errorOutput, 8, myValue );
-		""");
+		""", 140, 32);
 		
 		var done = kernel.enqueueNDRange(queue, new int[] {1}, events.toArray(new CLEvent[events.size()]));
 		var data = heap.readData(queue, done);
@@ -217,8 +219,7 @@ class TableTest extends TestBase {
 	
 	@Test
 	void insertOutOfTableArrayCapacity() throws IOException {
-		var events = setBufferSizes( 140, 512 );
-		setupProgram("""
+		var events = setupProgram("""
 		initHeap( heap, maxHeapSize );
 		href myTable = newTable( heap, maxHeapSize );
 		href arrayPart = tableCreateArrayPart( heap, maxHeapSize, myTable ); 
@@ -242,7 +243,7 @@ class TableTest extends TestBase {
 		putHeapInt( errorOutput, 16, TABLE_INIT_ARRAY_SIZE );
 		putHeapInt( errorOutput, 20, resizeRule( TABLE_INIT_ARRAY_SIZE ));
 		putHeapInt( errorOutput, 24, newArrayPart);
-		""");
+		""", 140, 512);
 		
 		var done = kernel.enqueueNDRange(queue, new int[] {1}, events.toArray(new CLEvent[events.size()]));
 		var data = heap.readData(queue, done);
@@ -291,8 +292,7 @@ class TableTest extends TestBase {
 	
 	@Test
 	void insertIntoHashmap() throws IOException {
-		var events = setBufferSizes( 128, 512 );
-		setupProgram("""
+		var events = setupProgram("""
 		initHeap( heap, maxHeapSize );
 		href myTable = newTable( heap, maxHeapSize );
 		href hashedPart = tableCreateHashedPart( heap, maxHeapSize, myTable ); 
@@ -309,7 +309,7 @@ class TableTest extends TestBase {
 		putHeapInt( errorOutput, 8, hstr );
 		putHeapInt( errorOutput, 12, hash );
 		putHeapInt( errorOutput, 16, hashObj );
-		""");
+		""", 128, 128);
 		
 		var done = kernel.enqueueNDRange(queue, new int[] {1}, events.toArray(new CLEvent[events.size()]));
 		var data = heap.readData(queue, done);
@@ -343,8 +343,7 @@ class TableTest extends TestBase {
 	
 	@Test
 	void getStringFromHashmap() throws IOException {
-		var events = setBufferSizes( 128, 512 );
-		setupProgram("""
+		var events = setupProgram("""
 		initHeap( heap, maxHeapSize );
 		href myTable = newTable( heap, maxHeapSize );
 		href hashedPart = tableCreateHashedPart( heap, maxHeapSize, myTable ); 
@@ -358,7 +357,7 @@ class TableTest extends TestBase {
 		putHeapInt( errorOutput, 4, slen );
 		putHeapInt( errorOutput, 8, hstr );
 		putHeapInt( errorOutput, 12, hstrCopy );
-		""");
+		""", 128, 128);
 		
 		var done = kernel.enqueueNDRange(queue, new int[] {1}, events.toArray(new CLEvent[events.size()]));
 		var data = heap.readData(queue, done);
@@ -379,8 +378,7 @@ class TableTest extends TestBase {
 	
 	@Test
 	void duplicateEntry() throws IOException {
-		var events = setBufferSizes( 128, 512 );
-		setupProgram("""
+		var events = setupProgram("""
 		initHeap( heap, maxHeapSize );
 		href myTable = newTable( heap, maxHeapSize );
 		
@@ -392,7 +390,7 @@ class TableTest extends TestBase {
 		tableRawSet( heap, maxHeapSize, myTable, x, x );
 		
 		putHeapInt( errorOutput, 0, myTable );
-		""");
+		""", 128, 128);
 		
 		var done = kernel.enqueueNDRange(queue, new int[] {1}, events.toArray(new CLEvent[events.size()]));
 		var data = heap.readData(queue, done);
@@ -416,8 +414,7 @@ class TableTest extends TestBase {
 	
 	@Test
 	void resize() throws IOException {
-		var events = setBufferSizes( 256, 512 );
-		setupProgram("""
+		var events = setupProgram("""
 		initHeap( heap, maxHeapSize );
 		href myMap = newHashmap( heap, maxHeapSize, 4 );
 		
@@ -432,7 +429,7 @@ class TableTest extends TestBase {
 		putHeapInt( errorOutput, 0, myMap );
 		putHeapInt( errorOutput, 4, x );
 		putHeapInt( errorOutput, 8, worked ? 1 : 0 );
-		""");
+		""", 256, 128);
 		
 		var done = kernel.enqueueNDRange(queue, new int[] {1}, events.toArray(new CLEvent[events.size()]));
 		var data = heap.readData(queue, done);
@@ -459,8 +456,7 @@ class TableTest extends TestBase {
 	
 	@Test
 	void multiString() throws IOException {
-		var events = setBufferSizes( 256, 512 );
-		setupProgram("""
+		var events = setupProgram("""
 		initHeap( heap, maxHeapSize );
 		href myTable = newTable( heap, maxHeapSize );
 		href hashedPart = tableCreateHashedPart( heap, maxHeapSize, myTable ); 
@@ -486,7 +482,7 @@ class TableTest extends TestBase {
 		putHeapInt( errorOutput, 12, hstr3 );
 		putHeapInt( errorOutput, 16, hstr4 );
 		putHeapInt( errorOutput, 20, hstr5 );
-		""");
+		""", 256, 128);
 		
 		var done = kernel.enqueueNDRange(queue, new int[] {1}, events.toArray(new CLEvent[events.size()]));
 		var data = heap.readData(queue, done);
