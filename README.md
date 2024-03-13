@@ -14,5 +14,5 @@ Each tag is 4 bytes
 `0x03_FF_FF_FF` is the largest chunk size
 
 
-<a href="debug.png"> <img src=debug.png alt="heap visualization" width= 850></a> <br>
+<a href="https://raw.githubusercontent.com/TheIncgi/GPU-Lua/main/debug.png?token=GHSAT0AAAAAACHZ6JMQQ4IW4OEKUUCYNC3GZPRGGSA"> <img src=debug.png alt="heap visualization" width= 850></a> <br>
 [Table's hashmap portion being resized as more strings and functions are added to it. Click for full size]
