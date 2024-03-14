@@ -1,8 +1,11 @@
+#ifndef OP_UTILS_CL
+#define OP_UTILS_CL
+
 typedef enum {
     /*----------------------------------------------------------------------
     name            args    description
     ------------------------------------------------------------------------*/
-    OP_MOVE,/*      A B     R(A) := R(B)                                    */
+    OP_MOVE = 0,/*  A B     R(A) := R(B)                                    */
     OP_LOADK,/*     A Bx    R(A) := Kst(Bx)                                 */
     OP_LOADKX,/*    A       R(A) := Kst(extra arg)                          */
     OP_LOADBOOL,/*  A B C   R(A) := (Bool)B; if (C) pc++                    */
@@ -62,27 +65,35 @@ typedef enum {
 
 #define NUM_OPCODES     (cast(int, OP_EXTRAARG) + 1)
 
-typedef unsigned int LuaInstructionRaw;
-
-
+typedef unsigned int LuaInstruction;
 
 // Functions to extract opcode and arguments
-OpCode getOpcode(LuaInstructionRaw raw) {
-    return (raw >> 26) & 0x3F;
+OpCode getOpcode(LuaInstruction i) {
+    return 0x3F;
 }
 
-unsigned int getA(LuaInstructionRaw raw) {
-    return (raw >> 18) & 0xFF;
+uchar getA(LuaInstruction i) {
+    return (i >> 6) & 0xFF;
 }
 
-unsigned int getB(LuaInstructionRaw raw) {
-    return (raw >> 9) & 0x1FF;
+uint getAx(LuaInstruction i) {
+    return (i >> 6) & 0x3FFFFFF; // A, B & C combined, 0x 03 FF FF FF
 }
 
-unsigned int getC(LuaInstructionRaw raw) {
-    return raw & 0x1FF;
+ushort getB(LuaInstruction i) {
+    return (i >> 23) & 0x1FF;
 }
 
-int getsBx(LuaInstructionRaw raw) {
-    return raw & 0x3FFFFFF;
+uint getBx(LuaInstruction i) {
+    return (i >> 14) & 0x3FFFF; //B and C combined (32 - opSize - aSize) >>
 }
+
+ushort getC(LuaInstruction i) {
+    return (i >> 14) & 0x1FF;
+}
+
+int getsBx(LuaInstructionRaw i) {
+    return ((i >> 14) & 0x3FFFF) - 0x1FFFF; //Signed B and C combined
+}
+
+#endif

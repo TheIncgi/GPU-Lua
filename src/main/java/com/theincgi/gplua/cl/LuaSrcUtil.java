@@ -119,7 +119,7 @@ public class LuaSrcUtil {
 		}
 		
 //		Double.longBitsToDouble(longBits);
-		buf[0] = 1; //double
+		buf[0] = LuaTypes.NUMBER; //double
 		return buf;
 	}
 	
@@ -130,6 +130,7 @@ public class LuaSrcUtil {
 			value = Integer.reverseBytes(value);
 		
 		//like Big Endian, most significant first
+		buf[0] = (byte) LuaTypes.INT;
 		buf[1] = (byte) (value >> 24 & 0xFF);
 		buf[2] = (byte) (value >> 16 & 0xFF);
 		buf[3] = (byte) (value >>  8 & 0xFF);
