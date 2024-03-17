@@ -18,12 +18,12 @@ public class LuaKernelArgs {
 //	public final IntArray1D workSize;
 	//call info stack??
 //	public final ByteArray1D luaState;
-	public final IntArray1D luaStacks;
+	public final IntArray1D luaStack;
 	public final IntArray1D stackSizes; // [callInfo, luaStack, heapSize]
 //	public final IntArray1D errorPointer
 	public final StringBuffer errorBuffer;
 	public final ByteArray1D heap;
-	public final LongArray1D heapNext;
+//	public final LongArray1D heapNext;
 	public final LongArray1D maxExecutionTime; //[millis]
 	
 	
@@ -53,11 +53,11 @@ public class LuaKernelArgs {
 		
 //		workSize = new IntArray1D(context, Input);
 //		luaState = new ByteArray1D(context, InputOutput);
-		luaStacks = new IntArray1D(context, InputOutput);     //io
+		luaStack = new IntArray1D(context, InputOutput);     //io
 		stackSizes = new IntArray1D(context, Input);
 		errorBuffer = new StringBuffer(context, InputOutput);  //io
 		heap = new ByteArray1D(context, InputOutput);          //io
-		heapNext = new LongArray1D(context, InputOutput);      //io
+//		heapNext = new LongArray1D(context, InputOutput);      //io
 		maxExecutionTime = new LongArray1D(context, Input);
 		
 		linesDefinedBuffer = new IntArray1D(context, Input);
@@ -117,12 +117,12 @@ public class LuaKernelArgs {
 		
 		var eventA = this.stackSizes.loadData(List.of(luaStacks, heap, errorBuffer), queue);
 //		var eventB = this.luaState.fillEmpty(luaState, queue);
-		var eventC = this.luaStacks.fillEmpty(luaStacks, queue);
-		var eventD = this.heap.fillEmpty(heap, queue);
-		var eventE = this.heapNext.fillEmpty(1, queue);
-		var eventF = this.errorBuffer.fillEmpty(errorBuffer, queue);
+		this.luaStack.noData(luaStacks);
+		this.heap.noData(heap);
+//		var eventE = this.heapNext.fillEmpty(1, queue);
+		this.errorBuffer.noData(errorBuffer);
 		
-		return List.of(eventA, eventC, eventD, eventE, eventF);
+		return List.of(eventA);
 	}
 	
 	public CLEvent setMaxExecution(CLQueue queue, long millis) {
@@ -134,12 +134,12 @@ public class LuaKernelArgs {
 			//workSize.arg(),
 //			callInfoStack.arg(),
 //			luaState.arg(),
-			luaStacks.arg(),
+			luaStack.arg(),
 			stackSizes.arg(),
 			errorBuffer.arg(),
 			maxExecutionTime.arg(),
 			heap.arg(),
-			heapNext.arg(),
+//			heapNext.arg(),
 			
 			nFunctions.arg(),
 			linesDefinedBuffer.arg(),

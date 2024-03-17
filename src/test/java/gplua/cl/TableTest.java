@@ -18,7 +18,7 @@ import org.junit.jupiter.api.Test;
 import com.nativelibs4java.opencl.CLEvent;
 import com.theincgi.gplua.cl.LuaTypes;
 
-class TableTest extends TestBase {
+class TableTest extends HeapTestBase {
 
 	public static final String header = 
 	"""

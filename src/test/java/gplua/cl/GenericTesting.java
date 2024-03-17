@@ -15,7 +15,7 @@ import org.junit.jupiter.api.Test;
 import com.nativelibs4java.opencl.CLEvent;
 import com.theincgi.gplua.cl.LuaTypes;
 
-public class GenericTesting extends TestBase {
+public class GenericTesting extends HeapTestBase {
 	
 	public static final String header = 
 			"""

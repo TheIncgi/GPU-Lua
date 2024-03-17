@@ -7,7 +7,7 @@ import java.io.IOException;
 
 import javax.imageio.ImageIO;
 
-import gplua.cl.TestBase;
+import gplua.cl.HeapTestBase;
 
 public class HeapVisualizer {
 	
@@ -28,7 +28,7 @@ public class HeapVisualizer {
 	 * @throws IOException 
 	 * */
 	public HeapVisualizer(byte[] heap, int heapRecordIndex) throws IOException {
-		var array = TestBase.getChunkData(heap, heapRecordIndex);
+		var array = HeapTestBase.getChunkData(heap, heapRecordIndex);
 		this.events = array.arraySize() / 2;
 		this.heapRecordIndex = heapRecordIndex;
 		var usage = new int[heapRecordIndex];

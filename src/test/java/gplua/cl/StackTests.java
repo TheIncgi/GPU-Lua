@@ -1,11 +1,15 @@
 package gplua.cl;
 
+import java.io.FileNotFoundException;
+import java.io.IOException;
+import java.nio.file.Files;
 import java.util.List;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import com.nativelibs4java.opencl.CLEvent;
+import com.theincgi.gplua.cl.LuaSrcUtil;
 
 public class StackTests extends KernelTestBase {
 	
@@ -25,35 +29,74 @@ public class StackTests extends KernelTestBase {
 			#include"vm.cl"
 			
 			__kernel void exec(
-			    __global const uint* stackSizes,
-			    __global      uchar* heap,
-			    __global       char* log
+			    __global        uint* luaStack,
+			    __global const ulong* stackSizes,
+			    __global        char* errorOutput,
+			    __global const  long* maxExecutionTime,
+			    __global       uchar* heap,
+			    
+			    /*Byte code pieces*/
+			    __global unsigned int* numFunctions,
+			    __global unsigned int* linesDefined,
+			    __global unsigned int* lastLinesDefined,
+			    __global        uchar* numParams,
+			    __global         bool* isVararg, //could be true or passed number of args & set that way
+			    __global        uchar* maxStackSizes, //from bytecode, poor name planning, oops, different than stackSizes[0]
+			
+			    //code
+			    __global          int* codeIndexes,
+			    __global unsigned int* code, //[function #][instruction] = code[ codeIndexes[function] + instruction ]
+			    
+			    //constants
+			    __global            int* constantsPrimaryIndex,
+			    __global            int* constantsSecondaryIndex,
+			    __global          uchar* constantsData, //[function #][byte] - single byte type, followed by value, strings are null terminated
+			    __global            int* protoLengths,
+			    
+			    //upvals
+			    __global           int* upvalsIndex,
+			    __global         uchar* upvals
 			) {
 			    //int dimensions = get_work_dim();
 				
 				if( get_global_id(0) != 0 )
 					return;
-					
-				uint maxHeapSize = stackSizes[0];
-				uint logBufSize = stackSizes[1];
 				
-				int dummyStack[1024];
+				
 				
 				struct WorkerEnv env;
-				env.luaStack = &dummyStack;
-				env.stackSize = 1024;
-				env.heap = heap;
-				env.maxHeapSize = maxHeapSize;
-				env
+				env.luaStack                = luaStack;                  //&(luaStack[ maxStackSize * glid ]);
+				env.stackSize               = stackSizes[0];
+				env.heap                    = heap;
+				env.maxHeapSize             = stackSizes[1];
+				env.error                   = errorOutput;
+				env.errorSize               = stackSizes[2];
+				env.constantsPrimaryIndex   = constantsPrimaryIndex;
+				env.constantsSecondaryIndex = constantsSecondaryIndex;
+				env.constantsData           = constantsData;
+				
+				href stringTable = newTable(      heap, env.maxHeapSize );
+				href globals     = createGlobals( heap, env.maxHeapSize, stringTable );
+				
+				env.stringTable             = stringTable;
+				env.globals                 = globals;
+				env.func = 0;
+				env.pc = 0;
 					
 			""";
 	public static final String footer = "\n}";
 	
-//	@BeforeEach
-//	void setup() {
-//		super.setup();
-//	}
-//	
+	@BeforeEach
+	void setup() {
+		super.setup();
+	}
+	
+	@Override
+	public List<CLEvent> setupProgram(String src, byte[] byteCode, int heapSize, int stackSize, int errSize)
+			throws IOException {
+		return super.setupProgram(header + src + footer, byteCode, heapSize, stackSize, errSize);
+	}
+	
 //	@Override
 //	public List<CLEvent> setupProgram( String src, int heapSize, int logSize ) {
 //		return super.setupProgram(header + src + footer, heapSize, logSize);
@@ -65,8 +108,15 @@ public class StackTests extends KernelTestBase {
 //	}
 	
 	@Test
-	void initStack() {
+	void initStack() throws FileNotFoundException, IOException {
+		var events = setupProgram("""
 		
+		""", 
+		LuaSrcUtil.readBytecode("print.out"),
+		4096, //heap
+		1024, //stack
+		32    //log/err
+		);
 	}
 	
 	void loadK() {

@@ -16,7 +16,7 @@ import com.theincgi.gplua.cl.LuaTypes;
 
 import gplua.HeapVisualizer;
 
-public class AllocationTest extends TestBase {
+public class AllocationTest extends HeapTestBase {
 	
 	public static final String header = 
 	"""

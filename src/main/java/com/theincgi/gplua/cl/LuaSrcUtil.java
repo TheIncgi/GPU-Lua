@@ -34,10 +34,10 @@ public class LuaSrcUtil {
 	 * @throws IOException 
 	 * @throws InterruptedException 
 	 * */
-	public static void compile(String src, String file) throws IOException, InterruptedException {
+	public static void compile(String srcCode, String file) throws IOException, InterruptedException {
 		var rt = Runtime.getRuntime();
 		var proc = rt.exec(new String[] { LUAC, "-o", file, "-" });
-		proc.getOutputStream().write(src.getBytes());
+		proc.getOutputStream().write(srcCode.getBytes());
 		proc.getOutputStream().flush();
 		proc.getOutputStream().close();
 		proc.waitFor();

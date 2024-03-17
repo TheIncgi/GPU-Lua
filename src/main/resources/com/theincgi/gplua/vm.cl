@@ -11,7 +11,7 @@ bool loadk( struct WorkerEnv* env, uchar reg, uint index ) {
     uint secondaryIndex = fConstStart + index;
     //if secondaryIndex > >= len return 0, 1 indexed ? 0 indexed?
     uint constStart = env->constantsSecondaryIndex[ secondaryIndex * 2     ];
-    uint constLen   = env->constantsSecondaryIndex[ secondaryIndex * 2 + 1 ]
+    uint constLen   = env->constantsSecondaryIndex[ secondaryIndex * 2 + 1 ];
     
     href k = allocateHeap( env->heap, env->maxHeapSize, constLen );
     if( k == 0 ) return false; //TODO err OOM
@@ -21,7 +21,7 @@ bool loadk( struct WorkerEnv* env, uchar reg, uint index ) {
     }
     
     //nil bool number str
-    return bool setRegister( env->luaStack, env->stackSize, reg, k );
+    return setRegister( env->luaStack, env->stackSize, reg, k );
 }
 
 //Ax
@@ -34,6 +34,9 @@ bool doABxOp( struct WorkerEnv* env, OpCode code, uchar a, uint bx ) {
     switch( code ) {
         case OP_LOADK: // R(A) := Kst(Bx)
             return loadk( env, a, bx );
+
+        default:
+            return false;
     }
 }
 
@@ -48,7 +51,7 @@ void doABCOp( struct WorkerEnv* env, OpCode code, uchar a, ushort b, ushort c ) 
 }
 
 bool doOp( struct WorkerEnv* env, LuaInstruction instruction ) {
-    LuaInstruction instruction = code[ codeIndexes[func] + pc ];
+    // LuaInstruction instruction = code[ codeIndexes[func] + pc ];
     OpCode op = getOpcode( instruction );
 
     switch( op ) {
@@ -59,8 +62,7 @@ bool doOp( struct WorkerEnv* env, LuaInstruction instruction ) {
         {
             uchar a = getA( instruction );
             ushort bx = getBx( instruction );
-            doABxOp( &workerEnv, op, uchar a, uint bx )
-            break;
+            return doABxOp( env, op, a, bx );
         }
         //case:
 
@@ -69,6 +71,7 @@ bool doOp( struct WorkerEnv* env, LuaInstruction instruction ) {
 
         //A B C
         //case:
-
+        default:
+            return false;
     }
 }

@@ -92,7 +92,7 @@ ushort getC(LuaInstruction i) {
     return (i >> 14) & 0x1FF;
 }
 
-int getsBx(LuaInstructionRaw i) {
+int getsBx(LuaInstruction i) {
     return ((i >> 14) & 0x3FFFF) - 0x1FFFF; //Signed B and C combined
 }
 

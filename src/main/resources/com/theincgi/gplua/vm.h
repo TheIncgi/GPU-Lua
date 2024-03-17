@@ -1,6 +1,7 @@
 #ifndef VM_H
 #define VM_H
 #include"common.cl"
+#include"opUtils.cl"
 
 struct WorkerEnv {
     uint* luaStack;
@@ -20,8 +21,8 @@ struct WorkerEnv {
     href stringTable;
 
     //vm
-    uint func = 0;
-    uint pc=0;
+    uint func;
+    uint pc;
 };
 
 bool loadk( struct WorkerEnv* env, uchar reg, uint index );

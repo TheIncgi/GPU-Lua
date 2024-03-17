@@ -15,7 +15,7 @@ import com.theincgi.gplua.cl.LuaTypes;
 
 import gplua.HeapVisualizer;
 
-class GlobalsTest extends TestBase {
+class GlobalsTest extends HeapTestBase {
 	
 	public static final String header = 
 			"""

@@ -60,4 +60,8 @@ public class IntArray1D {
 		pointer = Pointer.pointerToArray(new int[size]);
 		return buffer.write(queue, pointer, false);
 	}
+
+	public void noData(long size) {
+		buffer = context.createIntBuffer(usage, size);
+	}
 }
