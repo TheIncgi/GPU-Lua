@@ -1,5 +1,7 @@
 package gplua.cl;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.nio.file.Files;
@@ -20,6 +22,7 @@ public class StackTests extends KernelTestBase {
 			#include"strings.h"
 			#include"globals.cl"
 			#include"vm.h"
+			#include"stackUtils.h"
 			
 			#include"table.cl"
 			#include"array.cl"
@@ -27,6 +30,7 @@ public class StackTests extends KernelTestBase {
 			#include"heapUtils.cl"
 			#include"strings.cl"
 			#include"vm.cl"
+			#include"stackUtils.cl"
 			
 			__kernel void exec(
 			    __global        uint* luaStack,
@@ -75,6 +79,8 @@ public class StackTests extends KernelTestBase {
 				env.constantsSecondaryIndex = constantsSecondaryIndex;
 				env.constantsData           = constantsData;
 				
+				initHeap( heap, env.maxHeapSize );
+				
 				href stringTable = newTable(      heap, env.maxHeapSize );
 				href globals     = createGlobals( heap, env.maxHeapSize, stringTable );
 				
@@ -82,6 +88,8 @@ public class StackTests extends KernelTestBase {
 				env.globals                 = globals;
 				env.func = 0;
 				env.pc = 0;
+				
+				
 					
 			""";
 	public static final String footer = "\n}";
@@ -110,13 +118,24 @@ public class StackTests extends KernelTestBase {
 	@Test
 	void initStack() throws FileNotFoundException, IOException {
 		var events = setupProgram("""
+		initStack( env.luaStack, 1, 2, 3 );
 		
+		for(int i = 0; i < env.stackSize; i++)
+			putHeapInt( errorOutput, i * 4, env.luaStack[ i ] );
 		""", 
 		LuaSrcUtil.readBytecode("print.out"),
 		4096, //heap
 		1024, //stack
-		32    //log/err
+		1024*4    //log/err
 		);
+		
+		var done = run(events);
+		var log  = args.errorBuffer.readData(queue, done);
+		
+		int[] validation = new int[] {1, 8, 5, 1, 2};
+		for(int i = 0; i < validation.length; i++) {
+			assertEquals(validation[i], readIntAt(log, i*4), "validation["+i+"] failed");
+		}
 	}
 	
 	void loadK() {

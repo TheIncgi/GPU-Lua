@@ -14,6 +14,7 @@ import com.theincgi.gplua.cl.LuaSrcUtil;
 public class KernelTestBase extends TestCommons {
 	
 	LuaKernelArgs args;
+	int[] workSize = new int[] {1};
 	
 	@Override
 	void setup() {
@@ -48,7 +49,15 @@ public class KernelTestBase extends TestCommons {
 		events.add(args.heap.fillEmpty(heapSize, queue));
 		events.add(args.luaStack.fillEmpty(stackSize, queue));
 		events.add(args.errorBuffer.fillEmpty(errSize, queue));
+		events.addAll(args.setStackSizes(queue, stackSize, heapSize, errSize, workSize));
+		events.add(args.setMaxExecution(queue, 30_000));
+		
+		args.applyArgs(kernel);
 		
 		return events;
+	}
+	
+	public CLEvent run(List<CLEvent> events) {
+		return kernel.enqueueNDRange(queue, new int[] {1}, events.toArray(new CLEvent[events.size()]));
 	}
 }
