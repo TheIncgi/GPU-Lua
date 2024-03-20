@@ -118,10 +118,10 @@ public class StackTests extends KernelTestBase {
 	@Test
 	void initStack() throws FileNotFoundException, IOException {
 		var events = setupProgram("""
-		initStack( env.luaStack, 1, 2, 3 );
-		
-		for(int i = 0; i < env.stackSize; i++)
-			putHeapInt( errorOutput, i * 4, env.luaStack[ i ] );
+		uint func = 1;
+		uint closure = 2;
+		uint varargs = 3;
+		initStack( env.luaStack, func, closure, varargs );
 		""", 
 		LuaSrcUtil.readBytecode("print.out"),
 		4096, //heap
@@ -130,12 +130,53 @@ public class StackTests extends KernelTestBase {
 		);
 		
 		var done = run(events);
-		var log  = args.errorBuffer.readData(queue, done);
+		var stack  = args.luaStack.readData(queue, done);
 		
-		int[] validation = new int[] {1, 8, 5, 1, 2};
+		int[] validation = new int[] {1, 8, 8, 1, 2};
 		for(int i = 0; i < validation.length; i++) {
-			assertEquals(validation[i], readIntAt(log, i*4), "validation["+i+"] failed");
+			assertEquals(validation[i], stack[i], "validation["+i+"] failed");
 		}
+	}
+	
+	@Test
+	void pushStack() throws FileNotFoundException, IOException {
+		var events = setupProgram("""
+		initStack( env.luaStack, 1, 2, 3 );
+		
+		//pc func, closure, varargs
+		pushStackFrame( env.luaStack, env.stackSize, 45, 11, 12, 4 );
+		
+		
+		""", 
+		LuaSrcUtil.readBytecode("print.out"),
+		4096, //heap
+		1024, //stack
+		1024*4    //log/err
+		);
+		
+		var done  = run(events);
+		var stack = args.luaStack.readData(queue, done);
+		
+		var frames = readStackFrames(stack);
+		
+		printFrames( frames );
+		
+		var topFrame = frames.peekLast();
+		var firstFrame = frames.peekFirst();
+		
+		
+		assertEquals(4, topFrame.varargs.length);
+		assertEquals(0, topFrame.registers.length);
+		assertEquals(45, topFrame.returnPC);
+		assertEquals(1, topFrame.returnBase);
+		assertEquals(11, topFrame.function);
+		assertEquals(12, topFrame.closure);
+		
+		assertEquals(3, firstFrame.varargs.length);
+		assertEquals(0, firstFrame.registers.length);
+		assertEquals(1, firstFrame.function);
+		assertEquals(2, firstFrame.closure);
+		
 	}
 	
 	void loadK() {

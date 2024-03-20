@@ -6,7 +6,8 @@
 void initStack( uint* stack, href funcHeapIndex, href funcHeapClosure, uint nVarargs ) {
     stack[0] = 1; //base of top frame, always available
     stack[1] = 5 + nVarargs; //first empty, value might not be 0 if reused, but will be overwritten before use
-    stack[2] = 5; //varargs are bellow "base" as it's used in a regular lua stack, they use it to point to the first register in a frame. with no varargs top will be here too
+    stack[2] = 5 + nVarargs; //varargs are bellow "base" as it's used in a regular lua stack, they use it to point to the first register in a frame. top will be here too until registers are pushed
+                             //this value points to the last non-inclusive slot used for varargs, which is also the first fixed arg
     stack[3] = funcHeapIndex;
     stack[4] = funcHeapClosure;
 }
@@ -19,7 +20,7 @@ bool pushStackFrame( uint* stack, uint stackSize, uint pc, href funcHeapIndex, h
     sref oldTop  = stack[oldBase];
 
     sref base = oldTop + 2; //first empty of old frame, +1 to store old base of frame and old PC
-    sref top = oldBase + 4; //first empty of new frame after values set
+    sref top = base + 4; //first empty of new frame after values set
     
     if(top > stackSize)
         return false; //not enough space!
@@ -29,7 +30,7 @@ bool pushStackFrame( uint* stack, uint stackSize, uint pc, href funcHeapIndex, h
     stack[base - 2] = pc;             //part of the previous frame, old 'program counter'
     stack[base - 1] = oldBase;        //part of the previous frame, if no previous frame then stack[0]
     stack[base    ] = top + nVarargs;            //first value in a frame points to the first empty index on the stack
-    stack[base + 1] = top;
+    stack[base + 1] = top + nVarargs;
     stack[base + 2] = funcHeapIndex;
     stack[base + 3] = funcHeapClosure;
     //   [base + 4] empty
