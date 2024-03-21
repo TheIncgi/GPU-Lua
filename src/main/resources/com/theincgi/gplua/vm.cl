@@ -4,7 +4,9 @@
 #include"heapUtils.h"
 #include"opUtils.cl"
 
-bool loadk( struct WorkerEnv* env, uchar reg, uint index ) {
+bool loadk( struct WorkerEnv* env, uchar reg, uint index ) { //TODO cache hrefs, preload?
+    if(index == 0) return false;
+    index = index - 1;
     uint fConstStart = env->constantsPrimaryIndex[ env->func * 2     ];
     uint fConstLen   = env->constantsPrimaryIndex[ env->func * 2 + 1 ];
 
@@ -12,16 +14,21 @@ bool loadk( struct WorkerEnv* env, uchar reg, uint index ) {
     //if secondaryIndex > >= len return 0, 1 indexed ? 0 indexed?
     uint constStart = env->constantsSecondaryIndex[ secondaryIndex * 2     ];
     uint constLen   = env->constantsSecondaryIndex[ secondaryIndex * 2 + 1 ];
-    
-    href k = allocateHeap( env->heap, env->maxHeapSize, constLen );
-    if( k == 0 ) return false; //TODO err OOM
 
-    for( int r = constStart, w = 0; r < constLen; r++, w++ ) {
+    href k = allocateHeap( env->heap, env->maxHeapSize, constLen );
+    if( k == 0 ) { env->error[2] = 1; return false; } //TODO err OOM
+
+    uint limit = constStart + constLen;
+    for( uint r = constStart, w = 0; r < limit; r++, w++ ) {
         env->heap[ k + w ] = env->constantsData[ r ];
     }
-    
     //nil bool number str
-    return setRegister( env->luaStack, env->stackSize, reg, k );
+    if( setRegister( env->luaStack, env->stackSize, reg, k ) ) {
+        return true;
+    } else {
+        freeHeap( env->heap, env->maxHeapSize, k, false ); //TODO return href instead?
+        return false;
+    } 
 }
 
 //Ax

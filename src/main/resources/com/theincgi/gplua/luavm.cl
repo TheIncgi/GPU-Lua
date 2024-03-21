@@ -16,7 +16,7 @@ __kernel void exec(
     // __global const uint * workSize,
     // __global      uchar* luaState,
     __global       uint* luaStack,
-    __global const ulong* stackSizes,
+    __global const uint* stackSizes,
     __global       char* errorOutput,
     __global const long* maxExecutionTime,
     __global uchar* heap,

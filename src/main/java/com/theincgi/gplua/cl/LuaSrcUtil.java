@@ -281,12 +281,18 @@ public class LuaSrcUtil {
 				(isLittleEndian ? Long.reverseBytes(dis.readLong()) : dis.readLong())
 				: intAsLittleEndian(dis.readInt(), isLittleEndian);
 			
-		byte[] buf = new byte[Math.max(len+1, 2)]; //type and null terminated, but the data is already null terminated
+		len--;
+		byte[] buf = new byte[Math.max(len+6, 2)]; //type, len and null terminated, but the data is already null terminated
 		buf[0] = 4; //string type
+		buf[1] = (byte) ((len >> 24) & 0xFF); 
+		buf[2] = (byte) ((len >> 16) & 0xFF); 
+		buf[3] = (byte) ((len >>  8) & 0xFF); 
+		buf[4] = (byte) ((len      ) & 0xFF); 
 		
 		for(int i = 0; i < len; i++){
-			buf[i+1] = dis.readByte();
+			buf[i+5] = dis.readByte();
 		}
+		dis.skip(1);
 		return buf;
 	}
 

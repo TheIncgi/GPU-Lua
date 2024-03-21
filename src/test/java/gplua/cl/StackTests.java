@@ -34,7 +34,7 @@ public class StackTests extends KernelTestBase {
 			
 			__kernel void exec(
 			    __global        uint* luaStack,
-			    __global const ulong* stackSizes,
+			    __global const  uint* stackSizes,
 			    __global        char* errorOutput,
 			    __global const  long* maxExecutionTime,
 			    __global       uchar* heap,
@@ -65,8 +65,6 @@ public class StackTests extends KernelTestBase {
 				
 				if( get_global_id(0) != 0 )
 					return;
-				
-				
 				
 				struct WorkerEnv env;
 				env.luaStack                = luaStack;                  //&(luaStack[ maxStackSize * glid ]);
@@ -126,7 +124,7 @@ public class StackTests extends KernelTestBase {
 		LuaSrcUtil.readBytecode("print.out"),
 		4096, //heap
 		1024, //stack
-		1024*4    //log/err
+		32    //log/err
 		);
 		
 		var done = run(events);
@@ -151,7 +149,7 @@ public class StackTests extends KernelTestBase {
 		LuaSrcUtil.readBytecode("print.out"),
 		4096, //heap
 		1024, //stack
-		1024*4    //log/err
+		32    //log/err
 		);
 		
 		var done  = run(events);
@@ -191,7 +189,7 @@ public class StackTests extends KernelTestBase {
 		LuaSrcUtil.readBytecode("print.out"),
 		4096, //heap
 		1024, //stack
-		1024*4    //log/err
+		32    //log/err
 		);
 		
 		var done  = run(events);
@@ -218,7 +216,7 @@ public class StackTests extends KernelTestBase {
 		LuaSrcUtil.readBytecode("print.out"),
 		4096, //heap
 		1024, //stack
-		1024*4    //log/err
+		32    //log/err
 		);
 		
 		var done  = run(events);
@@ -238,8 +236,38 @@ public class StackTests extends KernelTestBase {
 	}
 	
 	@Test
-	void loadK() {
+	void loadK() throws FileNotFoundException, IOException {
+		var events = setupProgram("""
+		initStack( env.luaStack, 1, 2, 3 ); //3 varargs
 		
+		bool ok = loadk( &env, 3, 1 ); //reg 3, const 1
+		env.error[ 0 ] = ok ? 1 : 0; //log
+		""", 
+		LuaSrcUtil.readBytecode("print.out"), //print"hello"
+		5112, //heap
+		1024, //stack
+		32    //log/err
+		);
+		
+		var done  = run(events);
+		var stack = args.luaStack.readData(queue, done);
+		var heap = args.heap.readData(queue);
+		var log  = args.errorBuffer.readData(queue);
+		
+		var frames = readStackFrames(stack);
+		
+//		printFrames( frames );
+//		dumpHeap(heap);
+		
+		assertEquals(1, log[0], "allocation failed");
+		
+		var firstFrame = frames.peekFirst();
+		var regHref = firstFrame.registers[3];
+		var heapValue = getChunkData(heap, regHref);
+		
+//		System.out.println(heapValue);
+		
+		assertEquals("print", heapValue.stringValue());
 	}
 	
 }
