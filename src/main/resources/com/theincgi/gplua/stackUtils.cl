@@ -56,8 +56,8 @@ bool pushStack( uint* stack, uint stackSize, href value) {
     if(top+1 > stackSize)
         return false; //not enough space!
 
-    stack[ currentBase ] = value;
-    stack[ currentBase ]++;
+    stack[ top ] = value;
+    stack[ currentBase ]++; //top++
     return true; //not out of memory
 }
 
@@ -75,7 +75,7 @@ bool setRegister( uint* stack, uint stackSize, uchar regNum, href heapIndex ) {
     sref startOfRegisters = stack[ currentBase + 1 ];
     sref regPos = startOfRegisters + regNum;
     if( regPos >= top ) { //top is the first unused, this indicates that this is a new register
-        for(uchar i = 0; i < (regPos - top); i++)
+        while( regPos > stack[ currentBase ] )
             if(!pushStack( stack, stackSize, 0)) //push nil to fill gap
                 return false; //ran out of space filling gap!
         return pushStack( stack, stackSize, heapIndex);

@@ -159,7 +159,7 @@ public class StackTests extends KernelTestBase {
 		
 		var frames = readStackFrames(stack);
 		
-		printFrames( frames );
+//		printFrames( frames );
 		
 		var topFrame = frames.peekLast();
 		var firstFrame = frames.peekFirst();
@@ -179,6 +179,65 @@ public class StackTests extends KernelTestBase {
 		
 	}
 	
+	@Test
+	void setVararg() throws FileNotFoundException, IOException {
+		var events = setupProgram("""
+		initStack( env.luaStack, 1, 2, 3 ); //3 varargs
+		
+		setVararg( env.luaStack, 0, 97 );
+		setVararg( env.luaStack, 1, 98 );
+		setVararg( env.luaStack, 2, 99 );
+		""", 
+		LuaSrcUtil.readBytecode("print.out"),
+		4096, //heap
+		1024, //stack
+		1024*4    //log/err
+		);
+		
+		var done  = run(events);
+		var stack = args.luaStack.readData(queue, done);
+		
+		var frames = readStackFrames(stack);
+		
+		printFrames( frames );
+		
+		var firstFrame = frames.peekFirst();
+		
+		assertEquals(97, firstFrame.varargs[0]);
+		assertEquals(98, firstFrame.varargs[1]);
+		assertEquals(99, firstFrame.varargs[2]);
+	}
+	
+	@Test
+	void setRegister() throws FileNotFoundException, IOException {
+		var events = setupProgram("""
+		initStack( env.luaStack, 1, 2, 3 ); //3 varargs
+		
+		setRegister( env.luaStack, env.stackSize, 3, 105 );
+		""", 
+		LuaSrcUtil.readBytecode("print.out"),
+		4096, //heap
+		1024, //stack
+		1024*4    //log/err
+		);
+		
+		var done  = run(events);
+		var stack = args.luaStack.readData(queue, done);
+		
+		var frames = readStackFrames(stack);
+		
+		printFrames( frames );
+		
+		var firstFrame = frames.peekFirst();
+		
+		assertEquals(4,   firstFrame.registers.length);
+		assertEquals(0,   firstFrame.registers[0]);
+		assertEquals(0,   firstFrame.registers[1]);
+		assertEquals(0,   firstFrame.registers[2]);
+		assertEquals(105, firstFrame.registers[3]);
+	}
+	
+	@Test
 	void loadK() {
 		
 	}
