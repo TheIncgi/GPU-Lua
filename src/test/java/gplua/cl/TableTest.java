@@ -429,11 +429,11 @@ class TableTest extends HeapTestBase {
 		putHeapInt( errorOutput, 0, myMap );
 		putHeapInt( errorOutput, 4, x );
 		putHeapInt( errorOutput, 8, worked ? 1 : 0 );
-		""", 256, 128);
+		""", 512, 128);
 		
 		var done = kernel.enqueueNDRange(queue, new int[] {1}, events.toArray(new CLEvent[events.size()]));
 		var data = heap.readData(queue, done);
-//		dumpHeap(data);
+		dumpHeap(data);
 		var log  = errOut.readData(queue);
 		DataInputStream dis = new DataInputStream(new ByteArrayInputStream(log));
 		

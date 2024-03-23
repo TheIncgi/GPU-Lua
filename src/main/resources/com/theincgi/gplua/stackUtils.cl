@@ -5,10 +5,10 @@
 //min stack size ~ 5
 void initStack( uint* stack, href funcHeapIndex, href funcHeapClosure, uint nVarargs ) {
     stack[0] = 1; //base of top frame, always available
-    stack[1] = 5 + nVarargs; //first empty, value might not be 0 if reused, but will be overwritten before use
-    stack[2] = 5 + nVarargs; //varargs are bellow "base" as it's used in a regular lua stack, they use it to point to the first register in a frame. top will be here too until registers are pushed
+    stack[1] = 1 + STACK_RESERVE + nVarargs; //first empty, value might not be 0 if reused, but will be overwritten before use
+    stack[2] = 1 + STACK_RESERVE + nVarargs; //varargs are bellow "base" as it's used in a regular lua stack, they use it to point to the first register in a frame. top will be here too until registers are pushed
                              //this value points to the last non-inclusive slot used for varargs, which is also the first fixed arg
-    stack[3] = funcHeapIndex;
+    stack[3] = funcHeapIndex;   //same as in closure, slightly quicker access
     stack[4] = funcHeapClosure;
 }
 
@@ -20,7 +20,7 @@ bool pushStackFrame( uint* stack, uint stackSize, uint pc, href funcHeapIndex, h
     sref oldTop  = stack[oldBase];
 
     sref base = oldTop + 2; //first empty of old frame, +1 to store old base of frame and old PC
-    sref top = base + 4; //first empty of new frame after values set
+    sref top = base + STACK_RESERVE; //first empty of new frame after values set
     
     if(top > stackSize)
         return false; //not enough space!
@@ -64,7 +64,7 @@ bool pushStack( uint* stack, uint stackSize, href value) {
 //index arg starting at 0
 void setVararg( uint* stack, uchar arg, href heapIndex ) {
     sref currentBase = stack[0];
-    sref argPos = currentBase + 4 + arg;
+    sref argPos = currentBase + STACK_RESERVE + arg;
     stack[ argPos ] = heapIndex;
 }
 
@@ -93,5 +93,22 @@ sref getRegisterPos( uint* stack, uchar regNum ) {
 
 sref getVarargPos( uint* stack, uchar vargn ) {
     sref currentBase = stack[0];
-    return currentBase + 4 + vargn;
+    return currentBase + STACK_RESERVE + vargn;
+}
+
+href getStackClosure( uint* stack ) {
+    sref base = stack[0];
+    return stack[ base + 3 ];
+}
+
+href getRegister( uint* stack, uchar regNum ) {
+    return stack[ getRegisterPos( stack, regNum ) ];
+}
+
+href getVararg( uint* stack, uchar vargn ) {
+    return stack[ getVarargPos( stack, vargn ) ];
+}
+
+int getNVarargs( uint* stack ) {
+    return getRegisterPos( stack, 0 ) - getVarargPos( stack, 0 );
 }

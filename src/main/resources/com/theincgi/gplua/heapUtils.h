@@ -26,16 +26,16 @@
 #define SIZE_MASK 0x3FFFFFFF
 #define HEAP_RESERVE 5
 
-int getHeapInt(uchar* heap, href index);
-void putHeapInt(uchar* heap, href index, uint value);
+int getHeapInt(const uchar* heap, const href index);
+void putHeapInt(uchar* heap, const href index, const uint value);
 
 void initHeap(uchar* heap, uint maxHeap);
 href allocateHeap(uchar* heap, uint maxHeap, uint size);
 
 
-uint heapObjectLength(uchar* heap, href index);
+uint heapObjectLength(const uchar* heap, const href index);
 uint heapObjectGrowthLimit( uchar* heap, uint maxHeapSize, href index );
-uint _hashCode(uchar* bytes, int offset, int length);
+uint _hashCode(const  uchar* bytes, const int offset, const int length);
 
 //return the hash code for an int object without needing it on the heap
 uint hashInt( int value );

@@ -5,7 +5,7 @@
 //#define DEBUG_ALLOCATION
 //#define DEBUG_ALLOCATION_START someNumber
 
-int getHeapInt(uchar* heap, href index) {
+int getHeapInt(const uchar* heap, const href index) {
     return 
         heap[index    ] << 24 |
         heap[index + 1] << 16 |
@@ -13,7 +13,7 @@ int getHeapInt(uchar* heap, href index) {
         heap[index + 3];
 }
 
-void putHeapInt(uchar* heap, href index, uint value) {
+void putHeapInt(uchar* heap, const href index, const uint value) {
     heap[index    ] = value >> 24 & 0xFF; //bit shift is higher priority than bitwise AND in c++, I checked
     heap[index + 1] = value >> 16 & 0xFF;
     heap[index + 2] = value >>  8 & 0xFF;
@@ -101,7 +101,7 @@ href allocateHeap(uchar* heap, uint maxHeap, uint size) {
 }
 
 //allocated space NOT including the boundry tag
-uint heapObjectLength(uchar* heap, href index) {
+uint heapObjectLength(const uchar* heap, const href index) {
     return (getHeapInt( heap, index - 4 ) & SIZE_MASK) - 4;
 }
 
@@ -132,7 +132,7 @@ uint heapObjectGrowthLimit( uchar* heap, uint maxHeapSize, href index ) {
     * <br>
     * Sourced from LuaJ
     */
-uint _hashCode(uchar* bytes, int offset, int length) {
+uint _hashCode(const uchar* bytes, const int offset, const int length) {
     int h = length;  /* seed */
     int step = (length>>5)+1;  /* if string is too long, don't hash all its chars */
     for (int l1=length; l1>=step; l1-=step)  /* compute hash */

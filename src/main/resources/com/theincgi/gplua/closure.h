@@ -3,10 +3,11 @@
 
 #include"common.cl"
 
-/**
-  * main will have closure pointint to heap[0], this indicates that there are no upvals and the env should default to globals
-  * no real point in having a pointer to globals when the VM will already have that, less heap, less pointer following
-  */
-href createClosure(uchar* heap, uint maxHeap, uint* stack, href envTable);
+href createClosure(uchar* heap, uint maxHeapSize, uint* stack, int funcIndex, href envTable);
+
+uint getClosureFunction(struct WorkerEnv* env, href closure);
+href getClosureUpvalArray(struct WorkerEnv* env, href closure);
+href getClosureUpval(struct WorkerEnv* env, href closure, uint upvalIndex);
+href getClosureEnv(struct WorkerEnv* env, href closure);
 
 #endif

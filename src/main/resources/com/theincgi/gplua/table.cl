@@ -4,6 +4,7 @@
 #include"array.h"
 #include"hashmap.h"
 #include"types.cl"
+#include"vm.h"
 
 //may return 0 if not enough memory
 href newTable(uchar* heap, uint maxHeapSize) {
@@ -62,30 +63,89 @@ href tableCreateHashedPart( uchar* heap, uint maxHeapSize, href tableHeapIndex )
     return hashedPart; //created
 }
 
-href tableRawGet( uchar* heap, href heapIndex, href key ) {
-    href arrayPart = tableGetArrayPart( heap, heapIndex );
-    uchar keyType = heap[key];
+// bool tableHashContainsKey( uchar* heap, href tableIndex, uchar* keySource, uint keyIndex, uint keyLen, uint* foundIndex ) {
+//     href hashPart = tableGetHashedPart( heap, tableIndex );
+//     if( hashPart == 0 ) return false;
 
-    if( keyType == T_INT && arrayPart != 0 ) {              //int and array part exists
-        uint size = arraySize( heap, arrayPart );
-        int keyIndex = getHeapInt( heap, key + 1 ) - 1;         //SIGNED int, convert from 1 to 0 indexed
+//     return hashmapBytesGetIndex( heap, hashPart, keySource, keyIndex, keyLen, foundIndex );
+// }
 
-        if( 0 <= keyIndex && keyIndex < size ) {            //in bounds of the array part (else check hashed part)
-            return arrayGet( heap, arrayPart, keyIndex );   //found it in array part
+// bool tableArrayContainsKey( uchar* heap, href tableIndex, uint indexInTable) {
+//     href arrayPart = tableGetArrayPart( heap, tableIndex );
+//     return arrayPart != 0;
+// }
+
+href tableRawGet( uchar* heap, href tableIndex, uchar* keySource, uint keyIndex, uint keyLen ) {
+    uchar keyType = keySource[keyIndex];
+
+    if( keyType == T_INT ) {
+        int key = getHeapInt( keySource, keyIndex + 1 );
+        href arrayPart = tableGetArrayPart( heap, tableIndex );
+        if( arrayPart != 0 ) {
+            if( 0 <= key && key < arraySize( heap, arrayPart ) ) {
+                return arrayGet( heap, arrayPart, key );
+            }
         }
     }
+
+    href hashedPart = tableGetHashedPart( heap, tableIndex );
+    if( hashedPart == 0 ) return 0;
+
+    uint* foundIndex;
+    if(hashmapBytesGetIndex( heap, hashedPart, keySource, keyIndex, keyLen, foundIndex ))
+        return heap[ *foundIndex ];
     
-    href hashedPart = tableGetHashedPart( heap, heapIndex );
-    return hashmapGet( heap, hashedPart, key );
+    return 0;
 }
+
+// href tableRawGet( uchar* heap, href heapIndex, href key ) {
+//     href arrayPart = tableGetArrayPart( heap, heapIndex );
+//     uchar keyType = heap[key];
+
+//     if( keyType == T_INT && arrayPart != 0 ) {              //int and array part exists
+//         uint size = arraySize( heap, arrayPart );
+//         int keyIndex = getHeapInt( heap, key + 1 ) - 1;         //SIGNED int, convert from 1 to 0 indexed
+
+//         if( 0 <= keyIndex && keyIndex < size ) {            //in bounds of the array part (else check hashed part)
+//             return arrayGet( heap, arrayPart, keyIndex );   //found it in array part
+//         }
+//     }
+    
+//     href hashedPart = tableGetHashedPart( heap, heapIndex );
+//     return hashmapGet( heap, hashedPart, key );
+// }
+
+
 
 bool tableResizeArray( uchar* heap, uint maxHeapSize, href tableIndex, uint newSize ) {
     href oldArray = tableGetArrayPart( heap, tableIndex );
+    uint oldSize = arraySize( heap, oldArray );
+
     href newArray = arrayResize( heap, maxHeapSize, oldArray, newSize );
     if( newArray == 0 )
         return false;
     if(oldArray != newArray)
         putHeapInt( heap, tableIndex + 1, newArray );
+
+    uchar intBuf[5];
+    intBuf[0] = T_INT;
+    href hashedPart = tableGetHashedPart( heap, tableIndex );
+    if( hashedPart != 0 ) {
+        href hashedKeys = hashmapGetKeysPart( heap, hashedPart );
+        href hashedVals = hashmapGetValsPart( heap, hashedPart );
+
+        for( uint i = oldSize; i < newSize; i++ ) {
+            putHeapInt( intBuf, 1, i );
+
+            uint* foundIndex;
+            if( hashmapBytesGetIndex( heap, hashedPart, intBuf, 0, 5, foundIndex ) ) {
+                href foundValue = arrayGet( heap, hashedVals, *foundIndex );
+                arraySet( heap, newArray, i, foundValue );   //move into array part
+                arraySet( heap, hashedKeys, *foundIndex, 0 ); //remove from hashmap
+                arraySet( heap, hashedVals, *foundIndex, 0 ); //remove from hasmmap
+            }
+        }
+    }
     return true;
 }
 
@@ -122,4 +182,53 @@ bool tableRawSet( uchar* heap, uint maxHeapSize, href tableIndex, href key, href
         return false; //out of memory
 
     return hashmapPut( heap, maxHeapSize, hashedPart, key, value );
+}
+
+href tableGetMetaIndex( struct WorkerEnv* env, href table ) {
+     href meta = tableGetMetatable( env->heap, table );
+    if( meta == 0 ) return 0;
+
+    href metahash = tableGetHashedPart( env->heap, meta );
+    if( metahash == 0 ) return 0;
+
+    string metakey = "__index";
+    href metaIndex = hashmapStringGet( env->heap, metahash, metakey, strLen( metakey ));
+    return metaIndex;
+}
+
+href tableGetByHeap( struct WorkerEnv* env, href table, href key ) {
+    uint keySize = heapObjectLength( env->heap, key );
+
+    href value = tableRawGet( env->heap, table, env->heap, key, keySize );
+    if( value != 0 ) return value;
+
+    href metaIndex = tableGetMetaIndex( env, table );
+    if( metaIndex == 0 ) return 0;
+
+    uchar indexType = env->heap[ metaIndex ];
+    if( indexType == T_TABLE ) {
+        return tableGetByHeap( env, metaIndex, key );
+    } else if ( indexType == T_FUNC ) {
+        return 0; //TODO call
+    }
+    return 0;
+}
+
+href tableGetByConst( struct WorkerEnv* env, href table, int key ) {
+    uint constStart, constLen;
+    getConstDataRange( env, key, &constStart, &constLen );
+
+    href value = tableRawGet( env->heap, table, env->constantsData, constStart, constLen );
+    if( value != 0 ) return value;
+
+    href metaIndex = tableGetMetaIndex( env, table );
+    if( metaIndex == 0 ) return 0;
+
+    uchar metaIndexType = env->heap[ metaIndex ];
+    if( metaIndexType == T_TABLE ) {
+        return tableGetByConst( env, metaIndex, key );
+    } else if ( metaIndexType == T_FUNC ) {
+        return 0; //TOODO call
+    }
+    return 0;
 }

@@ -25,6 +25,8 @@ struct WorkerEnv {
     uint pc;
 };
 
+void getConstDataRange( struct WorkerEnv* env, uint index, uint* start, uint* len );
+
 bool loadk( struct WorkerEnv* env, uchar reg, uint index );
 
 void doAxOp( struct WorkerEnv* env,  OpCode code, uint a );

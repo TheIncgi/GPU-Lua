@@ -96,4 +96,17 @@ int getsBx(LuaInstruction i) {
     return ((i >> 14) & 0x3FFFF) - 0x1FFFF; //Signed B and C combined
 }
 
+bool isK( int x ) {
+    return 0 != (x & 0x100); //256
+}
+
+//uint? too small to matter?
+int indexK( int r ) {
+    return ((int)r) & (~0x100) ;
+}
+
+int rkAsK( int x ) {
+    return x | 0x100;
+}
+
 #endif

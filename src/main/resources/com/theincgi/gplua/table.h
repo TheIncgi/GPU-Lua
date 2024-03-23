@@ -2,6 +2,7 @@
 #define TABLE_CL
 
 #include"common.cl"
+#include"vm.h"
 
 #define TABLE_INIT_ARRAY_SIZE 4
 #define HASHMAP_INIT_SIZE 4
@@ -13,8 +14,12 @@ href tableGetMetatable( uchar* heap, href heapIndex );
 uint tableLen( uchar* heap, href heapIndex );
 href tableCreateArrayPart( uchar* heap, uint maxHeapSize, href tableHeapIndex );
 href tableCreateHashedPart( uchar* heap, uint maxHeapSize, href tableHeapIndex );
-href tableRawGet( uchar* heap, href heapIndex, href key );
+// bool tableArrayContainsKey( uchar* heap, href tableIndex, uint indexInTable);
+href tableRawGet( uchar* heap, href tableIndex, uchar* keySource, uint keyIndex, uint keyLen );
 bool tableResizeArray( uchar* heap, uint maxHeapSize, href tableIndex, uint newSize );
 bool tableRawSet( uchar* heap, uint maxHeapSize, href tableIndex, href key, href value );
+
+href tableGetByHeap( struct WorkerEnv* env, href table, href key );
+href tableGetByConst( struct WorkerEnv* env, href table, int key );
 
 #endif

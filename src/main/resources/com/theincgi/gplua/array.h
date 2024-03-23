@@ -9,8 +9,8 @@ href _allocateArray(uchar* heap, uint maxHeap, uint size);
 void arrayClear(uchar* heap, href heapIndex);
 uint arraySize( uchar* heap, href index );
 uint arrayCapacity( uchar* heap, href index );
-href arrayGet( uchar* heap, href heapIndex, int index );
-void arraySet( uchar* heap, href heapIndex, int index, href val );
+href arrayGet( uchar* heap, href heapIndex, uint index );
+void arraySet( uchar* heap, href heapIndex, uint index, href val );
 
 //if the next space in memory is free, claim some of that
 // uint grow( uchar* heap, href heapIndex, uint maxGrowth );

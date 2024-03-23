@@ -23,10 +23,18 @@ href newHashmap(uchar* heap, uint maxHeapSize, uint capacity) {
     return mapIndex;
 }
 
+href hashmapGetKeysPart( uchar* heap, href mapIndex ) {
+    return getHeapInt( heap, mapIndex + 1);
+}
+
+href hashmapGetValsPart( uchar* heap, href mapIndex ) {
+    return getHeapInt( heap, mapIndex + 5);
+}
+
 bool hashmapPut( uchar* heap, uint maxHeap, href mapIndex, href keyHeapIndex, href valueHeapIndex ) {
     uint keyHash  = heapHash( heap, keyHeapIndex ); 
-    href keysPart = getHeapInt( heap, mapIndex + 1);
-    href valsPart = getHeapInt( heap, mapIndex + 5);
+    href keysPart = hashmapGetKeysPart( heap, mapIndex );
+    href valsPart = hashmapGetValsPart( heap, mapIndex );
     uint size     = arraySize( heap, keysPart );
     uint capacity = arrayCapacity( heap, keysPart );
     bool isErase  = valueHeapIndex == 0;
@@ -98,6 +106,12 @@ href hashmapGet(uchar* heap, href mapIndex, href key) {
 }
 
 href hashmapStringGet(uchar* heap, href mapIndex, string str, uint strLen) {
+    // uint index;
+    // if( hashmapBytesGetIndex( heap, mapIndex, str, 0, strLen, &index ) ) {
+    //     href valsPart = hashmapGetValsPart( heap, mapIndex );
+    //     return arrayGet( heap, valsPart, index );
+    // }
+    // return 0;
     uint hash = hashString( str, strLen );
     href keysPart = getHeapInt( heap, mapIndex + 1);
     href valsPart = getHeapInt( heap, mapIndex + 5);
@@ -132,11 +146,45 @@ href hashmapStringGet(uchar* heap, href mapIndex, string str, uint strLen) {
     return 0;
 }
 
+bool hashmapBytesGetIndex(uchar* heap, const href mapIndex, const uchar* dataSrc, const uint dataOffset, const uint dataLen, uint* foundIndex) {
+    uint hash = _hashCode( dataSrc, dataOffset, dataLen );
+    href keysPart = getHeapInt( heap, mapIndex + 1);
+    href valsPart = getHeapInt( heap, mapIndex + 5);
+    uint capacity = arrayCapacity( heap, keysPart );
+    uint hashIndex = mapIndex % capacity;
+    
+    uint searchLimit = MAP_MAX_SEARCH < capacity ? MAP_MAX_SEARCH : capacity;
+    for(uint offset = 0; offset < searchLimit; offset++) { //i = search location (array index) | j = search count
+        uint i = (hashIndex + offset) % capacity;
+        //string equals
+        href heapKey = arrayGet(heap, keysPart, i);
+        if(heapKey == 0) continue;
+        uint heapObjSize = heapObjectLength( heap, heapKey );
+
+        if( heapObjSize != dataLen )
+            continue;
+        
+        bool match = true;
+        for(uint i = 0; i < dataLen; i++) {
+            if( heap[ heapKey + i ] != dataSrc[ dataOffset + i ] ) {
+                match = false;
+                break;
+            }
+        }
+        if( !match )
+            continue;
+
+        *foundIndex = i;
+        return true;
+    }
+    return false;
+}
+
 //no logic is implemented for scaling down to check that the elements will fit in the shrunk map
 //new capacity may be larger than requested 
 bool resizeHashmap(uchar* heap, uint maxHeapSize, href mapIndex, uint newCapacity) {
-    href oldKeysPart = getHeapInt( heap, mapIndex + 1 );
-    href oldValsPart = getHeapInt( heap, mapIndex + 5 );
+    href oldKeysPart = hashmapGetKeysPart( heap, mapIndex );
+    href oldValsPart = hashmapGetValsPart( heap, mapIndex );
     uint oldCapacity = arrayCapacity( heap, oldKeysPart );
     
     href newKeysPart = newArray( heap, maxHeapSize, newCapacity );
@@ -148,14 +196,14 @@ bool resizeHashmap(uchar* heap, uint maxHeapSize, href mapIndex, uint newCapacit
     for(int i = 0; i < oldCapacity; i++) {
         href key = arrayGet( heap, oldKeysPart, i );
         href val = arrayGet( heap, oldValsPart, i );
-        
+
         if( key == 0 ) continue;
         uint keyHash  = heapHash( heap, key );
         
         bool assigned = false;
         uint searchLimit = MAP_MAX_SEARCH < newCapacity ? MAP_MAX_SEARCH : newCapacity;
         for(uint j = 0; j < searchLimit; j++ ) {
-            href slot = (keyHash + j) % newCapacity;
+            uint slot = (keyHash + j) % newCapacity;
             href slotKey = arrayGet( heap, newKeysPart, slot );
             if( slotKey == 0 ) { //empty
                 arraySet( heap, newKeysPart, slot, key );

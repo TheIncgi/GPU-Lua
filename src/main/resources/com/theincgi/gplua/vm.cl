@@ -1,19 +1,27 @@
 #include"vm.h"
 #include"common.cl"
+#include"closure.h"
 #include"stackUtils.h"
 #include"heapUtils.h"
 #include"opUtils.cl"
 
-bool loadk( struct WorkerEnv* env, uchar reg, uint index ) { //TODO cache hrefs, preload?
-    if(index == 0) return false;
-    index = index - 1;
+void getConstDataRange( struct WorkerEnv* env, uint index, uint* start, uint* len ) {
     uint fConstStart = env->constantsPrimaryIndex[ env->func * 2     ];
     uint fConstLen   = env->constantsPrimaryIndex[ env->func * 2 + 1 ];
 
     uint secondaryIndex = fConstStart + index;
     //if secondaryIndex > >= len return 0, 1 indexed ? 0 indexed?
-    uint constStart = env->constantsSecondaryIndex[ secondaryIndex * 2     ];
-    uint constLen   = env->constantsSecondaryIndex[ secondaryIndex * 2 + 1 ];
+    *start = env->constantsSecondaryIndex[ secondaryIndex * 2     ];
+    *len   = env->constantsSecondaryIndex[ secondaryIndex * 2 + 1 ];
+}
+
+bool loadk( struct WorkerEnv* env, uchar reg, uint index ) { //TODO cache hrefs, preload?
+    if(index == 0) return false;
+    index = index - 1;
+
+    uint constStart; 
+    uint constLen;
+    getConstDataRange( env, index, &constStart, &constLen );
 
     href k = allocateHeap( env->heap, env->maxHeapSize, constLen );
     if( k == 0 ) { env->error[2] = 1; return false; } //TODO err OOM
@@ -29,6 +37,31 @@ bool loadk( struct WorkerEnv* env, uchar reg, uint index ) { //TODO cache hrefs,
         freeHeap( env->heap, env->maxHeapSize, k, false ); //TODO return href instead?
         return false;
     } 
+}
+
+href getUpVal( struct WorkerEnv* env, href closureRef, uint upval ) {
+    if( closureRef == 0 ) return 0;
+    return getClosureUpval( env, closureRef, upval );
+}
+
+// GETTABLE A B C   R(A) := R(B)[RK(C)]       //table comes from heap
+// GETTABUP A B C   R(A) := UpValue[B][RK(C)] //table comes from upval
+
+bool getTabUp( struct WorkerEnv* env, uchar reg, uint upvalIndexOfTable, uint tableKey ) {
+    href closure = getStackClosure( env->luaStack );
+    href table = getClosureUpval( env, closure, upvalIndexOfTable );
+
+    href value = 0;
+    if( isK(tableKey) ) { //use constant
+        int index = indexK( tableKey );
+        value = tableGetByConst( env, table, index );
+    } else { //use register
+        href key = getRegister( env->luaStack, (uchar)tableKey );
+        value = tableGetByHeap( env, table, key );
+    }
+
+    setRegister( env->luaStack, env->stackSize, reg, value );
+    return true;
 }
 
 //Ax

@@ -49,11 +49,13 @@ uint arrayCapacity( uchar* heap, href index ) {
     return getHeapInt( heap, index + 5 );
 }
 
-href arrayGet( uchar* heap, href heapIndex, int index ) {
+href arrayGet( uchar* heap, href heapIndex, uint index ) {
+    if( index >= arrayCapacity(heap, heapIndex ))
+        return 0; //out of bounds
     return getHeapInt( heap, heapIndex + 9 + index * 4 );
 }
 
-void arraySet( uchar* heap, href heapIndex, int index, href val ) {
+void arraySet( uchar* heap, href heapIndex, uint index, href val ) {
     uint capacity = arrayCapacity(heap, heapIndex);
     if(index >= capacity)
         return; //out of bounds
