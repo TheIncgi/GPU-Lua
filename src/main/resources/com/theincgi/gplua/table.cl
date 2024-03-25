@@ -77,7 +77,6 @@ href tableCreateHashedPart( uchar* heap, uint maxHeapSize, href tableHeapIndex )
 
 href tableRawGet( uchar* heap, href tableIndex, uchar* keySource, uint keyIndex, uint keyLen ) {
     uchar keyType = keySource[keyIndex];
-
     if( keyType == T_INT ) {
         int key = getHeapInt( keySource, keyIndex + 1 );
         href arrayPart = tableGetArrayPart( heap, tableIndex );
@@ -91,9 +90,11 @@ href tableRawGet( uchar* heap, href tableIndex, uchar* keySource, uint keyIndex,
     href hashedPart = tableGetHashedPart( heap, tableIndex );
     if( hashedPart == 0 ) return 0;
 
-    uint* foundIndex;
-    if(hashmapBytesGetIndex( heap, hashedPart, keySource, keyIndex, keyLen, foundIndex ))
-        return heap[ *foundIndex ];
+    uint foundIndex;
+    if(hashmapBytesGetIndex( heap, hashedPart, keySource, keyIndex, keyLen, &foundIndex )) {
+        href valsPart = hashmapGetValsPart( heap, hashedPart );
+        return arrayGet( heap, valsPart, foundIndex );
+    }
     
     return 0;
 }
@@ -215,8 +216,11 @@ href tableGetByHeap( struct WorkerEnv* env, href table, href key ) {
 }
 
 href tableGetByConst( struct WorkerEnv* env, href table, int key ) {
+    if(table == 0) return 0;
     uint constStart, constLen;
     getConstDataRange( env, key, &constStart, &constLen );
+
+    if(constLen == 0) return 0;
 
     href value = tableRawGet( env->heap, table, env->constantsData, constStart, constLen );
     if( value != 0 ) return value;
@@ -228,7 +232,7 @@ href tableGetByConst( struct WorkerEnv* env, href table, int key ) {
     if( metaIndexType == T_TABLE ) {
         return tableGetByConst( env, metaIndex, key );
     } else if ( metaIndexType == T_FUNC ) {
-        return 0; //TOODO call
+        return 0; //TODO call
     }
     return 0;
 }

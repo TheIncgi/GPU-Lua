@@ -5,7 +5,7 @@
 
 #define STACK_RESERVE 4
 
-void initStack( uint* stack, href funcHeapIndex, href funcHeapClosure, uint nVarargs );
+void initStack( uint* stack, uint funcHeapIndex, href funcHeapClosure, uint nVarargs );
 bool pushStackFrame( uint* stack, uint stackSize, uint pc, href funcHeapIndex, href funcHeapClosure, int nVarargs );
 uint getPreviousPC( uint* stack );
 void popStackFrame( uint* stack );

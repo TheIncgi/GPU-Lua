@@ -213,8 +213,9 @@ public abstract class TestCommons {
 				}
 				case LuaTypes.CLOSURE: {
 					builder.append("CLOSURE: \n")
-						.append("  Upvals: ").append(readInt(1)).append("\n")
-						.append("  _ENV:   ").append(readInt(5));
+						.append("  Function: ").append(readInt(1)).append("\n")
+						.append("  Upvals:   ").append(readInt(5)).append("\n")
+						.append("  _ENV:     ").append(readInt(9));
 					break;
 				}
 				case LuaTypes.SUBSTRING: {

@@ -41,6 +41,7 @@ bool hashmapPut( uchar* heap, uint maxHeap, href mapIndex, href keyHeapIndex, hr
     uint hashIndex = keyHash % capacity;
     bool foundEmpty = false;
     uint firstEmpty = 0;
+
     uint searchLimit = MAP_MAX_SEARCH < capacity ? MAP_MAX_SEARCH : capacity;
     for(uint offset = 0; offset < searchLimit; offset++) {
         uint i = (hashIndex + offset) % capacity;
@@ -151,29 +152,30 @@ bool hashmapBytesGetIndex(uchar* heap, const href mapIndex, const uchar* dataSrc
     href keysPart = getHeapInt( heap, mapIndex + 1);
     href valsPart = getHeapInt( heap, mapIndex + 5);
     uint capacity = arrayCapacity( heap, keysPart );
-    uint hashIndex = mapIndex % capacity;
-    
+    uint hashIndex = hash % capacity;
+
     uint searchLimit = MAP_MAX_SEARCH < capacity ? MAP_MAX_SEARCH : capacity;
     for(uint offset = 0; offset < searchLimit; offset++) { //i = search location (array index) | j = search count
         uint i = (hashIndex + offset) % capacity;
-        //string equals
+
         href heapKey = arrayGet(heap, keysPart, i);
         if(heapKey == 0) continue;
+
         uint heapObjSize = heapObjectLength( heap, heapKey );
 
         if( heapObjSize != dataLen )
             continue;
         
         bool match = true;
-        for(uint i = 0; i < dataLen; i++) {
-            if( heap[ heapKey + i ] != dataSrc[ dataOffset + i ] ) {
+        for(uint j = 0; j < dataLen; j++) {
+            if( heap[ heapKey + j ] != dataSrc[ dataOffset + j ] ) {
                 match = false;
                 break;
             }
         }
         if( !match )
             continue;
-
+        
         *foundIndex = i;
         return true;
     }
@@ -199,7 +201,7 @@ bool resizeHashmap(uchar* heap, uint maxHeapSize, href mapIndex, uint newCapacit
 
         if( key == 0 ) continue;
         uint keyHash  = heapHash( heap, key );
-        
+
         bool assigned = false;
         uint searchLimit = MAP_MAX_SEARCH < newCapacity ? MAP_MAX_SEARCH : newCapacity;
         for(uint j = 0; j < searchLimit; j++ ) {

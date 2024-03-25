@@ -220,6 +220,8 @@ public class LuaSrcUtil {
 //				case 6: //function
 //				case 7: //user data
 //				case 8: //thread
+				default:
+					throw new RuntimeException("Unhandled constant type "+ type);
 			}
 		}
 		flat.constantsLengths.add(constLen);

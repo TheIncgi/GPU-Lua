@@ -3,12 +3,12 @@
 // Lua Stack Utils
 
 //min stack size ~ 5
-void initStack( uint* stack, href funcHeapIndex, href funcHeapClosure, uint nVarargs ) {
+void initStack( uint* stack, uint funcIndex, href funcHeapClosure, uint nVarargs ) {
     stack[0] = 1; //base of top frame, always available
     stack[1] = 1 + STACK_RESERVE + nVarargs; //first empty, value might not be 0 if reused, but will be overwritten before use
     stack[2] = 1 + STACK_RESERVE + nVarargs; //varargs are bellow "base" as it's used in a regular lua stack, they use it to point to the first register in a frame. top will be here too until registers are pushed
                              //this value points to the last non-inclusive slot used for varargs, which is also the first fixed arg
-    stack[3] = funcHeapIndex;   //same as in closure, slightly quicker access
+    stack[3] = funcIndex;   //same as in closure, slightly quicker access
     stack[4] = funcHeapClosure;
 }
 

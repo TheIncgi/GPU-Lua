@@ -3,39 +3,44 @@
 #include"types.cl"
 #include"heapUtils.h"
 #include"vm.h"
+#include"array.h"
 
-href createClosure(WorkerEnv* env, int funcIndex, href envTable) {
-    href closure = allocateHeap( env->heap, env->maxHeapSize, 9 );
+href createClosure(struct WorkerEnv* env, int funcIndex, href envTable, uint numUpvals) {
+    href closure = allocateHeap( env->heap, env->maxHeapSize, 13 );
     if( closure == 0 ) return 0;
 
-    numUpvals = 0; //TODO count upvals needed, allocate, copy refs
-    href upvalArray = allocateArray( env->heap, env->maxHeapSize, numUpvals );
+    href upvalArray = newArray( env->heap, env->maxHeapSize, numUpvals );
 
     env->heap[ closure ] = T_CLOSURE;
 
-    putHeapInt( env->heap, closure + 1, funcRef );
+    putHeapInt( env->heap, closure + 1, funcIndex );
     putHeapInt( env->heap, closure + 5, upvalArray );
     putHeapInt( env->heap, closure + 9, envTable );
 
     return closure;
 }
 
-uint getClosureFunction(WorkerEnv* env, href closure) {
+uint getClosureFunction(struct WorkerEnv* env, href closure) {
     return getHeapInt( env->heap, closure + 1 );
 }
 
 
-href getClosureUpvalArray(WorkerEnv* env, href closure) {
+href getClosureUpvalArray(struct WorkerEnv* env, href closure) {
     return getHeapInt( env->heap, closure + 5 );
 }
 
-href getClosureUpval(WorkerEnv* env, href closure, uint upvalIndex) {
+href getClosureUpval(struct WorkerEnv* env, href closure, uint upvalIndex) {
     href array = getClosureUpvalArray( env, closure );
     if(array == 0) return 0;
 
     return arrayGet( env->heap, array, upvalIndex );
 }
 
-href getClosureEnv(WorkerEnv* env, href closure) {
+void setClosureUpval(struct WorkerEnv* env, href closure, uint upvalIndex, href value) {
+    href array = getClosureUpvalArray( env, closure );
+    arraySet( env->heap, array, upvalIndex, value );
+}
+
+href getClosureEnv(struct WorkerEnv* env, href closure) {
     return getHeapInt( env->heap, closure + 9 );
 }

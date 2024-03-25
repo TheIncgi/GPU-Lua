@@ -9,7 +9,7 @@ void getConstDataRange( struct WorkerEnv* env, uint index, uint* start, uint* le
     uint fConstStart = env->constantsPrimaryIndex[ env->func * 2     ];
     uint fConstLen   = env->constantsPrimaryIndex[ env->func * 2 + 1 ];
 
-    uint secondaryIndex = fConstStart + index;
+    uint secondaryIndex = fConstStart + index * 2;
     //if secondaryIndex > >= len return 0, 1 indexed ? 0 indexed?
     *start = env->constantsSecondaryIndex[ secondaryIndex * 2     ];
     *len   = env->constantsSecondaryIndex[ secondaryIndex * 2 + 1 ];
@@ -49,12 +49,15 @@ href getUpVal( struct WorkerEnv* env, href closureRef, uint upval ) {
 
 bool getTabUp( struct WorkerEnv* env, uchar reg, uint upvalIndexOfTable, uint tableKey ) {
     href closure = getStackClosure( env->luaStack );
+    if( closure == 0 ) return false;
+    
     href table = getClosureUpval( env, closure, upvalIndexOfTable );
-
+    if( table == 0 ) return false;
+    
     href value = 0;
     if( isK(tableKey) ) { //use constant
         int index = indexK( tableKey );
-        value = tableGetByConst( env, table, index );
+        value = tableGetByConst( env, table, index ); //FIXME?
     } else { //use register
         href key = getRegister( env->luaStack, (uchar)tableKey );
         value = tableGetByHeap( env, table, key );

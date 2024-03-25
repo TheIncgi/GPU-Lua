@@ -12,6 +12,7 @@ import org.junit.jupiter.api.Test;
 
 import com.nativelibs4java.opencl.CLEvent;
 import com.theincgi.gplua.cl.LuaSrcUtil;
+import com.theincgi.gplua.cl.LuaTypes;
 
 public class StackTests extends KernelTestBase {
 	
@@ -23,6 +24,7 @@ public class StackTests extends KernelTestBase {
 			#include"globals.cl"
 			#include"vm.h"
 			#include"stackUtils.h"
+			#include"closure.h"
 			
 			#include"table.cl"
 			#include"array.cl"
@@ -31,6 +33,7 @@ public class StackTests extends KernelTestBase {
 			#include"strings.cl"
 			#include"vm.cl"
 			#include"stackUtils.cl"
+			#include"closure.cl"
 			
 			__kernel void exec(
 			    __global        uint* luaStack,
@@ -268,6 +271,44 @@ public class StackTests extends KernelTestBase {
 //		System.out.println(heapValue);
 		
 		assertEquals("print", heapValue.stringValue());
+	}
+	
+	@Test
+	void getTabUp() throws FileNotFoundException, IOException {
+		var events = setupProgram("""		
+		href mainClosure = createClosure( &env, 0, globals, 1 );
+		setClosureUpval( &env, mainClosure, 0, env.globals );
+		
+		initStack( env.luaStack, 0, mainClosure, 0 ); //func 0, mainClosure, 0 varargs
+		
+		bool ok = getTabUp( &env, 2, 0, 0 | 0x100 );
+		env.error[ 0 ] = ok ? 1 : 0; //log
+		""", 
+		LuaSrcUtil.readBytecode("returnMath.out"), //return math
+		6000, //heap
+		1024, //stack
+		32    //log/err
+		);
+		
+		var done  = run(events);
+		var stack = args.luaStack.readData(queue, done);
+		var heap = args.heap.readData(queue);
+		var log  = args.errorBuffer.readData(queue);
+		
+		var frames = readStackFrames(stack);
+		
+		printFrames( frames );
+		dumpHeap(heap);
+		
+		assertEquals(1, log[0], "allocation failed");
+		
+		var firstFrame = frames.peekFirst();
+		var regHref = firstFrame.registers[2];
+		var heapValue = getChunkData(heap, regHref);
+		
+//				System.out.println(heapValue);
+		
+		assertEquals( LuaTypes.TABLE, heapValue.type() );
 	}
 	
 }
