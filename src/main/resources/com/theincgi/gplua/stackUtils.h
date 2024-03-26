@@ -8,7 +8,8 @@
 void initStack( uint* stack, uint funcHeapIndex, href funcHeapClosure, uint nVarargs );
 bool pushStackFrame( uint* stack, uint stackSize, uint pc, href funcHeapIndex, href funcHeapClosure, int nVarargs );
 uint getPreviousPC( uint* stack );
-void popStackFrame( uint* stack );
+uint getCurrentFunctionFromStack( uint* stack );
+bool popStackFrame( uint* stack );
 bool pushStack( uint* stack, uint stackSize, href value);
 void setVararg( uint* stack, uchar arg, href heapIndex );
 bool setRegister( uint* stack, uint stackSize, uchar regNum, href heapIndex );
@@ -18,6 +19,6 @@ href getStackClosure( uint* stack );
 
 href getRegister( uint* stack, uchar regNum );
 href getVararg( uint* stack, uchar vargn );
-int getNVarargs( uint* stack );
-
+uint getNVarargs( uint* stack );
+uint getNRegisters( uint* stack );
 #endif

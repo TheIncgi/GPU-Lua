@@ -45,7 +45,7 @@ typedef enum {
 
     OP_CALL,/*      A B C   R(A), ... ,R(A+C-2) := R(A)(R(A+1), ... ,R(A+B-1)) */
     OP_TAILCALL,/*  A B C   return R(A)(R(A+1), ... ,R(A+B-1))              */
-    OP_RETURN,/*    A B     return R(A), ... ,R(A+B-2)      (see note)      */
+    OP_RETURN,/*    A B     return R(A), ... ,R(A+B-2)                      */
 
     OP_FORLOOP,/*   A sBx   R(A)+=R(A+2);
                             if R(A) <?= R(A+1) then { pc+=sBx; R(A+3)=R(A) }*/

@@ -4,6 +4,7 @@
 #include"stackUtils.h"
 #include"heapUtils.h"
 #include"opUtils.cl"
+#include"types.cl"
 
 void getConstDataRange( struct WorkerEnv* env, uint index, uint* start, uint* len ) {
     uint fConstStart = env->constantsPrimaryIndex[ env->func * 2     ];
@@ -39,7 +40,7 @@ bool loadk( struct WorkerEnv* env, uchar reg, uint index ) { //TODO cache hrefs,
     } 
 }
 
-href getUpVal( struct WorkerEnv* env, href closureRef, uint upval ) {
+href _getUpVal( struct WorkerEnv* env, href closureRef, uint upval ) {
     if( closureRef == 0 ) return 0;
     return getClosureUpval( env, closureRef, upval );
 }
@@ -67,54 +68,143 @@ bool getTabUp( struct WorkerEnv* env, uchar reg, uint upvalIndexOfTable, uint ta
     return true;
 }
 
-//Ax
-void doAxOp( struct WorkerEnv* env,  OpCode code, uint a ) {
-
-}
-
-//A Bx
-bool doABxOp( struct WorkerEnv* env, OpCode code, uchar a, uint bx ) {
-    switch( code ) {
-        case OP_LOADK: // R(A) := Kst(Bx)
-            return loadk( env, a, bx );
-
-        default:
-            return false;
+void returnRange( struct WorkerEnv* env, uchar a, uchar b) {
+    env->returnFlag = true;
+    if( b == 0 ) {        //a to top of stack
+        env->returnStart = getRegisterPos( env->luaStack, a );
+        env->nReturn = getNRegisters( env-> luaStack );
+    } else if( b == 1 ) { //no return values
+        env->returnStart = 0;
+        env->nReturn = 0;
+    } else { //b >= 2, b-1 return values
+        env->returnStart = getRegisterPos( env->luaStack, a );
+        env->nReturn = b - 1;
     }
 }
 
-//A sBx
-void doAsBxOp( struct WorkerEnv* env, OpCode code, uchar a, int bx ) {
+bool op_call( struct WorkerEnv* env, uchar a, ushort b, ushort c) {
+    
+    if( env->returnFlag ) { //already called, handle result
+        uint keep = 0;
+        if( c == 0 ) {//top
+            keep = env->nReturn;
+        } else {
+            keep = c - 1;
+        }
+        keep = keep < env->nReturn ? keep : env->nReturn;
+        for(uint r = 0; r < keep; r++) //overwrites function ref on stack used to call
+            if(!setRegister( env->luaStack, env->stackSize, a + r, env->luaStack[ env->returnStart + r ] ))
+                return false; //can't imagine this happening, but checked anyway
+        
+        env->returnFlag = false;
 
+        return true;
+             // ===========================================================================================
+    } else { // | New call
+             // ===========================================================================================
+        href func = getRegister( env->luaStack, a ); //should be closure or native func
+        uint nargs = 0;
+        if(b == 0) { //TOP
+            nargs = getNRegisters( env-> luaStack ) - a;
+        } else if(b == 1) {
+            nargs = b-1;
+        }
+
+        uchar fType = env->heap[ func ];
+        sref srefA = getRegisterPos( env->luaStack, a );
+
+        if( fType == T_CLOSURE ) {
+            uint fID = getClosureFunction( env, func );
+            uint namedArgs = env->numParams[ fID ];
+            bool isVararg = env->isVararg[ fID ];
+            uint nVarargs = nargs - namedArgs;
+
+            //stores old pc for return, fID = funciton index, func = closure
+            if(!pushStackFrame( env->luaStack, env->stackSize, env->pc, fID, func, isVararg ? nVarargs : 0 )) return false;
+            env->func = fID;
+            env->pc = 0;
+
+            sref argI = srefA + 1;
+            for(uint i = 0; i < namedArgs; i++) { //copy function args to fixed registers
+                href argRef = getRegister( env->luaStack, argI++ );
+                if(!setRegister( env->luaStack, env->stackSize, i, argRef ));
+                    return false;
+            }
+
+            if( isVararg ) {                         //if needed
+                for(uint i = 0; i < nVarargs; i++) { //copy additonal args to varargs
+                    href argRef = getRegister( env->luaStack, argI++ );
+                    setVararg( env->luaStack, i, argRef );
+                }
+            }
+
+            //next program step should continue in the new stack frame
+            return true;
+
+        } else if ( fType == T_NATIVE_FUNC ) {
+            uint nativeID = getHeapInt( env->heap, func + 1 );
+            return callNative( env, nativeID, srefA, nargs ); //should read args and put return values
+        }
+    }
 }
 
-//A B C
-void doABCOp( struct WorkerEnv* env, OpCode code, uchar a, ushort b, ushort c ) {
-
-}
 
 bool doOp( struct WorkerEnv* env, LuaInstruction instruction ) {
     // LuaInstruction instruction = code[ codeIndexes[func] + pc ];
     OpCode op = getOpcode( instruction );
 
     switch( op ) {
-        //Ax
-        //case:
-        //A Bx
-        case OP_LOADK:
-        {
+        
+        case OP_LOADK:{ // R(A) := Kst(Bx)
             uchar a = getA( instruction );
             ushort bx = getBx( instruction );
-            return doABxOp( env, op, a, bx );
+            return loadk( env, a, bx );
         }
-        //case:
 
-        //A sBx
-        //case:
+        case OP_GETTABUP: { // R(A) := UpValue[B][RK(C)]
+            uchar a = getA( instruction );
+            ushort b = getB( instruction );
+            ushort c= getC( instruction );
+            return getTabUp( env, a, b, c );
+        }
 
-        //A B C
-        //case:
+        case OP_CALL: {
+            uchar a = getA( instruction );
+            ushort b = getB( instruction );
+            ushort c= getC( instruction );
+            return op_call( env, a, b, c );
+        }
+
+        case OP_RETURN: { // R(A) := Kst(Bx)
+            uchar a = getA( instruction );
+            ushort b = getB( instruction );
+            returnRange( env, a, b );
+            env->pc = getPreviousPC( env->luaStack );
+            popStackFrame( env->luaStack );
+            env->func = getCurrentFunctionFromStack( env->luaStack );
+            return true;
+        }
+
         default:
             return false;
+    }
+}
+
+bool stepProgram( struct WorkerEnv* env ) {
+    LuaInstruction instruction = env->code[ env->codeIndexes[ env->func ] + env->pc ];
+
+    if(!doOp( env, instruction )) return false;
+}
+
+bool call( struct WorkerEnv* env, href closure ) {
+    env->func = getClosureFunction( env, closure );
+
+    if(!pushStackFrame( env->luaStack, env->stackSize, env->pc, env->func, closure, 0 ))
+        return false;
+    
+    sref callFrame = env->luaStack[0];
+
+    while( callFrame >= env->luaStack[0] ) { //wait till popped
+        if(!stepProgram( env )) return false;
     }
 }
