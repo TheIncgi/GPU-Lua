@@ -99,7 +99,7 @@ __kernel void exec(
         workerEnv.returnFlag = false;
     }
     //stack, funcHref, closureHref, numVarargs
-    initStack( localStack, 0, 0, 0 ); //no closure for main maybe? idk, what's even in it?
+    // initStack( localStack, 0, 0, 0 ); //no closure for main maybe? idk, what's even in it?
 
     while() {
         

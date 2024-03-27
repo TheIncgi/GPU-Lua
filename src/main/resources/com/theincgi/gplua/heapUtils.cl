@@ -118,6 +118,8 @@ href allocateNumber( uchar* heap, uint maxHeap, double value ) {
     heap[hpos + 6] = (du.lbits >> 16) & 0xFF;
     heap[hpos + 7] = (du.lbits >>  8) & 0xFF;
     heap[hpos + 8] = (du.lbits      ) & 0xFF;
+
+    return hpos;
 }
 
 href allocateInt( uchar* heap, uint maxHeap, int value ) {

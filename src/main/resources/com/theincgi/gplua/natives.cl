@@ -26,8 +26,14 @@ href _cn_argAssert( struct WorkerEnv* env, sref a, uchar arg, uchar type ) {
 }
 
 double _cn_argDouble( struct WorkerEnv* env, href arg ) {
+    uchar argType = env->heap[ arg ];
     union doubleUnion du;
-    du.lbits = (getHeapInt( env->heap, arg + 1 ) << 32) | getHeapInt( env->heap, arg + 1 );
+    if( argType == T_NUMBER )
+        du.lbits = (((long)getHeapInt( env->heap, arg + 1 )) << 32) | getHeapInt( env->heap, arg + 1 );
+    else if( argType == T_INT )
+        du.dbits = (double) getHeapInt( env->heap, arg + 1 );
+    else
+        du.dbits = NAN;
     return du.dbits;
 }
 
@@ -50,6 +56,7 @@ bool callNative( struct WorkerEnv* env, uint nativeID, sref a, uint nargs ) {
             return true;
         }
     }
+    return false;
 }
 
 #endif
