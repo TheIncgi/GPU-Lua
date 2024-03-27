@@ -13,6 +13,11 @@ struct WorkerEnv {
     char* error;
     uint errorSize;
     
+    uint* codeIndexes;
+    uint* code; //[function #][instruction] = code[ codeIndexes[function] + instruction ]
+    uchar* numParams;
+    bool* isVararg;
+
     int* constantsPrimaryIndex;
     int* constantsSecondaryIndex;
     uchar* constantsData;
@@ -23,16 +28,18 @@ struct WorkerEnv {
     //vm
     uint func;
     uint pc;
+
+    bool returnFlag;
+    uint returnStart;
+    ushort nReturn;
 };
 
 void getConstDataRange( struct WorkerEnv* env, uint index, uint* start, uint* len );
 
 bool loadk( struct WorkerEnv* env, uchar reg, uint index );
-
-void doAxOp( struct WorkerEnv* env,  OpCode code, uint a );
-bool doABxOp( struct WorkerEnv* env, OpCode code, uchar a, uint bx );
-void doAsBxOp( struct WorkerEnv* env, OpCode code, uchar a, int bx );
-void doABCOp( struct WorkerEnv* env, OpCode code, uchar a, ushort b, ushort c );
+href _getUpVal( struct WorkerEnv* env, href closureRef, uint upval );
+bool getTabUp( struct WorkerEnv* env, uchar reg, uint upvalIndexOfTable, uint tableKey );
+void returnRange( struct WorkerEnv* env, uchar a, uchar b);
 
 bool doOp( struct WorkerEnv* env, LuaInstruction instruction );
 

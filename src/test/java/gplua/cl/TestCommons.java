@@ -134,6 +134,14 @@ public abstract class TestCommons {
 			return readInt( 1 );
 		}
 		
+		public double doubleValue() throws IOException {
+			assertType(LuaTypes.NUMBER);
+			long hi = (((long)readIntAt(data, 1)) << 32);
+			long lo = ((long)readIntAt(data, 5)) & 0xFFFFFFFFL;
+			long bits = hi | lo;
+			return Double.longBitsToDouble( bits );
+		}
+		
 		public int stringLength() throws IOException {
 			assertType(LuaTypes.STRING);
 			return readInt( 1 );
@@ -170,7 +178,7 @@ public abstract class TestCommons {
 					break;
 				}
 				case LuaTypes.NUMBER: {
-					builder.append("NUMBER: TODO");
+					builder.append("NUMBER: %f".formatted(doubleValue()) );
 					break;
 				}
 				case LuaTypes.STRING: {

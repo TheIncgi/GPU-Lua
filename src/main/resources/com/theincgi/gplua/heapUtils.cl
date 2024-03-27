@@ -7,17 +7,17 @@
 
 int getHeapInt(const uchar* heap, const href index) {
     return 
-        heap[index    ] << 24 |
-        heap[index + 1] << 16 |
-        heap[index + 2] <<  8 |
-        heap[index + 3];
+        (heap[index    ] << 24) |
+        (heap[index + 1] << 16) |
+        (heap[index + 2] <<  8) |
+        (heap[index + 3]      );
 }
 
 void putHeapInt(uchar* heap, const href index, const uint value) {
-    heap[index    ] = value >> 24 & 0xFF; //bit shift is higher priority than bitwise AND in c++, I checked
-    heap[index + 1] = value >> 16 & 0xFF;
-    heap[index + 2] = value >>  8 & 0xFF;
-    heap[index + 3] = value       & 0xFF;
+    heap[index    ] = (value >> 24) & 0xFF; //bit shift is higher priority than bitwise AND in c++, I checked
+    heap[index + 1] = (value >> 16) & 0xFF;
+    heap[index + 2] = (value >>  8) & 0xFF;
+    heap[index + 3] = (value      ) & 0xFF;
 }
 
 void initHeap(uchar* heap, uint maxHeap) {
@@ -98,6 +98,37 @@ href allocateHeap(uchar* heap, uint maxHeap, uint size) {
         }
     }  
     return 0; //not enough memory
+}
+
+href allocateNumber( uchar* heap, uint maxHeap, double value ) {
+    if( value == (int)value )
+        return allocateInt( heap, maxHeap, (int) value);
+
+    href hpos = allocateHeap( heap, maxHeap, 9 );
+    if( hpos == 0 ) return 0;
+
+    union doubleUnion du;
+    du.dbits = value;
+    heap[hpos    ] = T_NUMBER;
+    heap[hpos + 1] = (du.lbits >> 56) & 0xFF; //bit shift is higher priority than bitwise AND in c++, I checked
+    heap[hpos + 2] = (du.lbits >> 48) & 0xFF;
+    heap[hpos + 3] = (du.lbits >> 40) & 0xFF;
+    heap[hpos + 4] = (du.lbits >> 32) & 0xFF;
+    heap[hpos + 5] = (du.lbits >> 24) & 0xFF;
+    heap[hpos + 6] = (du.lbits >> 16) & 0xFF;
+    heap[hpos + 7] = (du.lbits >>  8) & 0xFF;
+    heap[hpos + 8] = (du.lbits      ) & 0xFF;
+
+    return hpos;
+}
+
+href allocateInt( uchar* heap, uint maxHeap, int value ) {
+    href hpos = allocateHeap( heap, maxHeap, 5 );
+    if( hpos == 0 ) return 0;
+
+    heap[ hpos ] = T_INT;
+    putHeapInt( heap, hpos + 1, value );
+    return hpos;
 }
 
 //allocated space NOT including the boundry tag

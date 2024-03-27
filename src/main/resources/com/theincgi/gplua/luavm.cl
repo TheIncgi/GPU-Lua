@@ -5,6 +5,7 @@
 #include"table.h"
 #include"opUtils.cl"
 #include"hashmap.cl"
+#include"globals.cl"
 // #include"opUtils.cl"
 #include"stackUtils.cl"
 #include"vm.h"
@@ -30,8 +31,8 @@ __kernel void exec(
     __global        uchar* maxStackSize,
 
     //code
-    __global          int* codeIndexes,
-    __global unsigned int* code, //[function #][instruction] = code[ codeIndexes[function] + instruction ]
+    __global          uint* codeIndexes,
+    __global          uint* code, //[function #][instruction] = code[ codeIndexes[function] + instruction ]
     
     //constants
     //__global unsigned int* constantsLen,
@@ -70,7 +71,7 @@ __kernel void exec(
     href stringTable = newTable( localHeap, heapSize );
     //TODO allow heap retention as a param/flag/setting
     //TODO consider shared globals to reduce memory usage
-    href globals = createGlobals( localHeap, heapSize, stringTable )
+    href globals = createGlobals( localHeap, heapSize, stringTable );
 
     // int func = 0,a,b,c,pc=0; //func here refers to code, not a heap ref
     {
@@ -80,8 +81,13 @@ __kernel void exec(
         workerEnv.heap = localHeap;
         workerEnv.maxHeapSize = heapSize;
 
-        workerEnv.error = error;
+        workerEnv.error = errorOutput;
         workerEnv.errorSize = errorSize;
+
+        workerEnv.codeIndexes = codeIndexes;
+        workerEnv.code = code;
+        workerEnv.numParams = numParams;
+        workerEnv.isVararg = isVararg;
 
         workerEnv.constantsPrimaryIndex = constantsPrimaryIndex;
         workerEnv.constantsSecondaryIndex = constantsSecondaryIndex;
@@ -89,9 +95,11 @@ __kernel void exec(
 
         workerEnv.globals = globals;
         workerEnv.stringTable = stringTable;
+
+        workerEnv.returnFlag = false;
     }
     //stack, funcHref, closureHref, numVarargs
-    initStack( localStack, 0, 0, 0 ); //no closure for main maybe? idk, what's even in it?
+    // initStack( localStack, 0, 0, 0 ); //no closure for main maybe? idk, what's even in it?
 
     while() {
         

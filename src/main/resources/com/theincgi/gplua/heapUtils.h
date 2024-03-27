@@ -31,6 +31,8 @@ void putHeapInt(uchar* heap, const href index, const uint value);
 
 void initHeap(uchar* heap, uint maxHeap);
 href allocateHeap(uchar* heap, uint maxHeap, uint size);
+href allocateNumber( uchar* heap, uint maxHeap, double value );
+href allocateInt( uchar* heap, uint maxHeap, int value );
 
 
 uint heapObjectLength(const uchar* heap, const href index);

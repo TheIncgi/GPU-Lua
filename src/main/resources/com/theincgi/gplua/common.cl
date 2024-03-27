@@ -20,6 +20,11 @@ typedef uint sref;
 
 typedef __constant char* string;
 
+union doubleUnion{
+    long lbits;
+    double dbits;
+};
+
 uint resizeRule( uint oldSize ) {
     uint times = oldSize * 2;
     uint add   = oldSize + 128;

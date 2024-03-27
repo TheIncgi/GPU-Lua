@@ -15,7 +15,12 @@ void initStack( uint* stack, uint funcIndex, href funcHeapClosure, uint nVarargs
 /** stack - should be to base of worker stack
   * stackSize - maxium size that won't cause overflow into the next worker / out of bounds
   */
-bool pushStackFrame( uint* stack, uint stackSize, uint pc, href funcHeapIndex, href funcHeapClosure, int nVarargs ) {
+bool pushStackFrame( uint* stack, uint stackSize, uint pc, uint funcIndex, href funcHeapClosure, int nVarargs ) {
+    if( stack[0] == 0 ) {
+        initStack( stack, funcIndex, funcHeapClosure, nVarargs );
+        return true;
+    }
+
     sref oldBase = stack[0];
     sref oldTop  = stack[oldBase];
 
@@ -31,7 +36,7 @@ bool pushStackFrame( uint* stack, uint stackSize, uint pc, href funcHeapIndex, h
     stack[base - 1] = oldBase;        //part of the previous frame, if no previous frame then stack[0]
     stack[base    ] = top + nVarargs;            //first value in a frame points to the first empty index on the stack
     stack[base + 1] = top + nVarargs;
-    stack[base + 2] = funcHeapIndex;
+    stack[base + 2] = funcIndex;
     stack[base + 3] = funcHeapClosure;
     //   [base + 4] empty
     return true; //not out of memory
@@ -39,14 +44,32 @@ bool pushStackFrame( uint* stack, uint stackSize, uint pc, href funcHeapIndex, h
 
 uint getPreviousPC( uint* stack ) {
     sref currentBase = stack[0];
+    if( currentBase <= 1 )
+        return 0;
     return stack[ currentBase - 2 ];
 }
 
-void popStackFrame( uint* stack ) {
+uint getCurrentFunctionFromStack( uint* stack ) {
     sref currentBase = stack[0];
+    if( currentBase <= 1 )
+        return 0;
+    return stack[ currentBase + 2 ];
+}
+
+bool popStackFrame( uint* stack ) {
+    sref currentBase = stack[0];
+    if( currentBase == 0 ) {
+        return false;
+    }
+    if( currentBase == 1 ) {
+        stack[0] = 0; //stack empty
+        return true;
+    }
+
     sref oldBase = stack[currentBase - 1];
     stack[0] = oldBase;
     //everything previously on the stack's old top frame can be safely ignored
+    return true;
 }
 
 bool pushStack( uint* stack, uint stackSize, href value) {
@@ -102,13 +125,28 @@ href getStackClosure( uint* stack ) {
 }
 
 href getRegister( uint* stack, uchar regNum ) {
-    return stack[ getRegisterPos( stack, regNum ) ];
+    sref currentBase = stack[0];
+    sref startOfRegisters = stack[ currentBase + 1 ];
+    sref top = stack[ currentBase ];
+    sref regPos = startOfRegisters + regNum;
+
+    if( regPos >= top )
+        return 0; //out of bounds
+    
+    return stack[ regPos ];
 }
 
 href getVararg( uint* stack, uchar vargn ) {
     return stack[ getVarargPos( stack, vargn ) ];
 }
 
-int getNVarargs( uint* stack ) {
+uint getNVarargs( uint* stack ) {
     return getRegisterPos( stack, 0 ) - getVarargPos( stack, 0 );
+}
+
+uint getNRegisters( uint* stack ) {
+    sref currentBase = stack[0];
+    sref top = stack[ currentBase ];
+    sref firstReg = stack[ currentBase + 1 ];
+    return top - firstReg;
 }
