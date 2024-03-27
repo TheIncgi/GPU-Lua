@@ -44,11 +44,15 @@ bool pushStackFrame( uint* stack, uint stackSize, uint pc, uint funcIndex, href 
 
 uint getPreviousPC( uint* stack ) {
     sref currentBase = stack[0];
+    if( currentBase <= 1 )
+        return 0;
     return stack[ currentBase - 2 ];
 }
 
 uint getCurrentFunctionFromStack( uint* stack ) {
     sref currentBase = stack[0];
+    if( currentBase <= 1 )
+        return 0;
     return stack[ currentBase + 2 ];
 }
 

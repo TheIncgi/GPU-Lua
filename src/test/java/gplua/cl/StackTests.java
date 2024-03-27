@@ -1,5 +1,6 @@
 package gplua.cl;
 
+import static org.junit.Assert.assertTrue;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import java.io.FileNotFoundException;
@@ -250,7 +251,7 @@ public class StackTests extends KernelTestBase {
 		var events = setupProgram("""
 		initStack( env.luaStack, 1, 2, 3 ); //3 varargs
 		
-		bool ok = loadk( &env, 3, 1 ); //reg 3, const 1
+		bool ok = loadk( &env, 3, 0 ); //reg 3, const 0
 		env.error[ 0 ] = ok ? 1 : 0; //log
 		""", 
 		LuaSrcUtil.readBytecode("print.out"), //print"hello"
@@ -390,13 +391,14 @@ public class StackTests extends KernelTestBase {
 		
 		var ok = log[0] == 1;
 		var returned = log[1] == 1;
-		var lastInst = readIntAt(log, 2);
-		System.out.println("last instr: ");
-		System.out.println("  OP: " + (lastInst & 0x3F));
-		System.out.println("   A: " + ((lastInst >> 6) & 0xFF));
-		System.out.println("   B: " + ((lastInst >> 23) & 0x1FF));
-		System.out.println("   C: " + ((lastInst >> 14) & 0x1FF));
-		System.out.println("K(C): " + ((lastInst >> 14) & 0xFF));
+		//debug
+//		var lastInst = readIntAt(log, 2);
+//		System.out.println("last instr: ");
+//		System.out.println("  OP: " + (lastInst & 0x3F));
+//		System.out.println("   A: " + ((lastInst >> 6) & 0xFF));
+//		System.out.println("   B: " + ((lastInst >> 23) & 0x1FF));
+//		System.out.println("   C: " + ((lastInst >> 14) & 0x1FF));
+//		System.out.println("K(C): " + ((lastInst >> 14) & 0xFF));
 		var returnValueHref = readIntAt(log, 6);
 		
 		var frames = readStackFrames(stack);
@@ -404,9 +406,12 @@ public class StackTests extends KernelTestBase {
 		printFrames( frames );
 		dumpHeap(heap);
 		
-		assertEquals(1, log[0], "call failed");
+		assertTrue("call says it failed", ok);
+		assertTrue("should have returnFlag true", returned);
 		
-		
+		var result = getChunkData(heap, returnValueHref);
+		assertEquals(LuaTypes.NUMBER, result.type());
+		assertEquals(Math.log(10), result.doubleValue(), .0000001d);	
 	}
 	
 }

@@ -175,7 +175,6 @@ bool op_call( struct WorkerEnv* env, uchar a, ushort b, ushort c) {
             bool ok = callNative( env, nativeID, srefA, nargs ); //should read args and put return values
             if( !ok ) return false;
             env->pc++;
-            return false;
             return true;
         } else {
             return false; //attempt to call TYPE
@@ -187,7 +186,6 @@ bool op_call( struct WorkerEnv* env, uchar a, ushort b, ushort c) {
 bool doOp( struct WorkerEnv* env, LuaInstruction instruction ) {
     // LuaInstruction instruction = code[ codeIndexes[func] + pc ];
     OpCode op = getOpcode( instruction );
-
     switch( op ) {
         
         case OP_LOADK:{ // R(A) := Kst(Bx)
@@ -249,8 +247,10 @@ bool call( struct WorkerEnv* env, href closure ) {
     env->returnFlag = false;
     sref callFrame = env->luaStack[0];
 
-    while( callFrame >= env->luaStack[0] ) { //wait till popped
-        if(!stepProgram( env )) return false;
+    while( callFrame <= env->luaStack[0] ) { //wait till popped
+        if(!stepProgram( env )) {
+            return false;
+        } 
     }
 
     return true;
