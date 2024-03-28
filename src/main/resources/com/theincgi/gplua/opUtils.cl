@@ -7,7 +7,7 @@ typedef enum {
     ---------------------------------------------------------------------------*/
     OP_MOVE = 0,/*  A B     R(A) := R(B)                                     0 */
     OP_LOADK,/*     A Bx    R(A) := Kst(Bx)                                  1 */
-    OP_LOADKX,/*    A       R(A) := Kst(extra arg)                           2 */
+    OP_LOADKX,/*    A       R(A) := Kst(extra arg)                           2 */ // ?? no docs on https://the-ravi-programming-language.readthedocs.io/en/latest/lua_bytecode_reference.html#op-loadk-instruction
     OP_LOADBOOL,/*  A B C   R(A) := (Bool)B; if (C) pc++                     3 */
     OP_LOADNIL,/*   A B     R(A), R(A+1), ..., R(A+B) := nil                 4 */
     OP_GETUPVAL,/*  A B     R(A) := UpValue[B]                               5 */
@@ -107,6 +107,15 @@ int indexK( int r ) {
 
 int rkAsK( int x ) {
     return x | 0x100;
+}
+
+int floatingPointByte( uchar x ) {
+    //eeee exxx x is the mantissa, e is the exponent
+    //1xxx*2^(eeeee-1)
+    //copied from https://www.lua.org/source/5.2/lobject.c.html lua0_fb2int
+    int e = (x >> 3) & 0x1f;
+    if (e == 0) return x;
+    else return ((x & 7) + 8) << (e - 1);
 }
 
 #endif

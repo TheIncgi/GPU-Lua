@@ -36,11 +36,15 @@ uint tableLen( uchar* heap, href heapIndex ) {
 }
 
 href tableCreateArrayPart( uchar* heap, uint maxHeapSize, href tableHeapIndex ) {
+    return tableCreateArrayPartWithSize( heap, maxHeapSize, tableHeapIndex, TABLE_INIT_ARRAY_SIZE );
+}
+
+href tableCreateArrayPartWithSize( uchar* heap, uint maxHeapSize, href tableHeapIndex, uint initalSize ) {
     href current = tableGetArrayPart( heap, tableHeapIndex );
     if( current != 0 )
         return current; //already exists
     
-    href arrayPart = newArray( heap, maxHeapSize, TABLE_INIT_ARRAY_SIZE );
+    href arrayPart = newArray( heap, maxHeapSize, initalSize );
     
     if( arrayPart == 0 )
         return false; //couldn't create array
@@ -50,11 +54,15 @@ href tableCreateArrayPart( uchar* heap, uint maxHeapSize, href tableHeapIndex ) 
 }
 
 href tableCreateHashedPart( uchar* heap, uint maxHeapSize, href tableHeapIndex ) {
+    return tableCreateHashedPartWithSize( heap, maxHeapSize, tableHeapIndex, HASHMAP_INIT_SIZE );
+}
+
+href tableCreateHashedPartWithSize( uchar* heap, uint maxHeapSize, href tableHeapIndex, uint initalSize ) {
     href current = tableGetHashedPart( heap, tableHeapIndex );
     if( current != 0 )
         return current; //already exists
 
-    href hashedPart = newHashmap( heap, maxHeapSize, HASHMAP_INIT_SIZE );
+    href hashedPart = newHashmap( heap, maxHeapSize, initalSize );
     
     if( hashedPart == 0 )
         return false; //couldn't create map

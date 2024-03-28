@@ -17,6 +17,14 @@ void getConstDataRange( struct WorkerEnv* env, uint index, uint* start, uint* le
     *len   = env->constantsSecondaryIndex[ secondaryIndex + 1 ];
 }
 
+bool op_move( struct WorkerEnv* env, uchar dstReg, ushort srcReg ) {
+    if(setRegister( env->luaStack, env->stackSize, dstReg, getRegister( env->luaStack, srcReg ) )) {
+        env->pc++;
+        return true;
+    }
+    return false;
+}
+
 bool loadk( struct WorkerEnv* env, uchar reg, uint index ) { //TODO cache hrefs, preload?
     uint constStart; 
     uint constLen;
@@ -188,10 +196,50 @@ bool doOp( struct WorkerEnv* env, LuaInstruction instruction ) {
     OpCode op = getOpcode( instruction );
     switch( op ) {
         
-        case OP_LOADK:{ // R(A) := Kst(Bx)
-            uchar a = getA( instruction );
+        case OP_MOVE: { // R(A) := R(B)
+            uchar  a = getA( instruction );
+            ushort b = getB( instruction );
+            return op_move( env, a, b );       // ok? pc++
+        }
+
+        case OP_LOADK: { // R(A) := Kst(Bx)
+            uchar  a  = getA( instruction );
             ushort bx = getBx( instruction );
             return loadk( env, a, bx );        //ok? pc++
+        }
+
+        case OP_LOADKX: { return false; } //not implemented
+
+        case OP_LOADBOOL: { // R(A) := (Bool)B; if(C) pc++ (skip next)
+            uchar  a = getA( instruction );
+            ushort b = getB( instruction );
+            ushort c = getC( instruction );
+            if(!setRegister( env->luaStack, env->stackSize, a, b == 0 ? 1 : 3 )) //Heap reserve: 0 nil, 1 false, 3 true
+                return false;
+            env->pc += c != 0 ? 2 : 1;
+        }
+
+        case OP_LOADNIL: { // R(A ... A+B) := nil
+            uchar  a = getA( instruction );
+            ushort b = getB( instruction );
+            uint limit = a + b;
+            for(uint r = a; r <= limit; r++) {
+                if(!setRegister( env->luaStack, env->stackSize, r, 0 ))
+                    return false;
+            }
+            env->pc++;
+            return true;
+        }
+
+        case OP_GETUPVAL: { // R(A) := upval[B]
+            uchar  a = getA( instruction );
+            ushort b = getB( instruction );
+            href closure = getStackClosure( env->luaStack );
+            href upval = _getUpVal( env, closure, b );
+            if(!setRegister( env->luaStack, env->stackSize, a, upval ))
+                return false;
+            env->pc++;
+            return true;
         }
 
         //table is an upval
@@ -210,6 +258,58 @@ bool doOp( struct WorkerEnv* env, LuaInstruction instruction ) {
             return op_getTable( env, a, b, c ); //ok? pc++
         }
 
+        case OP_SETTABUP: { //UpVal[A][RK(B)] := RK(C) | UpVal[ tableUpvalIndex ][ tableKey ] := tableValue
+            // uchar  a = getA( instruction ); //target upval
+            // ushort b = getB( instruction ); //RK(B) table key
+            // ushort c = getC( instruction ); //RK(C) value
+            return false; //TODO implement, meta event __newindex too!
+        }
+
+        case OP_SETUPVAL: {
+
+            return false;
+        }
+
+        case OP_SETTABLE: {
+
+            return false;
+        }
+
+        case OP_NEWTABLE: { // R(A) := {} (size = B,C)
+            uchar a = getA( instruction );
+            int arraySize = floatingPointByte( getB( instruction ) );
+            int hashSize  = floatingPointByte( getC( instruction ) );
+
+            href table = newTable( env->heap, env->maxHeapSize );
+            if(table == 0) return false;
+
+            if( arraySize > 0 ) {
+                if( tableCreateArrayPartWithSize( env->heap, env->maxHeapSize, table, arraySize ) == 0 )
+                    return false;
+            }
+
+            if( hashSize > 0 ) {
+                if( tableCreateHashedPartWithSize( env->heap, env->maxHeapSize, table, hashSize ) == 0 )
+                    return false;
+            }
+            
+            if(!setRegister( env->luaStack, env->stackSize, a, table ))
+                return false;
+            env->pc++;
+            return true;
+        }
+
+        case OP_SELF: { //R(A+1) := R(B);   R(A) := R(B)[RK(C)]
+            uchar  a = getA( instruction );
+            ushort b = getB( instruction );
+            ushort c = getC( instruction );
+
+            if( !setRegister( env->luaStack, env->stackSize, a + 1, getRegister( env->luaStack, b ) ) )
+                return false;
+            
+            return op_getTable( env, a, b, c ); // ok? pc++
+        }
+
         case OP_CALL: {
             uchar a = getA( instruction );
             ushort b = getB( instruction );
@@ -225,6 +325,10 @@ bool doOp( struct WorkerEnv* env, LuaInstruction instruction ) {
             popStackFrame( env->luaStack );
             env->func = getCurrentFunctionFromStack( env->luaStack ); //frame popped, don't care about pc++
             return true;
+        }
+
+        case OP_ADD: { // R(A) := RK(B) + RK(C)
+            return false;
         }
 
         default:

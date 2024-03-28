@@ -110,7 +110,7 @@ href allocateNumber( uchar* heap, uint maxHeap, double value ) {
     union doubleUnion du;
     du.dbits = value;
     heap[hpos    ] = T_NUMBER;
-    heap[hpos + 1] = (du.lbits >> 56) & 0xFF; //bit shift is higher priority than bitwise AND in c++, I checked
+    heap[hpos + 1] = (du.lbits >> 56) & 0xFF;
     heap[hpos + 2] = (du.lbits >> 48) & 0xFF;
     heap[hpos + 3] = (du.lbits >> 40) & 0xFF;
     heap[hpos + 4] = (du.lbits >> 32) & 0xFF;
