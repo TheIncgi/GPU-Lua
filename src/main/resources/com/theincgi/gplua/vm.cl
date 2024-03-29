@@ -25,13 +25,14 @@ bool op_move( struct WorkerEnv* env, uchar dstReg, ushort srcReg ) {
     return false;
 }
 
-bool loadk( struct WorkerEnv* env, uchar reg, uint index ) { //TODO cache hrefs, preload?
+//TODO cache hrefs using env->constTable;
+href kToHeap( struct WorkerEnv* env, uint index ) {
     uint constStart; 
     uint constLen;
     getConstDataRange( env, index, &constStart, &constLen );
 
     if( constLen == 0 )
-        return false; //const should have at minium 1 byte for type
+        return 0; //const should have at minium 1 byte for type
 
     href k = allocateHeap( env->heap, env->maxHeapSize, constLen );
     if( k == 0 ) { return false; } //TODO err OOM
@@ -40,6 +41,14 @@ bool loadk( struct WorkerEnv* env, uchar reg, uint index ) { //TODO cache hrefs,
     for( uint r = constStart, w = 0; r < limit; r++, w++ ) {
         env->heap[ k + w ] = env->constantsData[ r ];
     }
+
+    return k;
+}
+
+bool loadk( struct WorkerEnv* env, uchar reg, uint index ) { 
+    href k = kToHeap( env, index );
+    if( k == 0 ) return false;
+
     //nil bool number str
     if( setRegister( env->luaStack, env->stackSize, reg, k ) ) {
         env->pc++;
@@ -105,7 +114,73 @@ bool op_getTable( struct WorkerEnv* env, uchar destReg, ushort tableReg, ushort 
     return true;
 }
 
-void returnRange( struct WorkerEnv* env, uchar a, uchar b) {
+//set table upval
+// UpVal[A][RK(B)] := RK(C) | UpVal[ tableUpvalIndex A ][ tableKey B ] := tableValue C
+bool op_settabup( struct WorkerEnv* env, uchar a, ushort b, ushort c ) { 
+    href closure = getStackClosure( env->luaStack ); //active function
+    if( closure == 0 ) return false;
+
+    href table = _getUpVal( env, closure, a ); //table upval of current function
+    if( env->heap[table] != T_TABLE ) return false; //attempt to assign to TYPE
+
+    return _settable( env, table, b, c );    
+}
+
+//R(A)[RK(B)] := RK(C) | Registers[ A ][ tableKey B ] := tableValue C
+bool op_settable( struct WorkerEnv* env, uchar a, ushort b, ushort c ) {
+    href table = getRegister( env->luaStack, a );
+    if( env->heap[table] != T_TABLE ) return false; //attempt to assign to TYPE
+
+    bool ok = _settable( env, table, b, c );
+    if( ok ) env->pc++;
+    return ok;
+}
+
+//shared logic of settabup and settable
+bool _settable( struct WorkerEnv* env, href table, ushort b, ushort c ) {
+    href key, value;
+
+    if( isK( b ) ) {
+        key = kToHeap( env, indexK( b ));
+        if( key == 0 ) return false; //failed to allocate key to heap or attempt to index using nil
+    } else {
+        key = getRegister( env->luaStack, b );
+        if( key == 0 ) return false; //attempt to index using nil
+    }
+
+    if( isK( c )) {
+        value = kToHeap( env, indexK( c ));
+        if( value == 0 ) return false; //failed to allocate value to heap
+    } else {
+        value = getRegister( env->luaStack, c );
+    }
+
+    href newindex = tableGetMetaNewIndex( env, table ); //check for meta event
+    if( env->heap[newindex] == T_CLOSURE ) { //T_FUNC isn't callable, needs upvals & such
+        bool isNew = false;
+
+        isNew = tableGetByHeap( env, table, key ) == 0; //check if current value is nil
+
+        if( isNew ) { //current value is nil
+            href args[3]; // __newindex( myTable, key, value )
+            args[0] = table;
+            args[1] = key;
+
+            if( isK( c ) ) { // c is a constant
+                args[2] = kToHeap( env, indexK( c ) );
+                if(args[2] == 0) return false; //failed to allocate space for constant
+            } else { //c is a register
+                args[2] = getRegister( env->luaStack, c );
+            }
+
+            return callWithArgs( env, newindex, args, 3 );
+        }
+    } //else no usable meta-event __newindex
+
+    return tableRawSet( env->heap, env->maxHeapSize, table, key, value );
+}
+
+void returnRange( struct WorkerEnv* env, uchar a, uchar b ) {
     env->returnFlag = true;
     if( b == 0 ) {        //a to top of stack
         env->returnStart = getRegisterPos( env->luaStack, a );
@@ -119,7 +194,7 @@ void returnRange( struct WorkerEnv* env, uchar a, uchar b) {
     }
 }
 
-bool op_call( struct WorkerEnv* env, uchar a, ushort b, ushort c) {
+bool op_call( struct WorkerEnv* env, uchar a, ushort b, ushort c ) {
     
     if( env->returnFlag ) { //already called, handle result
         uint keep = 0;
@@ -259,20 +334,25 @@ bool doOp( struct WorkerEnv* env, LuaInstruction instruction ) {
         }
 
         case OP_SETTABUP: { //UpVal[A][RK(B)] := RK(C) | UpVal[ tableUpvalIndex ][ tableKey ] := tableValue
-            // uchar  a = getA( instruction ); //target upval
-            // ushort b = getB( instruction ); //RK(B) table key
-            // ushort c = getC( instruction ); //RK(C) value
-            return false; //TODO implement, meta event __newindex too!
+            uchar  a = getA( instruction ); //target upval
+            ushort b = getB( instruction ); //RK(B) table key
+            ushort c = getC( instruction ); //RK(C) value
+            return op_settabup( env, a, b, c );
         }
 
-        case OP_SETUPVAL: {
-
-            return false;
+        case OP_SETUPVAL: { //UpValue[B] := R(A)
+            uchar  a = getA( instruction ); //value register
+            ushort b = getB( instruction ); //upval index
+            href closure = getStackClosure( env->luaStack );
+            setClosureUpval( env, closure, b, getRegister( env->luaStack, a ) );
+            return true;
         }
 
-        case OP_SETTABLE: {
-
-            return false;
+        case OP_SETTABLE: { //R(A)[RK(B)] := RK(C)
+            uchar  a = getA( instruction ); //target register
+            ushort b = getB( instruction ); //RK(B) table key
+            ushort c = getC( instruction ); //RK(C) value
+            return op_settable( env, a, b, c );
         }
 
         case OP_NEWTABLE: { // R(A) := {} (size = B,C)
@@ -343,10 +423,31 @@ bool stepProgram( struct WorkerEnv* env ) {
 }
 
 bool call( struct WorkerEnv* env, href closure ) {
+    href args[0];
+    return callWithArgs( env, closure, &args, 0 );
+}
+bool callWithArgs( struct WorkerEnv* env, href closure, href* args, uint nargs ) {
     env->func = getClosureFunction( env, closure );
 
-    if(!pushStackFrame( env->luaStack, env->stackSize, env->pc, env->func, closure, 0 ))
+    uint namedArgs = env->numParams[ env->func ];
+    bool isVararg = env->isVararg[ env->func ];
+    uint nVarargs = nargs - namedArgs;
+
+    if(!pushStackFrame( env->luaStack, env->stackSize, env->pc, env->func, closure, nVarargs ))
         return false;
+
+    if( nargs > 0 ) {
+        for( uint n = 0; n < namedArgs; n++ ) {
+            if(!setRegister( env->luaStack, env->stackSize, n, args[n] ))
+                return false;
+        }
+        if( isVararg ) {
+            uint a = namedArgs;
+            for(uint v = 0; v < nVarargs; v++) {
+                setVararg( env->luaStack, v, args[a] );
+            }
+        }
+    }
     
     env->returnFlag = false;
     sref callFrame = env->luaStack[0];
