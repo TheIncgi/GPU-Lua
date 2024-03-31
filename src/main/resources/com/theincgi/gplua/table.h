@@ -21,6 +21,7 @@ href tableRawGet( uchar* heap, href tableIndex, uchar* keySource, uint keyIndex,
 bool tableResizeArray( uchar* heap, uint maxHeapSize, href tableIndex, uint newSize );
 bool tableRawSet( uchar* heap, uint maxHeapSize, href tableIndex, href key, href value );
 
+href tableGetMetaEvent( struct WorkerEnv* env, href table, string eventName );
 href tableGetMetaIndex( struct WorkerEnv* env, href table );
 href tableGetMetaNewIndex( struct WorkerEnv* env, href table );
 

@@ -265,6 +265,107 @@ bool op_call( struct WorkerEnv* env, uchar a, ushort b, ushort c ) {
     }
 }
 
+bool _readAsDouble( uchar* dataSource, uint start, double* result ) {
+    if( dataSource[start] == T_INT ) {
+        *result = (double)getHeapInt( dataSource, start  );
+        return true;
+    } else if( dataSource[start] == T_NUMBER ) {
+        union doubleUnion d;
+        uint hi = ((ulong)getHeapInt( dataSource, start + 1 )) << 32;
+        uint lo = ((ulong)getHeapInt( dataSource, start + 5 )) & 0xFFFFFFFF;
+        d.lbits = hi | lo;
+        *result = d.dbits;
+        return true;
+    } else {
+        return false;
+    }
+}
+
+bool op_math( struct WorkerEnv* env, LuaInstruction instruction, OpCode op ) {
+    uchar a = getA( instruction );
+    ushort rkb = getB( instruction );
+    ushort rkc = getC( instruction );
+
+    double x, y, ans;
+    if( isK( rkb ) ) {
+        uint constStart; 
+        uint constLen;
+        getConstDataRange( env, indexK(rkb), &constStart, &constLen );
+        if( constLen == 0 )
+            return false; //const should have at minium 1 byte for type
+
+        if( !_readAsDouble( env->constantsData, constStart, &x ))
+            return false; //attempt to op with type
+    } else {
+        href val = getRegister( env->luaStack, rkb );
+        if( !_readAsDouble( env->heap, val, &x ))
+            return false; //attempt to op with type
+    }
+
+    if( OP_ADD <= op && op <= OP_POW ) { //math ops with 2 values
+        if( isK( rkc ) ) {
+            uint constStart; 
+            uint constLen;
+            getConstDataRange( env, indexK(rkc), &constStart, &constLen );
+            if( constLen == 0 )
+                return false; //const should have at minium 1 byte for type
+
+            if( !_readAsDouble( env->constantsData, constStart, &y ))
+                return false; //attempt to op with type
+        } else {
+            href val = getRegister( env->luaStack, rkc );
+            if( !_readAsDouble( env->heap, val, &y ))
+                return false; //attempt to op with type
+        }
+    }
+
+    // R(A) := RK(B) op RK(C)
+    switch( op ) {
+        //2 values
+        case OP_ADD:
+            ans = x + y; 
+            break;
+
+        case OP_SUB:
+            ans = x - y; 
+            break;
+
+        case OP_MUL:
+            ans = x * y; 
+            break;
+
+        case OP_DIV:
+            ans = x / y; 
+            break;
+
+        case OP_MOD:
+            ans = fmod( x, y ); 
+            break;
+
+        case OP_POW:
+            ans = pow( x, y );
+            break;
+
+        //1 value
+        case OP_UNM:
+            ans = -x; 
+            break;
+
+        default:
+            return false;
+    }
+
+    href ansRef = allocateNumber( env->heap, env->maxHeapSize, ans );
+    if( setRegister( env->luaStack, env->stackSize, a, ansRef ) ) {
+        env->pc++;
+        return true;
+    }
+    return false;
+}
+
+bool isTruthy( href value ) {
+    return value >= TRUE_HREF; //[0] nil | [1,2] false | [3:4] true | [5+] heap values
+}
 
 bool doOp( struct WorkerEnv* env, LuaInstruction instruction ) {
     // LuaInstruction instruction = code[ codeIndexes[func] + pc ];
@@ -407,9 +508,112 @@ bool doOp( struct WorkerEnv* env, LuaInstruction instruction ) {
             return true;
         }
 
-        case OP_ADD: { // R(A) := RK(B) + RK(C)
+        case OP_ADD: 
+        case OP_SUB:
+        case OP_MUL:
+        case OP_DIV:
+        case OP_MOD:
+        case OP_POW:
+        case OP_UNM:
+        { // R(A) := RK(B) op RK(C)
+            return op_math( env, instruction, op ); // ok? pc++
+        }
+
+        case OP_NOT: {
+            uchar  a = getA( instruction );
+            ushort b = getB( instruction );
+            href val = getRegister( env->luaStack, b );
+            //2 is constant ref for 
+            if( setRegister( env->luaStack, env->stackSize, a, isTruthy( val ) ? FALSE_HREF : TRUE_HREF ) ) {
+                env->pc++;
+                return true;
+            }
             return false;
         }
+
+        case OP_LEN: { // R(A) := # R(B)
+            uchar  a = getA( instruction );
+            ushort b = getB( instruction );
+            href val = getRegister( env->luaStack, b );
+
+            switch( env->heap[ val ] ) {
+                case T_STRING: {
+                    uint length = getHeapInt( env->heap, val+1 );
+                    href r = allocateInt( env->heap, env->maxHeapSize, length );
+                    if( r == 0 ) return false;
+                    if( setRegister( env->luaStack, env->stackSize, a, r ) ) {
+                        env->pc++;
+                        return true;
+                    }
+                    return false;
+                }
+                case T_TABLE: {
+                    string metaEventName = "__len";
+                    href metaEvent = tableGetMetaEvent( env, val, metaEventName );
+                    if( env->heap[metaEvent] == T_CLOSURE ) {
+                        href args[1];
+                        args[0] = val;
+                        if( callWithArgs( env, metaEvent, args, 1 )) {
+                            if( env->returnFlag ) {
+                                href r1 = env->luaStack[ returnStart ];
+                                if(setRegister( env->luaStack, env->stackSize, a, r1 )) {
+                                    env->pc++;
+                                    return true;
+                                }
+                            }
+                        }
+                        return false;
+                    } else {
+                        uint length = tableLen( env->heap, val );
+                        href r = allocateInt( env->heap, env->maxHeapSize, length );
+                        if( r == 0 ) return false; //out of memory
+                        if( setRegister( env->luaStack, env->stackSize, a, r )) {
+                            env->pc++;
+                            return true;
+                        }
+                        return false;
+                    }
+                }
+                default: {
+                    return false; //attempt to get length of type
+                }
+            }
+        }
+
+        case OP_CONCAT: { // R(A) : = R(B).. ... ..R(C)
+            uchar  a = getA( instruction );
+            ushort b = getB( instruction );
+            ushort c = getC( instruction );
+
+            //todo length of each type as a string
+            return false;
+        }
+
+        case OP_JMP: { // pc += sBx; if (A) "close" all upvals >= R(A-1)
+            uchar a = getA( instruction );
+            int  sBx = getsBx( instruction ); //signed, (B & C)
+            env->pc += sBx + 1;
+
+            //no closable resources like files
+            return true;
+        }
+
+
+        case OP_EQ: // if ((RK(B) == RK(C)) ~= A) then pc++
+        case OP_LT:        //        A B C   if ((RK(B) <  RK(C)) ~= A) then pc++           
+        case OP_LE:        //        A B C   if ((RK(B) <= RK(C)) ~= A) then pc++           
+        case OP_TEST:      //      A C     if not (R(A) <=> C) then pc++                  
+        case OP_TESTSET:   //   A B C   if (R(B) <=> C) then R(A) := R(B) else pc++    
+        case OP_TAILCALL:  //  A B C   return R(A)(R(A+1), ... ,R(A+B-1))             
+        case OP_FORLOOP:   //   A sBx   R(A)+=R(A+2);
+                           //     if R(A) <?= R(A+1) then { pc+=sBx; R(A+3)=R(A) }
+        case OP_FORPREP:   //   A sBx   R(A)-=R(A+2); pc+=sBx                          
+        case OP_TFORCALL:  //  A C     R(A+3), ... ,R(A+2+C) := R(A)(R(A+1), R(A+2)); 
+        case OP_TFORLOOP:  //  A sBx   if R(A+1) ~= nil then { R(A)=R(A+1); pc += sBx }
+        case OP_SETLIST:   //   A B C   R(A)[(C-1)*FPF+i] := R(A+i), 1 <= i <= B       
+        case OP_CLOSURE:   //   A Bx    R(A) := closure(KPROTO[Bx])                    
+        case OP_VARARG:    //    A B     R(A), R(A+1), ..., R(A+B-2) = vararg           
+        case OP_EXTRAARG:  //  Ax      extra (larger) argument for previous opcode    
 
         default:
             return false;

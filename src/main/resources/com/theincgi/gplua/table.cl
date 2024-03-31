@@ -193,19 +193,7 @@ bool tableRawSet( uchar* heap, uint maxHeapSize, href tableIndex, href key, href
     return hashmapPut( heap, maxHeapSize, hashedPart, key, value );
 }
 
-href tableGetMetaIndex( struct WorkerEnv* env, href table ) {
-    href meta = tableGetMetatable( env->heap, table );
-    if( meta == 0 ) return 0;
-
-    href metahash = tableGetHashedPart( env->heap, meta );
-    if( metahash == 0 ) return 0;
-
-    string metakey = "__index";
-    href metaIndex = hashmapStringGet( env->heap, metahash, metakey, strLen( metakey ));
-    return metaIndex;
-}
-
-href tableGetMetaNewIndex( struct WorkerEnv* env, href table ) {
+href tableGetMetaEvent( struct WorkerEnv* env, href table, string eventName ) {
     href meta = tableGetMetatable( env->heap, table );
     if( meta == 0 ) return 0;
 
@@ -213,8 +201,18 @@ href tableGetMetaNewIndex( struct WorkerEnv* env, href table ) {
     if( metahash == 0 ) return 0;
 
     string metakey = "__newindex";
-    href metaIndex = hashmapStringGet( env->heap, metahash, metakey, strLen( metakey ));
+    href metaIndex = hashmapStringGet( env->heap, metahash, eventName, strLen( eventName ));
     return metaIndex;
+}
+
+href tableGetMetaIndex( struct WorkerEnv* env, href table ) {
+    string metakey = "__index";
+    return tableGetMetaEvent( env, table, metakey );
+}
+
+href tableGetMetaNewIndex( struct WorkerEnv* env, href table ) {
+    string metakey = "__newindex";
+    return tableGetMetaEvent( env, table, metakey );
 }
 
 href tableGetByHeap( struct WorkerEnv* env, href table, href key ) {
