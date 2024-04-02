@@ -131,7 +131,7 @@ public class LuaTests extends KernelTestBase {
 		
 		assertEquals(1, results.length);
 		assertEquals(LuaTypes.INT, results[0].type());
-		assertEquals(9, results[0].intValue(), .0000001);
+		assertEquals(9, results[0].intValue());
 	}
 	
 	@Test
@@ -144,7 +144,7 @@ public class LuaTests extends KernelTestBase {
 		
 		assertEquals(1, results.length);
 		assertEquals(LuaTypes.INT, results[0].type());
-		assertEquals(2, results[0].intValue(), .0000001);
+		assertEquals(2, results[0].intValue());
 	}
 	
 	@Test
