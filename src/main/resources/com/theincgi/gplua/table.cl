@@ -192,7 +192,7 @@ bool tableRawSet( struct WorkerEnv* env, href tableIndex, href key, href value )
     if( hashedPart == 0 )
         return false; //out of memory
 
-    return hashmapPut( heap, maxHeapSize, hashedPart, key, value );
+    return hashmapPut( env, hashedPart, key, value );
 }
 
 href tableGetMetaEvent( struct WorkerEnv* env, href table, string eventName ) {

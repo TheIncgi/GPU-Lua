@@ -5,6 +5,7 @@
 #include"types.cl"
 #include"comparison.cl"
 #include"array.h"
+#include"vm.h"
 
 href newHashmap(uchar* heap, uint maxHeapSize, uint capacity) {
     href mapIndex = allocateHeap( heap, maxHeapSize, 9);
@@ -31,7 +32,9 @@ href hashmapGetValsPart( uchar* heap, href mapIndex ) {
     return getHeapInt( heap, mapIndex + 5);
 }
 
-bool hashmapPut( uchar* heap, uint maxHeap, href mapIndex, href keyHeapIndex, href valueHeapIndex ) {
+bool hashmapPut( struct WorkerEnv* env, href mapIndex, href keyHeapIndex, href valueHeapIndex ) {
+    uchar* heap = env->heap;
+    uint maxHeap = env->maxHeapSize;
     uint keyHash  = heapHash( heap, keyHeapIndex ); 
     href keysPart = hashmapGetKeysPart( heap, mapIndex );
     href valsPart = hashmapGetValsPart( heap, mapIndex );
@@ -89,7 +92,8 @@ bool hashmapPut( uchar* heap, uint maxHeap, href mapIndex, href keyHeapIndex, hr
     }
 }
 
-href hashmapGet(uchar* heap, href mapIndex, href key) {
+href hashmapGet(struct WorkerEnv* env, href mapIndex, href key) {
+    uchar* heap = env->heap;
     uint hash = heapHash( heap, key );
     href keysPart = getHeapInt( heap, mapIndex + 1);
     href valsPart = getHeapInt( heap, mapIndex + 5);

@@ -430,7 +430,7 @@ class TableTest extends HeapTestBase {
 		heap[x] = T_INT;
 		putHeapInt( heap, x + 1, 123 );
 		
-		hashmapPut( heap, maxHeapSize, myMap, x, x );
+		hashmapPut( &env, myMap, x, x );
 		
 		bool worked = resizeHashmap( heap, maxHeapSize, myMap, 8 );
 		
