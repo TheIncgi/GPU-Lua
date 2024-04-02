@@ -6,10 +6,13 @@
 #include"types.cl"
 
 href heapString(struct WorkerEnv* env, string str) {
-    return _heapString( env->heap, env->maxHeapSize, env->stringTable, str, strLen(str));
+    return _heapString( env, str, strLen(str));
 }
 
-href _heapString(uchar* heap, uint maxHeapSize, href stringTable, string str, uint strLen) {
+href _heapString(struct WorkerEnv* env, string str, uint strLen) {
+    uchar* heap = env->heap;
+    uint maxHeapSize = env->maxHeapSize;
+    href stringTable = env->stringTable;
     href hashedPart = tableCreateHashedPart( heap, maxHeapSize, stringTable );
     
     if( hashedPart == 0 )
@@ -33,7 +36,7 @@ href _heapString(uchar* heap, uint maxHeapSize, href stringTable, string str, ui
 
     heap[ stringDataStart + strLen ] = 0; //null terminated, but not counted in length
 
-    if( !tableRawSet( heap, maxHeapSize, stringTable, newString, newString )) //could be a HashSet probably
+    if( !tableRawSet( env, stringTable, newString, newString )) //could be a HashSet probably
         return 0;
 
     return newString;

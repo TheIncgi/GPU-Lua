@@ -177,7 +177,7 @@ bool _settable( struct WorkerEnv* env, href table, ushort b, ushort c ) {
         }
     } //else no usable meta-event __newindex
 
-    return tableRawSet( env->heap, env->maxHeapSize, table, key, value );
+    return tableRawSet( env, table, key, value );
 }
 
 void returnRange( struct WorkerEnv* env, uchar a, uchar b ) {

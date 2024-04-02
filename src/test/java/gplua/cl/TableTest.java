@@ -236,7 +236,7 @@ class TableTest extends HeapTestBase {
 		heap[myValue] = T_INT;
 		putHeapInt( heap, myValue+1, 0x11223344 );
 		
-		tableRawSet( heap, maxHeapSize, myTable, myKey, myValue );
+		tableRawSet( &env, myTable, myKey, myValue );
 		 
 		href newArrayPart = tableGetArrayPart( heap, myTable );
 		
@@ -394,8 +394,8 @@ class TableTest extends HeapTestBase {
 		heap[x] = T_INT;
 		putHeapInt( heap, x + 1, 123 );
 		
-		tableRawSet( heap, maxHeapSize, myTable, x, x );
-		tableRawSet( heap, maxHeapSize, myTable, x, x );
+		tableRawSet( &env, myTable, x, x );
+		tableRawSet( &env, myTable, x, x );
 		
 		putHeapInt( errorOutput, 0, myTable );
 		""", 128, 128);

@@ -158,7 +158,9 @@ bool tableResizeArray( uchar* heap, uint maxHeapSize, href tableIndex, uint newS
     return true;
 }
 
-bool tableRawSet( uchar* heap, uint maxHeapSize, href tableIndex, href key, href value ) {
+bool tableRawSet( struct WorkerEnv* env, href tableIndex, href key, href value ) {
+    uchar* heap = env->heap;
+    uint maxHeapSize = env->maxHeapSize;
     uchar keyType = heap[key];
     bool  erase   = value == 0;
     if( keyType == T_INT ) {

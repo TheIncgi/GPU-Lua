@@ -19,7 +19,7 @@ href tableCreateHashedPartWithSize( uchar* heap, uint maxHeapSize, href tableHea
 // bool tableArrayContainsKey( uchar* heap, href tableIndex, uint indexInTable);
 href tableRawGet( uchar* heap, href tableIndex, uchar* keySource, uint keyIndex, uint keyLen );
 bool tableResizeArray( uchar* heap, uint maxHeapSize, href tableIndex, uint newSize );
-bool tableRawSet( uchar* heap, uint maxHeapSize, href tableIndex, href key, href value );
+bool tableRawSet( struct WorkerEnv* env, href tableIndex, href key, href value );
 
 href tableGetMetaEvent( struct WorkerEnv* env, href table, string eventName );
 href tableGetMetaIndex( struct WorkerEnv* env, href table );
