@@ -44,6 +44,10 @@ class TableTest extends HeapTestBase {
 			
 		uint maxHeapSize = stackSizes[0];
 		uint errBufSize = stackSizes[1];
+		
+		struct WorkerEnv env;
+		env.heap = heap;
+		env.maxHeapSize = maxHeapSize;
 			
 	""";
 	
@@ -294,17 +298,19 @@ class TableTest extends HeapTestBase {
 	void insertIntoHashmap() throws IOException {
 		var events = setupProgram("""
 		initHeap( heap, maxHeapSize );
-		href myTable = newTable( heap, maxHeapSize );
-		href hashedPart = tableCreateHashedPart( heap, maxHeapSize, myTable ); 
+		href strTable = newTable( heap, maxHeapSize );
+		href hashedPart = tableCreateHashedPart( heap, maxHeapSize, strTable ); 
+		
+		env.stringTable = strTable;
 		
 		string str = "example";
 		uint slen = strLen( str );
-		href hstr = heapString(heap, maxHeapSize, myTable, str); 
+		href hstr = heapString(&env, str); 
 		uint hash = hashString( str, slen );
 		uint hashObj = heapHash( heap, hstr );
 		
 		
-		putHeapInt( errorOutput, 0, myTable );
+		putHeapInt( errorOutput, 0, strTable );
 		putHeapInt( errorOutput, 4, slen );
 		putHeapInt( errorOutput, 8, hstr );
 		putHeapInt( errorOutput, 12, hash );
@@ -345,15 +351,17 @@ class TableTest extends HeapTestBase {
 	void getStringFromHashmap() throws IOException {
 		var events = setupProgram("""
 		initHeap( heap, maxHeapSize );
-		href myTable = newTable( heap, maxHeapSize );
-		href hashedPart = tableCreateHashedPart( heap, maxHeapSize, myTable ); 
+		href strTable = newTable( heap, maxHeapSize );
+		href hashedPart = tableCreateHashedPart( heap, maxHeapSize, strTable ); 
+		
+		env.stringTable = strTable;
 		
 		string str = "example";
 		uint slen = strLen( str );
-		href hstr = heapString(heap, maxHeapSize, myTable, str); 
-		href hstrCopy = heapString(heap, maxHeapSize, myTable, str); //checks in hashmap
+		href hstr = heapString(&env, str); 
+		href hstrCopy = heapString(&env, str); //checks in hashmap
 		
-		putHeapInt( errorOutput, 0, myTable );
+		putHeapInt( errorOutput, 0, strTable );
 		putHeapInt( errorOutput, 4, slen );
 		putHeapInt( errorOutput, 8, hstr );
 		putHeapInt( errorOutput, 12, hstrCopy );
@@ -458,25 +466,27 @@ class TableTest extends HeapTestBase {
 	void multiString() throws IOException {
 		var events = setupProgram("""
 		initHeap( heap, maxHeapSize );
-		href myTable = newTable( heap, maxHeapSize );
-		href hashedPart = tableCreateHashedPart( heap, maxHeapSize, myTable ); 
+		href strTable = newTable( heap, maxHeapSize );
+		href hashedPart = tableCreateHashedPart( heap, maxHeapSize, strTable ); 
+		
+		env.stringTable = strTable;
 		
 		string str1 = "ex1";
-		href hstr1 = heapString(heap, maxHeapSize, myTable, str1); 
+		href hstr1 = heapString(&env, str1); 
 		
 		string str2 = "ex2";
-		href hstr2 = heapString(heap, maxHeapSize, myTable, str2); 
+		href hstr2 = heapString(&env, str2); 
 		
 		string str3 = "ex3";
-		href hstr3 = heapString(heap, maxHeapSize, myTable, str3); 
+		href hstr3 = heapString(&env, str3); 
 		
 		string str4 = "ex4";
-		href hstr4 = heapString(heap, maxHeapSize, myTable, str4); 
+		href hstr4 = heapString(&env, str4); 
 		
 		string str5 = "ex5";
-		href hstr5 = heapString(heap, maxHeapSize, myTable, str5); 
-		
-		putHeapInt( errorOutput, 0, myTable );
+		href hstr5 = heapString(&env, str5); 
+	    
+		putHeapInt( errorOutput, 0, strTable );
 		putHeapInt( errorOutput, 4, hstr1 );
 		putHeapInt( errorOutput, 8, hstr2 );
 		putHeapInt( errorOutput, 12, hstr3 );

@@ -106,12 +106,12 @@ __kernel void exec(
         workerEnv.error = 0; // no error
 
         workerEnv.stringTable = stringTable;
-        workerEnv.global = createGlobals( &workerEnv, stringTable );
+        workerEnv.globals = createGlobals( &workerEnv );
 
         workerEnv.returnFlag = false;
     }
    
-    href mainClosure = createClosure( &workerEnv, 0, globals, 1 ); //function 0, 1 upval(_ENV)
+    href mainClosure = createClosure( &workerEnv, 0, workerEnv.globals, 1 ); //function 0, 1 upval(_ENV)
     setClosureUpval( &workerEnv, mainClosure, 0, workerEnv.globals );
 
     bool ok = call( &workerEnv, mainClosure ); //callWithArgs is also available as an option
