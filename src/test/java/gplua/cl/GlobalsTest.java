@@ -87,7 +87,7 @@ class GlobalsTest extends HeapTestBase {
 		href strTable = newTable( heap, maxHeapSize );
 		env.stringTable = strTable;
 		
-		href globals = createGlobals( &env, strTable);
+		href globals = createGlobals( &env );
 		env.globals = globals;
 		
 		putHeapInt( log, 0, strTable );

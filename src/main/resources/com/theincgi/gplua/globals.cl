@@ -121,7 +121,7 @@ bool globals_registerNF(struct WorkerEnv* env, href table, uint id, string name)
     uchar* heap = env->heap;
     uint maxHeapSize = env->maxHeapSize;
     string nameConstant = name;
-    href label = heapString( env, env->stringTable, nameConstant);
+    href label = heapString( env, nameConstant);
     if (label == 0) 
         return false; 
     href nf = newNativeFunction(heap, maxHeapSize, id, label); 
@@ -134,7 +134,7 @@ bool globals_registerNF(struct WorkerEnv* env, href table, uint id, string name)
     return true; 
 }
 
-href createMathModule( struct WorkerEnv* env, href stringTable) {
+href createMathModule(struct WorkerEnv* env) {
     uchar* heap = env->heap;
     uint maxHeapSize = env->maxHeapSize;
     href mathModule = newTable( heap, maxHeapSize );
@@ -170,7 +170,7 @@ href createMathModule( struct WorkerEnv* env, href stringTable) {
     return mathModule;
 }
 
-href createStringModule(struct WorkerEnv* env, href stringTable) {
+href createStringModule(struct WorkerEnv* env) {
     uchar* heap = env->heap;
     uint maxHeapSize = env->maxHeapSize;
     href stringModule = newTable( heap, maxHeapSize );
@@ -192,7 +192,7 @@ href createStringModule(struct WorkerEnv* env, href stringTable) {
     return stringModule;
 }
 
-href createTableModule(struct WorkerEnv* env, href stringTable) {
+href createTableModule(struct WorkerEnv* env) {
     uchar* heap = env->heap;
     uint maxHeapSize = env->maxHeapSize;
     href tableModule = newTable( heap, maxHeapSize );
@@ -208,7 +208,7 @@ href createTableModule(struct WorkerEnv* env, href stringTable) {
     return tableModule;
 }
 
-href createBit32Module(struct WorkerEnv* env, href stringTable) {
+href createBit32Module(struct WorkerEnv* env) {
     uchar* heap = env->heap;
     uint maxHeapSize = env->maxHeapSize;
     href bitModule = newTable( heap, maxHeapSize );
@@ -229,7 +229,7 @@ href createBit32Module(struct WorkerEnv* env, href stringTable) {
     return bitModule;
 }
 
-bool createGlobalFunctions(struct WorkerEnv* env, href globalsTable, href stringTable) {
+bool createGlobalFunctions(struct WorkerEnv* env, href globalsTable) {
     if(!globals_registerNF(env, globalsTable, NF_GLOBAL_ASSERT,         "assert")) return false;
     if(!globals_registerNF(env, globalsTable, NF_GLOBAL_COLLECTGARBAGE, "collectgarbage")) return false;
     if(!globals_registerNF(env, globalsTable, NF_GLOBAL_ERROR,          "error")) return false;
@@ -251,7 +251,7 @@ bool createGlobalFunctions(struct WorkerEnv* env, href globalsTable, href string
     return true;
 }
 
-href createGlobals( struct WorkerEnv* env, href stringTable ) {
+href createGlobals( struct WorkerEnv* env ) {
     uchar* heap = env->heap;
     uint maxHeapSize = env->maxHeapSize;
     href globalsTable = newTable( heap, maxHeapSize );
@@ -264,34 +264,34 @@ href createGlobals( struct WorkerEnv* env, href stringTable ) {
     href moduleTableHref;
 
     moduleName = "math";
-    moduleNameHref = heapString( env, stringTable, moduleName );
+    moduleNameHref = heapString( env, moduleName );
     if( moduleNameHref == 0 ) return 0;
-    moduleTableHref = createMathModule( env, stringTable );
+    moduleTableHref = createMathModule( env );
     if( moduleTableHref == 0 ) return 0;
     tableRawSet( heap, maxHeapSize, globalsTable, moduleNameHref, moduleTableHref );
 
     moduleName = "string";
-    moduleNameHref = heapString( env, stringTable, moduleName );
+    moduleNameHref = heapString( env, moduleName );
     if( moduleNameHref == 0 ) return 0;
-    moduleTableHref = createStringModule( env, stringTable );
+    moduleTableHref = createStringModule( env );
     if( moduleTableHref == 0 ) return 0;
     tableRawSet( heap, maxHeapSize, globalsTable, moduleNameHref, moduleTableHref );
 
     moduleName = "table";
-    moduleNameHref = heapString( env, stringTable, moduleName );
+    moduleNameHref = heapString( env, moduleName );
     if( moduleNameHref == 0 ) return 0;
-    moduleTableHref = createTableModule( env, stringTable );
+    moduleTableHref = createTableModule( env );
     if( moduleTableHref == 0 ) return 0;
     tableRawSet( heap, maxHeapSize, globalsTable, moduleNameHref, moduleTableHref );
 
     moduleName = "bit32";
-    moduleNameHref = heapString( env, stringTable, moduleName );
+    moduleNameHref = heapString( env, moduleName );
     if( moduleNameHref == 0 ) return 0;
-    moduleTableHref = createBit32Module( env, stringTable );
+    moduleTableHref = createBit32Module( env );
     if( moduleTableHref == 0 ) return 0;
     tableRawSet( heap, maxHeapSize, globalsTable, moduleNameHref, moduleTableHref );
 
-    if( !createGlobalFunctions( env, globalsTable, stringTable ) )
+    if( !createGlobalFunctions( env, globalsTable ) )
         return 0;
 
     return globalsTable;

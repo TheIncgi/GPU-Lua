@@ -5,8 +5,8 @@
 #include"heapUtils.h"
 #include"types.cl"
 
-href heapString(struct WorkerEnv* env, href stringTable, string str) {
-    return _heapString( env->heap, env->maxHeapSize, stringTable, str, strLen(str));
+href heapString(struct WorkerEnv* env, string str) {
+    return _heapString( env->heap, env->maxHeapSize, env->stringTable, str, strLen(str));
 }
 
 href _heapString(uchar* heap, uint maxHeapSize, href stringTable, string str, uint strLen) {
