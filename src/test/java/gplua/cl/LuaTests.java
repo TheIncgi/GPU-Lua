@@ -2,18 +2,14 @@ package gplua.cl;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
-import java.io.File;
 import java.io.IOException;
-import java.nio.file.Files;
 import java.util.List;
 
 import org.junit.jupiter.api.BeforeAll;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInstance;
 import org.junit.jupiter.api.TestInstance.Lifecycle;
 
-import com.android.dx.command.annotool.Main;
 import com.nativelibs4java.opencl.CLEvent;
 import com.nativelibs4java.opencl.JavaCL;
 import com.theincgi.gplua.cl.LuaKernelArgs;
