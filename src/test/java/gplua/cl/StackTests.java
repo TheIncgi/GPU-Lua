@@ -91,7 +91,7 @@ public class StackTests extends KernelTestBase {
 				initHeap( heap, env.maxHeapSize );
 				
 				href stringTable = newTable(      heap, env.maxHeapSize );
-				href globals     = createGlobals( heap, env.maxHeapSize, stringTable );
+				href globals     = createGlobals( &env, stringTable );
 				
 				env.stringTable             = stringTable;
 				env.globals                 = globals;

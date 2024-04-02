@@ -82,7 +82,6 @@ __kernel void exec(
     href stringTable = newTable( localHeap, heapSize );
     //TODO allow heap retention as a param/flag/setting
     //TODO consider shared globals to reduce memory usage
-    href globals = createGlobals( localHeap, heapSize, stringTable );
 
     // int func = 0,a,b,c,pc=0; //func here refers to code, not a heap ref
     {
@@ -106,8 +105,8 @@ __kernel void exec(
 
         workerEnv.error = 0; // no error
 
-        workerEnv.globals = globals;
         workerEnv.stringTable = stringTable;
+        workerEnv.global = createGlobals( &workerEnv, stringTable );
 
         workerEnv.returnFlag = false;
     }

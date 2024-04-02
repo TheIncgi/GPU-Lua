@@ -1,4 +1,5 @@
 #include"heapUtils.h"
+#include"vm.h"
 #include"common.cl"
 #include"types.cl"
 
