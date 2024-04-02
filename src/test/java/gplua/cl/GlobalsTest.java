@@ -85,8 +85,10 @@ class GlobalsTest extends HeapTestBase {
 		var events = setupProgram("""
 		initHeap( heap, maxHeapSize );
 		href strTable = newTable( heap, maxHeapSize );
+		env.stringTable = strTable;
 		
 		href globals = createGlobals( &env, strTable);
+		env.globals = globals;
 		
 		putHeapInt( log, 0, strTable );
 		putHeapInt( log, 4, globals );

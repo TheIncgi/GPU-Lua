@@ -117,11 +117,11 @@ href newNativeFunction( uchar* heap, uint maxHeapSize, uint id, href label ) {
     return nf;
 }
 
-bool globals_registerNF(struct WorkerEnv* env, href stringTable, href table, uint id, string name) {
+bool globals_registerNF(struct WorkerEnv* env, href table, uint id, string name) {
     uchar* heap = env->heap;
     uint maxHeapSize = env->maxHeapSize;
     string nameConstant = name;
-    href label = heapString( env, stringTable, nameConstant);
+    href label = heapString( env, env->stringTable, nameConstant);
     if (label == 0) 
         return false; 
     href nf = newNativeFunction(heap, maxHeapSize, id, label); 
@@ -139,33 +139,33 @@ href createMathModule( struct WorkerEnv* env, href stringTable) {
     uint maxHeapSize = env->maxHeapSize;
     href mathModule = newTable( heap, maxHeapSize );
     
-    if(!globals_registerNF(env, stringTable, mathModule, NF_MATH_LOG,              "log")) return 0;
-    if(!globals_registerNF(env, stringTable, mathModule, NF_MATH_EXP,              "exp")) return 0;
-    if(!globals_registerNF(env, stringTable, mathModule, NF_MATH_ACOS,            "acos")) return 0;
-    if(!globals_registerNF(env, stringTable, mathModule, NF_MATH_ATAN,            "atan")) return 0;
-    if(!globals_registerNF(env, stringTable, mathModule, NF_MATH_LDEXP,           "ldexp")) return 0;
-    if(!globals_registerNF(env, stringTable, mathModule, NF_MATH_DEG,             "deg")) return 0;
-    if(!globals_registerNF(env, stringTable, mathModule, NF_MATH_RAD,             "rad")) return 0;
-    if(!globals_registerNF(env, stringTable, mathModule, NF_MATH_TAN,             "tan")) return 0;
-    if(!globals_registerNF(env, stringTable, mathModule, NF_MATH_COS,             "cos")) return 0;
-    if(!globals_registerNF(env, stringTable, mathModule, NF_MATH_COSH,            "cosh")) return 0;
-    if(!globals_registerNF(env, stringTable, mathModule, NF_MATH_RANDOM,          "random")) return 0;
-    if(!globals_registerNF(env, stringTable, mathModule, NF_MATH_FREXP,           "frexp")) return 0;
-    if(!globals_registerNF(env, stringTable, mathModule, NF_MATH_RANDOMSEED,      "randomseed")) return 0;
-    if(!globals_registerNF(env, stringTable, mathModule, NF_MATH_CEIL,            "ceil")) return 0;
-    if(!globals_registerNF(env, stringTable, mathModule, NF_MATH_TANH,            "tanh")) return 0;
-    if(!globals_registerNF(env, stringTable, mathModule, NF_MATH_FLOOR,           "floor")) return 0;
-    if(!globals_registerNF(env, stringTable, mathModule, NF_MATH_ABS,             "abs")) return 0;
-    if(!globals_registerNF(env, stringTable, mathModule, NF_MATH_MAX,             "max")) return 0;
-    if(!globals_registerNF(env, stringTable, mathModule, NF_MATH_SQRT,            "sqrt")) return 0;
-    if(!globals_registerNF(env, stringTable, mathModule, NF_MATH_MODF,            "modf")) return 0;
-    if(!globals_registerNF(env, stringTable, mathModule, NF_MATH_SINH,            "sinh")) return 0;
-    if(!globals_registerNF(env, stringTable, mathModule, NF_MATH_ASIN,            "asin")) return 0;
-    if(!globals_registerNF(env, stringTable, mathModule, NF_MATH_MIN,             "min")) return 0;
-    if(!globals_registerNF(env, stringTable, mathModule, NF_MATH_FMOD,            "fmod")) return 0;
-    if(!globals_registerNF(env, stringTable, mathModule, NF_MATH_POW,             "pow")) return 0;
-    if(!globals_registerNF(env, stringTable, mathModule, NF_MATH_ATAN2,           "atan2")) return 0;
-    if(!globals_registerNF(env, stringTable, mathModule, NF_MATH_SIN,             "sin")) return 0;
+    if(!globals_registerNF(env, mathModule, NF_MATH_LOG,              "log")) return 0;
+    if(!globals_registerNF(env, mathModule, NF_MATH_EXP,              "exp")) return 0;
+    if(!globals_registerNF(env, mathModule, NF_MATH_ACOS,            "acos")) return 0;
+    if(!globals_registerNF(env, mathModule, NF_MATH_ATAN,            "atan")) return 0;
+    if(!globals_registerNF(env, mathModule, NF_MATH_LDEXP,           "ldexp")) return 0;
+    if(!globals_registerNF(env, mathModule, NF_MATH_DEG,             "deg")) return 0;
+    if(!globals_registerNF(env, mathModule, NF_MATH_RAD,             "rad")) return 0;
+    if(!globals_registerNF(env, mathModule, NF_MATH_TAN,             "tan")) return 0;
+    if(!globals_registerNF(env, mathModule, NF_MATH_COS,             "cos")) return 0;
+    if(!globals_registerNF(env, mathModule, NF_MATH_COSH,            "cosh")) return 0;
+    if(!globals_registerNF(env, mathModule, NF_MATH_RANDOM,          "random")) return 0;
+    if(!globals_registerNF(env, mathModule, NF_MATH_FREXP,           "frexp")) return 0;
+    if(!globals_registerNF(env, mathModule, NF_MATH_RANDOMSEED,      "randomseed")) return 0;
+    if(!globals_registerNF(env, mathModule, NF_MATH_CEIL,            "ceil")) return 0;
+    if(!globals_registerNF(env, mathModule, NF_MATH_TANH,            "tanh")) return 0;
+    if(!globals_registerNF(env, mathModule, NF_MATH_FLOOR,           "floor")) return 0;
+    if(!globals_registerNF(env, mathModule, NF_MATH_ABS,             "abs")) return 0;
+    if(!globals_registerNF(env, mathModule, NF_MATH_MAX,             "max")) return 0;
+    if(!globals_registerNF(env, mathModule, NF_MATH_SQRT,            "sqrt")) return 0;
+    if(!globals_registerNF(env, mathModule, NF_MATH_MODF,            "modf")) return 0;
+    if(!globals_registerNF(env, mathModule, NF_MATH_SINH,            "sinh")) return 0;
+    if(!globals_registerNF(env, mathModule, NF_MATH_ASIN,            "asin")) return 0;
+    if(!globals_registerNF(env, mathModule, NF_MATH_MIN,             "min")) return 0;
+    if(!globals_registerNF(env, mathModule, NF_MATH_FMOD,            "fmod")) return 0;
+    if(!globals_registerNF(env, mathModule, NF_MATH_POW,             "pow")) return 0;
+    if(!globals_registerNF(env, mathModule, NF_MATH_ATAN2,           "atan2")) return 0;
+    if(!globals_registerNF(env, mathModule, NF_MATH_SIN,             "sin")) return 0;
     
     return mathModule;
 }
@@ -175,19 +175,19 @@ href createStringModule(struct WorkerEnv* env, href stringTable) {
     uint maxHeapSize = env->maxHeapSize;
     href stringModule = newTable( heap, maxHeapSize );
     
-    if(!globals_registerNF(env, stringTable, stringModule, NF_STRING_SUB,              "sub")) return 0;
-    if(!globals_registerNF(env, stringTable, stringModule, NF_STRING_FIND,             "find")) return 0;
-    if(!globals_registerNF(env, stringTable, stringModule, NF_STRING_REP,              "rep")) return 0;
-    if(!globals_registerNF(env, stringTable, stringModule, NF_STRING_MATCH,            "match")) return 0;
-    if(!globals_registerNF(env, stringTable, stringModule, NF_STRING_GMATCH,           "gmatch")) return 0;
-    if(!globals_registerNF(env, stringTable, stringModule, NF_STRING_CHAR,             "char")) return 0;
-    if(!globals_registerNF(env, stringTable, stringModule, NF_STRING_REVERSE,          "reverse")) return 0;
-    if(!globals_registerNF(env, stringTable, stringModule, NF_STRING_UPPER,            "upper")) return 0;
-    if(!globals_registerNF(env, stringTable, stringModule, NF_STRING_LEN,              "len")) return 0;
-    if(!globals_registerNF(env, stringTable, stringModule, NF_STRING_GSUB,             "gsub")) return 0;
-    if(!globals_registerNF(env, stringTable, stringModule, NF_STRING_BYTE,             "byte")) return 0;
-    if(!globals_registerNF(env, stringTable, stringModule, NF_STRING_FORMAT,           "format")) return 0;
-    if(!globals_registerNF(env, stringTable, stringModule, NF_STRING_LOWER,            "lower")) return 0;
+    if(!globals_registerNF(env, stringModule, NF_STRING_SUB,              "sub")) return 0;
+    if(!globals_registerNF(env, stringModule, NF_STRING_FIND,             "find")) return 0;
+    if(!globals_registerNF(env, stringModule, NF_STRING_REP,              "rep")) return 0;
+    if(!globals_registerNF(env, stringModule, NF_STRING_MATCH,            "match")) return 0;
+    if(!globals_registerNF(env, stringModule, NF_STRING_GMATCH,           "gmatch")) return 0;
+    if(!globals_registerNF(env, stringModule, NF_STRING_CHAR,             "char")) return 0;
+    if(!globals_registerNF(env, stringModule, NF_STRING_REVERSE,          "reverse")) return 0;
+    if(!globals_registerNF(env, stringModule, NF_STRING_UPPER,            "upper")) return 0;
+    if(!globals_registerNF(env, stringModule, NF_STRING_LEN,              "len")) return 0;
+    if(!globals_registerNF(env, stringModule, NF_STRING_GSUB,             "gsub")) return 0;
+    if(!globals_registerNF(env, stringModule, NF_STRING_BYTE,             "byte")) return 0;
+    if(!globals_registerNF(env, stringModule, NF_STRING_FORMAT,           "format")) return 0;
+    if(!globals_registerNF(env, stringModule, NF_STRING_LOWER,            "lower")) return 0;
     
     return stringModule;
 }
@@ -197,13 +197,13 @@ href createTableModule(struct WorkerEnv* env, href stringTable) {
     uint maxHeapSize = env->maxHeapSize;
     href tableModule = newTable( heap, maxHeapSize );
     
-    if(!globals_registerNF(env, stringTable, tableModule, NF_TABLE_REMOVE,        "remove")) return 0;
-    if(!globals_registerNF(env, stringTable, tableModule, NF_TABLE_PACK,          "pack")) return 0;
-    if(!globals_registerNF(env, stringTable, tableModule, NF_TABLE_CONCAT,        "concat")) return 0;
-    if(!globals_registerNF(env, stringTable, tableModule, NF_TABLE_SORT,          "sort")) return 0;
-    if(!globals_registerNF(env, stringTable, tableModule, NF_TABLE_INSERT,        "insert")) return 0;
-    if(!globals_registerNF(env, stringTable, tableModule, NF_TABLE_UNPACK,        "unpack")) return 0;
-    if(!globals_registerNF(env, stringTable, tableModule, NF_TABLE_PRESIZE,       "presize")) return 0;
+    if(!globals_registerNF(env, tableModule, NF_TABLE_REMOVE,        "remove")) return 0;
+    if(!globals_registerNF(env, tableModule, NF_TABLE_PACK,          "pack")) return 0;
+    if(!globals_registerNF(env, tableModule, NF_TABLE_CONCAT,        "concat")) return 0;
+    if(!globals_registerNF(env, tableModule, NF_TABLE_SORT,          "sort")) return 0;
+    if(!globals_registerNF(env, tableModule, NF_TABLE_INSERT,        "insert")) return 0;
+    if(!globals_registerNF(env, tableModule, NF_TABLE_UNPACK,        "unpack")) return 0;
+    if(!globals_registerNF(env, tableModule, NF_TABLE_PRESIZE,       "presize")) return 0;
     
     return tableModule;
 }
@@ -213,41 +213,41 @@ href createBit32Module(struct WorkerEnv* env, href stringTable) {
     uint maxHeapSize = env->maxHeapSize;
     href bitModule = newTable( heap, maxHeapSize );
     
-    if(!globals_registerNF(env, stringTable, bitModule, NF_BIT32_BAND,            "band")) return 0;
-    if(!globals_registerNF(env, stringTable, bitModule, NF_BIT32_LROTATE,         "lrotate")) return 0;
-    if(!globals_registerNF(env, stringTable, bitModule, NF_BIT32_EXTRACT,         "extract")) return 0;
-    if(!globals_registerNF(env, stringTable, bitModule, NF_BIT32_RSHIFT,          "rshift")) return 0;
-    if(!globals_registerNF(env, stringTable, bitModule, NF_BIT32_BOR,             "bor")) return 0;
-    if(!globals_registerNF(env, stringTable, bitModule, NF_BIT32_BNOT,            "bnot")) return 0;
-    if(!globals_registerNF(env, stringTable, bitModule, NF_BIT32_ARSHIFT,         "arshift")) return 0;
-    if(!globals_registerNF(env, stringTable, bitModule, NF_BIT32_BXOR,            "bxor")) return 0;
-    if(!globals_registerNF(env, stringTable, bitModule, NF_BIT32_REPLACE,         "replace")) return 0;
-    if(!globals_registerNF(env, stringTable, bitModule, NF_BIT32_LSHIFT,          "lshift")) return 0;
-    if(!globals_registerNF(env, stringTable, bitModule, NF_BIT32_BTEST,           "btest")) return 0;
-    if(!globals_registerNF(env, stringTable, bitModule, NF_BIT32_RROTATE,         "rrotate")) return 0;
+    if(!globals_registerNF(env, bitModule, NF_BIT32_BAND,            "band")) return 0;
+    if(!globals_registerNF(env, bitModule, NF_BIT32_LROTATE,         "lrotate")) return 0;
+    if(!globals_registerNF(env, bitModule, NF_BIT32_EXTRACT,         "extract")) return 0;
+    if(!globals_registerNF(env, bitModule, NF_BIT32_RSHIFT,          "rshift")) return 0;
+    if(!globals_registerNF(env, bitModule, NF_BIT32_BOR,             "bor")) return 0;
+    if(!globals_registerNF(env, bitModule, NF_BIT32_BNOT,            "bnot")) return 0;
+    if(!globals_registerNF(env, bitModule, NF_BIT32_ARSHIFT,         "arshift")) return 0;
+    if(!globals_registerNF(env, bitModule, NF_BIT32_BXOR,            "bxor")) return 0;
+    if(!globals_registerNF(env, bitModule, NF_BIT32_REPLACE,         "replace")) return 0;
+    if(!globals_registerNF(env, bitModule, NF_BIT32_LSHIFT,          "lshift")) return 0;
+    if(!globals_registerNF(env, bitModule, NF_BIT32_BTEST,           "btest")) return 0;
+    if(!globals_registerNF(env, bitModule, NF_BIT32_RROTATE,         "rrotate")) return 0;
     
     return bitModule;
 }
 
 bool createGlobalFunctions(struct WorkerEnv* env, href globalsTable, href stringTable) {
-    if(!globals_registerNF(env, stringTable, globalsTable, NF_GLOBAL_ASSERT,         "assert")) return false;
-    if(!globals_registerNF(env, stringTable, globalsTable, NF_GLOBAL_COLLECTGARBAGE, "collectgarbage")) return false;
-    if(!globals_registerNF(env, stringTable, globalsTable, NF_GLOBAL_ERROR,          "error")) return false;
-    if(!globals_registerNF(env, stringTable, globalsTable, NF_GLOBAL_GETMETATABLE,   "getmetatable")) return false;
-    if(!globals_registerNF(env, stringTable, globalsTable, NF_GLOBAL_IPAIRS,         "ipairs")) return false;
-    if(!globals_registerNF(env, stringTable, globalsTable, NF_GLOBAL_NEXT,           "next")) return false;
-    if(!globals_registerNF(env, stringTable, globalsTable, NF_GLOBAL_PAIRS,          "pairs")) return false;
-    if(!globals_registerNF(env, stringTable, globalsTable, NF_GLOBAL_PCALL,          "pcall")) return false;
-    if(!globals_registerNF(env, stringTable, globalsTable, NF_GLOBAL_RAWEQUAL,       "rawequal")) return false;
-    if(!globals_registerNF(env, stringTable, globalsTable, NF_GLOBAL_RAWGET,         "rawget")) return false;
-    if(!globals_registerNF(env, stringTable, globalsTable, NF_GLOBAL_RAWLEN,         "rawlen")) return false;
-    if(!globals_registerNF(env, stringTable, globalsTable, NF_GLOBAL_RAWSET,         "rawset")) return false;
-    if(!globals_registerNF(env, stringTable, globalsTable, NF_GLOBAL_SELECT,         "select")) return false;
-    if(!globals_registerNF(env, stringTable, globalsTable, NF_GLOBAL_SETMETATABLE,   "setmetatable")) return false;
-    if(!globals_registerNF(env, stringTable, globalsTable, NF_GLOBAL_TONUMBER,       "tonumber")) return false;
-    if(!globals_registerNF(env, stringTable, globalsTable, NF_GLOBAL_TOSTRING,       "tostring")) return false;
-    if(!globals_registerNF(env, stringTable, globalsTable, NF_GLOBAL_TYPE,           "type")) return false;
-    if(!globals_registerNF(env, stringTable, globalsTable, NF_GLOBAL_XPCALL,         "xpcall")) return false;    
+    if(!globals_registerNF(env, globalsTable, NF_GLOBAL_ASSERT,         "assert")) return false;
+    if(!globals_registerNF(env, globalsTable, NF_GLOBAL_COLLECTGARBAGE, "collectgarbage")) return false;
+    if(!globals_registerNF(env, globalsTable, NF_GLOBAL_ERROR,          "error")) return false;
+    if(!globals_registerNF(env, globalsTable, NF_GLOBAL_GETMETATABLE,   "getmetatable")) return false;
+    if(!globals_registerNF(env, globalsTable, NF_GLOBAL_IPAIRS,         "ipairs")) return false;
+    if(!globals_registerNF(env, globalsTable, NF_GLOBAL_NEXT,           "next")) return false;
+    if(!globals_registerNF(env, globalsTable, NF_GLOBAL_PAIRS,          "pairs")) return false;
+    if(!globals_registerNF(env, globalsTable, NF_GLOBAL_PCALL,          "pcall")) return false;
+    if(!globals_registerNF(env, globalsTable, NF_GLOBAL_RAWEQUAL,       "rawequal")) return false;
+    if(!globals_registerNF(env, globalsTable, NF_GLOBAL_RAWGET,         "rawget")) return false;
+    if(!globals_registerNF(env, globalsTable, NF_GLOBAL_RAWLEN,         "rawlen")) return false;
+    if(!globals_registerNF(env, globalsTable, NF_GLOBAL_RAWSET,         "rawset")) return false;
+    if(!globals_registerNF(env, globalsTable, NF_GLOBAL_SELECT,         "select")) return false;
+    if(!globals_registerNF(env, globalsTable, NF_GLOBAL_SETMETATABLE,   "setmetatable")) return false;
+    if(!globals_registerNF(env, globalsTable, NF_GLOBAL_TONUMBER,       "tonumber")) return false;
+    if(!globals_registerNF(env, globalsTable, NF_GLOBAL_TOSTRING,       "tostring")) return false;
+    if(!globals_registerNF(env, globalsTable, NF_GLOBAL_TYPE,           "type")) return false;
+    if(!globals_registerNF(env, globalsTable, NF_GLOBAL_XPCALL,         "xpcall")) return false;    
     return true;
 }
 
