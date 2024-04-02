@@ -10,8 +10,8 @@ struct WorkerEnv {
     uchar* heap;
     uint maxHeapSize;
 
-    char* error;
-    uint errorSize;
+    // char* error;
+    // uint errorSize;
     
     uint* codeIndexes;
     uint* code; //[function #][instruction] = code[ codeIndexes[function] + instruction ]
@@ -30,13 +30,15 @@ struct WorkerEnv {
     uint func;
     uint pc;
 
+    href error; //0 is ok
+
     bool returnFlag;
     uint returnStart;
     ushort nReturn;
 };
 
 void getConstDataRange( struct WorkerEnv* env, uint index, uint* start, uint* len );
-op_move( struct WorkerEnv* env, uchar dstReg, ushort srcReg );
+bool op_move( struct WorkerEnv* env, uchar dstReg, ushort srcReg );
 href kToHeap( struct WorkerEnv* env, uint index );
 
 bool loadk( struct WorkerEnv* env, uchar reg, uint index );

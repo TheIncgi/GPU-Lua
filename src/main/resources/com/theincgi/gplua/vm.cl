@@ -267,7 +267,7 @@ bool op_call( struct WorkerEnv* env, uchar a, ushort b, ushort c ) {
 
 bool _readAsDouble( uchar* dataSource, uint start, double* result ) {
     if( dataSource[start] == T_INT ) {
-        *result = (double)getHeapInt( dataSource, start  );
+        *result = (double)getHeapInt( dataSource, start +1 );
         return true;
     } else if( dataSource[start] == T_NUMBER ) {
         union doubleUnion d;
@@ -354,7 +354,7 @@ bool op_math( struct WorkerEnv* env, LuaInstruction instruction, OpCode op ) {
         default:
             return false;
     }
-
+    
     href ansRef = allocateNumber( env->heap, env->maxHeapSize, ans );
     if( setRegister( env->luaStack, env->stackSize, a, ansRef ) ) {
         env->pc++;
@@ -555,7 +555,7 @@ bool doOp( struct WorkerEnv* env, LuaInstruction instruction ) {
                         args[0] = val;
                         if( callWithArgs( env, metaEvent, args, 1 )) {
                             if( env->returnFlag ) {
-                                href r1 = env->luaStack[ returnStart ];
+                                href r1 = env->luaStack[ env->returnStart ];
                                 if(setRegister( env->luaStack, env->stackSize, a, r1 )) {
                                     env->pc++;
                                     return true;
@@ -628,7 +628,7 @@ bool stepProgram( struct WorkerEnv* env ) {
 
 bool call( struct WorkerEnv* env, href closure ) {
     href args[0];
-    return callWithArgs( env, closure, &args, 0 );
+    return callWithArgs( env, closure, args, 0 );
 }
 bool callWithArgs( struct WorkerEnv* env, href closure, href* args, uint nargs ) {
     env->func = getClosureFunction( env, closure );

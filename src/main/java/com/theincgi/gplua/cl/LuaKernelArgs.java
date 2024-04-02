@@ -21,6 +21,10 @@ public class LuaKernelArgs {
 	public final IntArray1D luaStack;
 	public final IntArray1D stackSizes; // [callInfo, luaStack, heapSize]
 //	public final IntArray1D errorPointer
+	/**
+	 * Marked for future removal, T_ERROR on the heap combined with stack return values will be prefered moving forward
+	 * */
+	@Deprecated(forRemoval = true)
 	public final StringBuffer errorBuffer;
 	public final ByteArray1D heap;
 //	public final LongArray1D heapNext;
@@ -43,6 +47,9 @@ public class LuaKernelArgs {
 	
 	//public final IntArray1D upvalsLengths;
 	public final ByteArray2D upvals;
+	
+	/**{start on stack, len}*/
+	public final IntArray1D returnInfo;
 	//end of bytecode args
 	
 	IntArray1D nFunctions; //and closures
@@ -77,6 +84,8 @@ public class LuaKernelArgs {
 		upvals = new ByteArray2D(context, Input);
 		
 		nFunctions = new IntArray1D(context, Input);
+		
+		returnInfo = new IntArray1D(context, InputOutput);
 	}
 	
 	public List<CLEvent> loadBytecode( byte[] bytecode, CLQueue queue ) throws IOException {
@@ -101,6 +110,8 @@ public class LuaKernelArgs {
 		
 		//events.add( upvalsLengths.loadData(flat.upvalsLengths, queue));
 		events.addAll( upvals.loadData(flat.upvals, queue));
+		
+		events.add( returnInfo.fillEmpty(2, queue) );
 		
 		return events;
 	}
@@ -160,7 +171,8 @@ public class LuaKernelArgs {
 			
 			//upvalsLengths.arg(),
 			upvals.indexArg(),
-			upvals.arg()
+			upvals.arg(),
+			returnInfo.arg()
 		);
 	}
 	

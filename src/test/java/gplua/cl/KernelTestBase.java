@@ -54,6 +54,7 @@ public class KernelTestBase extends TestCommons {
 		events.add(args.errorBuffer.fillEmpty(errSize, queue));
 		events.addAll(args.setStackSizes(queue, stackSize, heapSize, errSize, workSize));
 		events.add(args.setMaxExecution(queue, 30_000));
+		events.add(args.returnInfo.fillEmpty(2, queue));
 		
 		args.applyArgs(kernel);
 		

@@ -63,7 +63,8 @@ public class StackTests extends KernelTestBase {
 			    
 			    //upvals
 			    __global           int* upvalsIndex,
-			    __global         uchar* upvals
+			    __global         uchar* upvals,
+			    __global           int* returnInfo
 			) {
 			    //int dimensions = get_work_dim();
 				
@@ -75,8 +76,8 @@ public class StackTests extends KernelTestBase {
 				env.stackSize               = stackSizes[0];
 				env.heap                    = heap;
 				env.maxHeapSize             = stackSizes[1];
-				env.error                   = errorOutput;
-				env.errorSize               = stackSizes[2];
+//				env.error                   = errorOutput;
+//				env.errorSize               = stackSizes[2];
 				
 				env.codeIndexes             = codeIndexes;
 				env.code                    = code;
@@ -252,7 +253,7 @@ public class StackTests extends KernelTestBase {
 		initStack( env.luaStack, 1, 2, 3 ); //3 varargs
 		
 		bool ok = loadk( &env, 3, 0 ); //reg 3, const 0
-		env.error[ 0 ] = ok ? 1 : 0; //log
+		errorOutput[ 0 ] = ok ? 1 : 0; //log
 		""", 
 		LuaSrcUtil.readBytecode("print.out"), //print"hello"
 		5112, //heap
@@ -290,7 +291,7 @@ public class StackTests extends KernelTestBase {
 		initStack( env.luaStack, 0, mainClosure, 0 ); //func 0, mainClosure, 0 varargs
 		
 		bool ok = getTabUp( &env, 2, 0, 0 | 0x100 );
-		env.error[ 0 ] = ok ? 1 : 0; //log
+		errorOutput[ 0 ] = ok ? 1 : 0; //log
 		""", 
 		LuaSrcUtil.readBytecode("returnMath.out"), //return math
 		6000, //heap
@@ -325,11 +326,11 @@ public class StackTests extends KernelTestBase {
 		
 		LuaInstruction inst = env.code[ env.codeIndexes[ env.func ] + env.pc ];
 		
-		putHeapInt( env.error,  0,            inst   );
-		putHeapInt( env.error,  4, getOpcode( inst ) );
-		putHeapInt( env.error,  8, getA(      inst ) );
-		putHeapInt( env.error, 12, getB(      inst ) );
-		putHeapInt( env.error, 16, getC(      inst ) );
+		putHeapInt( errorOutput,  0,            inst   );
+		putHeapInt( errorOutput,  4, getOpcode( inst ) );
+		putHeapInt( errorOutput,  8, getA(      inst ) );
+		putHeapInt( errorOutput, 12, getB(      inst ) );
+		putHeapInt( errorOutput, 16, getC(      inst ) );
 		
 		""", 
 		LuaSrcUtil.readBytecode("math.log.out"), //return math.log( 10 )
@@ -370,13 +371,13 @@ public class StackTests extends KernelTestBase {
 		bool ok = 
 		  call( &env, mainClosure );
 		
-		env.error[ 0 ] = ok ? 1 : 0; //log
-		env.error[ 1 ] = env.returnFlag ? 1 : 0;
-		putHeapInt( env.error, 2, env.code[ env.codeIndexes[ env.func ] + env.pc ] );
+		errorOutput[ 0 ] = ok ? 1 : 0; //log
+		errorOutput[ 1 ] = env.returnFlag ? 1 : 0;
+		putHeapInt( errorOutput, 2, env.code[ env.codeIndexes[ env.func ] + env.pc ] );
 		
 		if( !env.returnFlag ) return;
 		
-		putHeapInt( env.error, 6, env.luaStack[ env.returnStart ] );
+		putHeapInt( errorOutput, 6, env.luaStack[ env.returnStart ] );
 		""", 
 		LuaSrcUtil.readBytecode("math.log.out"), //return math.log( 10 )
 		6000, //heap

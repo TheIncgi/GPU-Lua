@@ -16,6 +16,6 @@ public class LuaTypes {
 		HASHMAP = 0x51,
 		CLOSURE = 0x52,
 		SUBSTRING = 0x54,
-		NATIVE_FUNC = 0x56;
-		
+		NATIVE_FUNC = 0x56,
+		ERROR = 0x57;
 }
