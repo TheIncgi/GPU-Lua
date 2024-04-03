@@ -6,7 +6,9 @@
 
 
 
-bool heapEquals( uchar* heap, href indexA, href indexB ) {
+bool heapEquals( struct WorkerEnv* env, uchar* dataSourceA, href indexA, uchar* dataSourceB, href indexB ) {
+    uchar* heap = dataSourceA;
+    
     if( indexA == indexB )
         return true;
     
@@ -19,25 +21,48 @@ bool heapEquals( uchar* heap, href indexA, href indexB ) {
     switch( typeA ) {
         // case T_NIL:
         case T_BOOL:          //all bools are heap[1] or heap[3]
+            return dataSourceA[ indexA + 1 ] == dataSourceB[ indexB + 1 ];
+
         case T_USERDATA:     //probably not even used
+            return false;
+
         case T_CLOSURE:     //
+            return dataSourceA == dataSourceB && dataSourceA == env->heap && indexA == indexB;
+
         case T_STRING:     //should be reused
-        case T_SUBSTRING: //also in be string map and be re-used
+            if(dataSourceA == dataSourceB) {
+                return indexA == indexB;
+            }
+            int len = getHeapInt( dataSourceA, indexA + 1 );
+            if( len != getHeapInt( dataSourceB, indexB + 1 ))
+                return false;
+
+            for(int i = 0; i < len; i++ ) {
+                if( dataSourceA[ indexA + i ] != dataSourceB[ indexB + i ] )
+                    return false;
+            }
+            return true;
+
+        // case T_SUBSTRING: //also in be string map and be re-used
         case T_ARRAY:    //not checking contents
         case T_HASHMAP: //also not checking contents
+            return dataSourceA == dataSourceB && dataSourceA == env->heap && indexA == indexB;
+            
         case T_TABLE:  //TODO: metatable __eq
             return indexA == indexB;
 
         case T_INT:
         case T_NATIVE_FUNC:
         case T_FUNC:
-            return getHeapInt( heap, indexA + 1 ) == getHeapInt( heap, indexB + 1 );
+            return getHeapInt( dataSourceA, indexA + 1 ) == getHeapInt( dataSourceB, indexB + 1 );
 
-        case T_NUMBER:
-            return getHeapInt( heap, indexA + 1 ) == getHeapInt( heap, indexB + 1 )
-                && getHeapInt( heap, indexA + 5 ) == getHeapInt( heap, indexB + 5 );
+        case T_NUMBER: {
+            double x, y;
+            _readAsDouble( dataSourceA, indexA, &x ); //from vm.h
+            _readAsDouble( dataSourceA, indexB, &y ); //from vm.h
 
-
+            return x == y;
+        }
 
         default:
             return false;

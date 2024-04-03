@@ -59,6 +59,8 @@ class GlobalsTest extends HeapTestBase {
 				struct WorkerEnv env;
 				env.heap = heap;
 				env.maxHeapSize = maxHeapSize;
+				env.returnFlag = false;
+				env.nReturn = 0;
 					
 			""";
 	public static final String footer = "\n}";

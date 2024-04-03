@@ -53,6 +53,7 @@ void returnRange( struct WorkerEnv* env, uchar a, uchar b);
 
 bool doOp( struct WorkerEnv* env, LuaInstruction instruction );
 
+bool _readAsDouble( uchar* dataSource, uint start, double* result );
 bool call( struct WorkerEnv* env, href closure );
 bool callWithArgs( struct WorkerEnv* env, href closure, href* args, uint nargs );
 

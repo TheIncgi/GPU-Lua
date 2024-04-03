@@ -49,7 +49,7 @@ bool hashmapPut( struct WorkerEnv* env, href mapIndex, href keyHeapIndex, href v
     for(uint offset = 0; offset < searchLimit; offset++) {
         uint i = (hashIndex + offset) % capacity;
         href globalKeyIndex = keysPart + i;
-        if(heapEquals( heap, arrayGet(heap, keysPart, i), keyHeapIndex)) { //value in stored keys == provided key
+        if(heapEquals( env, heap, arrayGet(heap, keysPart, i), heap, keyHeapIndex)) { //value in stored keys == provided key
             arraySet( heap, keysPart, i, isErase ? 0 : keyHeapIndex );     //add or remove key
             arraySet( heap, valsPart, i, valueHeapIndex );                //set value
             return true; //found and removed or set
@@ -103,7 +103,7 @@ href hashmapGet(struct WorkerEnv* env, href mapIndex, href key) {
     uint searchLimit = MAP_MAX_SEARCH < capacity ? MAP_MAX_SEARCH : capacity;
     for(uint offset = 0; offset < searchLimit; offset++) { //i = search location (array index) | j = search count
         uint i = (hashIndex + offset) % capacity;
-        if(heapEquals( heap, arrayGet(heap, keysPart, i), key)) { //value in stored keys == provided key
+        if(heapEquals( env, heap, arrayGet(heap, keysPart, i), heap, key)) { //value in stored keys == provided key
             return arrayGet( heap, valsPart, i );
         } 
     }
