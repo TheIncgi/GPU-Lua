@@ -25,12 +25,14 @@ class TableTest extends HeapTestBase {
 	#include"heapUtils.h"
 	#include"table.h"
 	#include"strings.h"
+	#include"vm.h"
 	
 	#include"table.cl"
 	#include"array.cl"
 	#include"hashmap.cl"
 	#include"heapUtils.cl"
 	#include"strings.cl"
+	#include"vm.cl"
 	
 	__kernel void exec(
 	    __global const uint* stackSizes,
