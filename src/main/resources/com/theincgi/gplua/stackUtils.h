@@ -7,6 +7,7 @@
 
 void initStack( uint* stack, uint funcHeapIndex, href funcHeapClosure, uint nVarargs );
 bool pushStackFrame( uint* stack, uint stackSize, uint pc, href funcHeapIndex, href funcHeapClosure, int nVarargs );
+bool redefineFrame( uint* stack, uint stackSize, uint funcIndex, href funcHeapClosure, int nVarargs );
 uint getPreviousPC( uint* stack );
 uint getCurrentFunctionFromStack( uint* stack );
 bool popStackFrame( uint* stack );

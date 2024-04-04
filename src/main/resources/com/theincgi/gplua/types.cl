@@ -16,5 +16,10 @@
 #define T_CLOSURE 0x52
 #define T_SUBSTRING 0x54
 #define T_NATIVE_FUNC 0x56
-#define T_ERROR 0x57
+#define T_ERROR 0x57 //todo, remove, use string instead & env->error
+
+bool isNumber( uint type ) {
+    return type == T_INT || type == T_NUMBER;
+}
+
 #endif

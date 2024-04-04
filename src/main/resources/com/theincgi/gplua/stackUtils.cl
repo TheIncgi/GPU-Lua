@@ -42,6 +42,21 @@ bool pushStackFrame( uint* stack, uint stackSize, uint pc, uint funcIndex, href 
     return true; //not out of memory
 }
 
+bool redefineFrame( uint* stack, uint stackSize, uint funcIndex, href funcHeapClosure, int nVarargs ) {
+    sref base = stack[0];
+    sref top = base + STACK_RESERVE;
+
+    if(top > stackSize)
+        return false; //not enough space!
+
+    stack[base    ] = top + nVarargs;            //first value in a frame points to the first empty index on the stack
+    stack[base + 1] = top + nVarargs;
+    stack[base + 2] = funcIndex;
+    stack[base + 3] = funcHeapClosure;
+    //   [base + 4] empty
+    return true; //not out of memory
+}
+
 uint getPreviousPC( uint* stack ) {
     sref currentBase = stack[0];
     if( currentBase <= 1 )

@@ -6,6 +6,8 @@
 #include"opUtils.cl"
 #include"types.cl"
 #include"natives.cl"
+#include"comparison.cl"
+#include"errorMsg.cl"
 
 void getConstDataRange( struct WorkerEnv* env, uint index, uint* start, uint* len ) {
     uint fConstStart = env->constantsPrimaryIndex[ env->func * 2     ];
@@ -265,6 +267,73 @@ bool op_call( struct WorkerEnv* env, uchar a, ushort b, ushort c ) {
     }
 }
 
+bool op_tailCall( struct WorkerEnv* env, uchar a, ushort b ) {
+    
+    if( env->returnFlag ) { //already called, handle result
+        uint keep = 0;
+        if( c == 0 ) {//top
+            keep = env->nReturn;
+        } else {
+            keep = c - 1;
+        }
+        keep = keep < env->nReturn ? keep : env->nReturn;
+        for(uint r = 0; r < keep; r++) //overwrites function ref on stack used to call
+            if(!setRegister( env->luaStack, env->stackSize, a + r, env->luaStack[ env->returnStart + r ] ))
+                return false; //can't imagine this happening, but checked anyway
+        
+        env->returnFlag = false;
+        env->pc++;
+        return true;
+             // ===========================================================================================
+    } else { // | New tail call
+             // ===========================================================================================
+        href func = getRegister( env->luaStack, a ); //should only be closure
+        uint nargs = 0;
+        if(b == 0) { //TOP
+            nargs = getNRegisters( env-> luaStack ) - a;
+        } else if(b == 1) {
+            nargs = b-1;
+        }
+
+        uchar fType = env->heap[ func ];
+        sref srefA = getRegisterPos( env->luaStack, a );
+
+        if( fType == T_CLOSURE ) {
+            uint fID = getClosureFunction( env, func );
+            uint namedArgs = env->numParams[ fID ];
+            bool isVararg = env->isVararg[ fID ];
+            uint nVarargs = nargs - namedArgs;
+
+            //reuse current frame | fID = function index, func = closure
+            if(!redefineFrame( env->luaStack, env->stackSize, fID, func, isVararg ? nVarargs : 0 )) return false;
+            env->func = fID;
+            env->pc = 0;
+
+            sref argI = srefA + 1;
+            for(uint i = 0; i < namedArgs; i++) { //copy function args to fixed registers
+                href argRef = getRegister( env->luaStack, argI++ );
+                if(!setRegister( env->luaStack, env->stackSize, i, argRef ))
+                    return false;
+            }
+
+            if( isVararg ) {                         //if needed
+                for(uint i = 0; i < nVarargs; i++) { //copy additonal args to varargs
+                    href argRef = getRegister( env->luaStack, argI++ );
+                    setVararg( env->luaStack, i, argRef );
+                }
+            }
+
+            //next program step should continue in the new stack frame
+            return true;
+
+        } else if ( fType == T_NATIVE_FUNC ) {
+            return op_call( env, a, b, 0 );
+        } else {
+            return false; //attempt to call TYPE
+        }
+    }
+}
+
 bool _readAsDouble( uchar* dataSource, uint start, double* result ) {
     if( dataSource[start] == T_INT ) {
         *result = (double)getHeapInt( dataSource, start +1 );
@@ -367,6 +436,7 @@ bool isTruthy( href value ) {
     return value >= TRUE_HREF; //[0] nil | [1,2] false | [3:4] true | [5+] heap values
 }
 
+//TODO switch to void, error status checked via function now
 bool doOp( struct WorkerEnv* env, LuaInstruction instruction ) {
     // LuaInstruction instruction = code[ codeIndexes[func] + pc ];
     OpCode op = getOpcode( instruction );
@@ -492,9 +562,9 @@ bool doOp( struct WorkerEnv* env, LuaInstruction instruction ) {
         }
 
         case OP_CALL: {
-            uchar a = getA( instruction );
+            uchar  a = getA( instruction );
             ushort b = getB( instruction );
-            ushort c= getC( instruction );
+            ushort c = getC( instruction );
             return op_call( env, a, b, c );    //if(native || env.returnFlag && ok) pc++;
         }
 
@@ -599,14 +669,110 @@ bool doOp( struct WorkerEnv* env, LuaInstruction instruction ) {
         }
 
 
-        case OP_EQ: // if ((RK(B) == RK(C)) ~= A) then pc++
-        case OP_LT:        //        A B C   if ((RK(B) <  RK(C)) ~= A) then pc++           
-        case OP_LE:        //        A B C   if ((RK(B) <= RK(C)) ~= A) then pc++           
-        case OP_TEST:      //      A C     if not (R(A) <=> C) then pc++                  
-        case OP_TESTSET:   //   A B C   if (R(B) <=> C) then R(A) := R(B) else pc++    
-        case OP_TAILCALL:  //  A B C   return R(A)(R(A+1), ... ,R(A+B-1))             
-        case OP_FORLOOP:   //   A sBx   R(A)+=R(A+2);
-                           //     if R(A) <?= R(A+1) then { pc+=sBx; R(A+3)=R(A) }
+        case OP_EQ: // ==
+        case OP_LT: // <
+        case OP_LE: // <=
+        {// if ((RK(B) OP RK(C)) ~= A) then pc++
+            uchar* dataSourceA, dataSourceB;
+            href indexA, indexB;
+
+            uchar a = getA( instruction );
+            ushort b = getB( instruction );
+            ushort c = getC( instruction );
+            
+            if( isK( b ) ) {
+                dataSourceA = env->constantsData;
+                uint _;
+                getConstDataRange( env, indexK( b ), &indexA, &_ );
+            } else {
+                dataSourceA = env->heap;
+                indexA = getRegister( env->luaStack, b );
+            }
+
+            if( isK( c ) ) {
+                dataSourceB = env->constantsData;
+                uint _;
+                getConstDataRange( env, indexK( c ), &indexB, &_ );
+            } else {
+                dataSourceB = env->heap;
+                indexB = getRegister( env->luaStack, c );
+            }
+
+            bool result;
+            switch( op ) {
+                case OP_EQ:
+                    result = heapEquals( env, dataSourceA, indexA, dataSourceB, indexB ) == ((a == 0) ? false : true);
+                    break;
+                case OP_LT:
+                    result = compareLessThan( env, dataSourceA, indexA, dataSourceB, indexB ) == ((a == 0) ? false : true);
+                    break;
+                case OP_LE:
+                    result = compareLessThanOrEqual( env, dataSourceA, indexA, dataSourceB, indexB ) == ((a == 0) ? false : true);
+            } 
+            
+            env->pc += result ? 1 : 2;  //skips next if not eq
+            return true;
+        }
+        
+        case OP_TEST: {      //     TEST        A C     if (boolean(R(A)) != C) then PC++
+            uchar  a = getA( instruction );
+            bool   c = getC( instruction ) != 0;
+            bool val = isTruthy(getRegister( env->luaStack, a ));
+            env->pc += (val != c) ? 2 : 1;
+            return true;
+        }
+
+        case OP_TESTSET: {  //   A B C   if (boolean(R(B)) != C) then R(A) := R(B) else pc++    
+            uchar  a = getA( instruction );
+            ushort b = getB( instruction );
+            bool   c = getC( instruction ) != 0;
+            bool val = isTruthy( getRegister( env->luaStack, b ) );
+            if( val != c ) {
+                if(!setRegister( env->luaStack, env->stackSize, a, getRegister( env->luaStack, b ))) {
+                    throwSO();
+                    return false;
+                }
+                env->pc++;
+                return true;
+            } else {
+                env->pc += 2;
+                return true;
+            }
+        }
+
+        case OP_TAILCALL: {  //  A B C   return R(A)(R(A+1), ... ,R(A+B-1))      
+            uchar  a = getA( instruction );
+            ushort b = getB( instruction ); //b-1 == arg count, -1 means till top of frame
+            return op_tailCall( env, a, b ); //if return flag, pc++
+        }
+        
+        case OP_FORPREP: {  //R(A)-=R(A+2); pc+=sBx
+        
+            uchar  a = getA( instruction );
+            int  sBx = getsBx( instruction );
+            //R(a) -> init val / internal loop var
+            //R(a+1) -> limit
+            //R(a+2) -> step
+            //R(a+3) -> ext loop var
+            
+            //R(A) = R(A) - R(A+2) //init - step
+            href initRef = getRegister( env->luaStack, a   );
+            href stepRef = getRegister( env->luaStack, a+2 );
+            double initVal, stepVal; //anything below 2^53 has a whole number representation, well past 2^32 from int
+            _readAsDouble( env->heap, initRef, initVal );
+            _readAsDouble( env->heap, stepRef, stepVal ); 
+            href shiftedRef = allocateNumber( env->heap, env->maxHeapSize, initVal - stepVal );
+            if( shiftedRef == 0 ) { throwOOM( env ); return false; }
+            if( !setRegister( env->luaStack, env->stackSize, a, shiftedRef ) ) { throwSO( env ); return false; }
+
+            //pc += sBx +1
+            env->pc += sBx + 1;
+            return true;
+        }
+        case OP_FORLOOP:    //   A sBx   R(A)+=R(A+2);
+                            //     if R(A) <?= R(A+1) then { pc+=sBx; R(A+3)=R(A) }
+                            //R(A) += R(A+2);  //increment internal
+            //
         case OP_FORPREP:   //   A sBx   R(A)-=R(A+2); pc+=sBx                          
         case OP_TFORCALL:  //  A C     R(A+3), ... ,R(A+2+C) := R(A)(R(A+1), R(A+2)); 
         case OP_TFORLOOP:  //  A sBx   if R(A+1) ~= nil then { R(A)=R(A+1); pc += sBx }
@@ -657,7 +823,7 @@ bool callWithArgs( struct WorkerEnv* env, href closure, href* args, uint nargs )
     sref callFrame = env->luaStack[0];
 
     while( callFrame <= env->luaStack[0] ) { //wait till popped
-        if(!stepProgram( env )) {
+        if(!stepProgram( env ) || hasError( env )) {
             return false;
         } 
     }
