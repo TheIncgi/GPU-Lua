@@ -3,12 +3,13 @@
 #include"common.cl"
 #include"types.cl"
 #include"heapUtils.h"
+#include"vm.h"
 
 
 
 bool heapEquals( struct WorkerEnv* env, uchar* dataSourceA, href indexA, uchar* dataSourceB, href indexB ) {
     uchar* heap = dataSourceA;
-    
+
     if( indexA == indexB )
         return true;
     
@@ -48,8 +49,35 @@ bool heapEquals( struct WorkerEnv* env, uchar* dataSourceA, href indexA, uchar* 
         case T_HASHMAP: //also not checking contents
             return dataSourceA == dataSourceB && dataSourceA == env->heap && indexA == indexB;
             
-        case T_TABLE:  //TODO: metatable __eq
-            return indexA == indexB;
+        case T_TABLE: { //TODO: metatable __eq
+            if( dataSourceA != dataSourceB || dataSourceA != env->heap ) //all tables are on the heap
+                return false;
+
+            if( indexA == indexB ) //equals self
+                return true;
+            
+            string eventName = "__eq";
+            href metaA = tableGetMetaEvent( env, indexA, eventName );
+            href metaB = tableGetMetaEvent( env, indexB, eventName );
+            if( dataSourceA[metaA] == T_CLOSURE ) {
+                if( metaA != metaB )
+                    return false;
+                
+                href args[2];
+                args[0] = indexA;
+                args[1] = indexB;
+
+                return false;
+                bool ok = callWithArgs( env, metaA, args, 2 );
+                //TODO if not ok, pass error along somewhere
+
+                if( env->returnFlag && env->nReturn >= 1) {
+                    return isTruthy( env->luaStack[ env->returnStart ] );
+                }
+            }
+            
+            return false;
+        }
 
         case T_INT:
         case T_NATIVE_FUNC:
