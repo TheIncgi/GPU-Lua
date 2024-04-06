@@ -195,6 +195,24 @@ bool tableRawSet( struct WorkerEnv* env, href tableIndex, href key, href value )
     return hashmapPut( env, hashedPart, key, value );
 }
 
+//For use with setlist op to avoid temp heap values
+//arrayPart & arraySize/capacity will be solved if arrayPart is 0
+bool tableSetList( struct WorkerEnv* env, href tableIndex, href* arrayPart, uint* size, uint* cap, uint key, href value ) {
+    if( *arrayPart == 0 ) {
+        *arrayPart = tableCreateArrayPart( env->heap, env->maxHeapSize ); //probably already created, but just to be safe
+        *size = arraySize( env->heap, *arrayPart );
+        *cap  = arrayCapacity( env->heap, *arrayPart );
+    }
+    
+    if( (key-1) < cap ) {
+        arraySet( env->heap, *arrayPart, key-1, value );
+        return true;
+    } else {
+        href hkey = allocateInt( env->heap, env->maxHeapSize, key );
+        return tableRawSet( env, tableIndex, hkey, value );
+    }
+}
+
 href tableGetMetaEvent( struct WorkerEnv* env, href table, string eventName ) {
     href meta = tableGetMetatable( env->heap, table );
     if( meta == 0 ) return 0;

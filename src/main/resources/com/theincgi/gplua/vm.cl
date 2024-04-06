@@ -769,20 +769,130 @@ bool doOp( struct WorkerEnv* env, LuaInstruction instruction ) {
             env->pc += sBx + 1;
             return true;
         }
-        case OP_FORLOOP:    //   A sBx   R(A)+=R(A+2);
+        case OP_FORLOOP: {   //   A sBx   R(A)+=R(A+2); //increment internal
                             //     if R(A) <?= R(A+1) then { pc+=sBx; R(A+3)=R(A) }
-                            //R(A) += R(A+2);  //increment internal
-            //
-        case OP_FORPREP:   //   A sBx   R(A)-=R(A+2); pc+=sBx                          
-        case OP_TFORCALL:  //  A C     R(A+3), ... ,R(A+2+C) := R(A)(R(A+1), R(A+2)); 
-        case OP_TFORLOOP:  //  A sBx   if R(A+1) ~= nil then { R(A)=R(A+1); pc += sBx }
-        case OP_SETLIST:   //   A B C   R(A)[(C-1)*FPF+i] := R(A+i), 1 <= i <= B       
-        case OP_CLOSURE:   //   A Bx    R(A) := closure(KPROTO[Bx])                    
-        case OP_VARARG:    //    A B     R(A), R(A+1), ..., R(A+B-2) = vararg           
-        case OP_EXTRAARG:  //  Ax      extra (larger) argument for previous opcode    
+            
+            // increment internal loop var + step size
+            // if internal var <= limit
+            //    pc += sbx + 1? 
+            //    external = internal
+            // TODO check logic
+            uchar a = getA( instruction );
+            int sBx = getsBx( instruction );
 
-        default:
+            href internalRef = getRegister( env->luaStack, a );
+            href limitRef    = getRegister( env->luaStack, a + 1 );
+            href stepRef     = getRegister( env->luaStack, a + 2 );
+
+            double internal, limit, step;
+            _readAsDouble( env->heap, internalRef, &internal );
+            _readAsDouble( env->heap,    limitRef, &limitRef );
+            
+            internal += step;
+            
+            if( internal <= limit ) {
+                //allocate and re-assign internal counter to register
+                internalRef = allocateNumber( env->heap, env->maxHeapSize, internal );
+                setRegister( env->luaStack, env->stackSize, a, internalRef );
+
+                //set external var used in for loop
+                setRegister( env->luaStack, env->stackSize, a + 3, internalRef); //nothing will modify the value on the heap, safe to copy
+                
+                //jump back to the start
+                env->pc += sBx;
+            }
+            env->pc++;
+            return true;
+        }                     
+        case OP_TFORCALL: { //  A C     R(A+3), ... ,R(A+2+C) := R(A)(R(A+1), R(A+2)); 
+            uchar a = getA( instruction );
+            ushort c = getC( instruction );
+
+            //R(A) itterator func
+            //R(A+1) state
+            //R(A+2) control variable (internal only)
+            //R(A+3) lool vars (external), C refers to count, must always be at least 1 var
+
+            //call R(A) with ( state, controlVar )
+            //results are returned to loop vars R(A+3), ... R(A+2+C)
+
+            href closure = getRegister( env->luaStack, a );
+            href state = getRegister( env->luaStack, a + 1);
+            href ctrlVar = getRegister( env->luaStack, a + 2 );
+
+            href args[2];
+            args[0] = state;
+            args[1] = ctrlVar;
+            if(!callWithArgs( env, closure, args, 2 ))
+                return false;
+
+            for( uint r = 0; r < c; r++ ) {
+                href val = ((!env->returnFlag) || (r >= env->nReturn)) ? //no return, or past return value count
+                    0 : env->luaStack[env->returnStart + r]; //nil : return value
+                if(!setRegister( env->luaStack, env->stackSize, a + 3 + r, val ))
+                    return false;
+            }
+            return true;
+        }
+        case OP_TFORLOOP: { //  A sBx   if R(A+1) ~= nil then { R(A)=R(A+1); pc += sBx }
+            uchar a = getA( instruction );
+            int sBx = getsBx( instruction );
+
+            href test = getRegister( env->luaStack, a + 1 );
+            if( test != 0 ) {
+                href nxt = getRegister( env->luaStack, a + 1 );
+                setRegister( env->luaStack, env->stackSize, a, nxt );
+                env->pc += sBx;
+            }
+            env->pc++;
+        }
+        case OP_SETLIST: {   //   A B C   R(A)[(C-1)*FPF+i] := R(A+i), 1 <= i <= B       
+            uchar  a = getA( instruction ); //table, a+1... = values
+            ushort b = getB( instruction ); //nElements
+            ushort c = getC( instruction ); //blockNum (batch of values)
+
+            href tableRef = getRegister( env->luaStack, a );
+
+            uint offset = (c-1) * LFIELDS_PER_FLUSH;
+            
+            //reused vars to avoid repeate lookup
+            href arrayPart;
+            uint aSize, aCap;
+            for(ushort i = 1; i <= b; i++) { //[1, b] not [0, b)
+                href value = getRegister( lua->luaStack, a + i );
+                if( !tableSetList( env, tableRef, &arrayPart, &size, &cap, offset + i, value ) )
+                    return false;
+            }
+            return true;
+        }
+        case OP_CLOSURE: {  //   A Bx    R(A) := closure(KPROTO[Bx])                    
+
+        }
+        case OP_VARARG: {   //    A B     R(A), R(A+1), ..., R(A+B-2) = vararg           
+            uchar  a = getA( instruction );
+            ushort b = getB( instruction );
+
+            uint nRegisters;
+            if( b == 0 ) {
+                b = getNVarargs( env->luaStack );
+            } else {
+                nRegisters = b - 1;
+            }
+
+
+            for( uint i = 0; i < nRegisters; i++ ) {
+                href value = getVararg( env->luaStack, i );
+                if( !setRegister( env->luaStack, env->stackSize, a + i, value ) )
+                    return false;
+            }
+            return true;
+        }
+
+        case OP_EXTRAARG: //  Ax      extra (larger) argument for previous opcode    
+        default: {
+            throwUnexpectedBytecodeOp( env, op );
             return false;
+        }
     }
 }
 
@@ -797,7 +907,13 @@ bool call( struct WorkerEnv* env, href closure ) {
     return callWithArgs( env, closure, args, 0 );
 }
 bool callWithArgs( struct WorkerEnv* env, href closure, href* args, uint nargs ) {
+    if( env->heap[closure] != T_CLOSURE ) {
+        throwCall( env, env->heap[closure] );
+        return false;
+    }
+    
     env->func = getClosureFunction( env, closure );
+
 
     uint namedArgs = env->numParams[ env->func ];
     bool isVararg = env->isVararg[ env->func ];

@@ -3,9 +3,13 @@
 #include"common.cl"
 #include"opUtils.cl"
 
+#define LFIELDS_PER_FLUSH 50
+
 struct WorkerEnv {
     uint* luaStack;
     uint stackSize;
+
+    href luaStackHref;
 
     uchar* heap;
     uint maxHeapSize;

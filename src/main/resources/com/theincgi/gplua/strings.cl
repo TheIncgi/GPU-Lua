@@ -42,6 +42,19 @@ href _heapString(struct WorkerEnv* env, string str, uint strLen) {
     return newString;
 }
 
+void intToCharbuf( int value, char* buffer ) {
+    uint c = 0;
+    if( value < 0 ) {
+        buffer[ c++ ] = '-';
+        value = -value;
+    }
+    uint digits = (uint)ceil(log10(value));
+    for(uint digitPos = digitPos-1; digitPos >= 0; digitPos--) { //left to right
+        buffer[ c++ ] = '0' + ( (int)( value / exp10(digitPos) ) );
+    }
+    buffer[ c ] = 0;
+}
+
 href concatRaw( struct WorkerEnv* env, string* strings, uint nStrings ) {
     //TODO check for dupes in string table
     uchar* heap = env->heap;
