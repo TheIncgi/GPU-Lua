@@ -6,10 +6,11 @@
 #define LFIELDS_PER_FLUSH 50
 
 struct WorkerEnv {
-    uint* luaStack;
-    uint stackSize;
+    // uint* luaStack;
+    // uint stackSize;
 
-    href luaStackHref;
+    href luaStack;
+    uint* maxStackSizes;
 
     uchar* heap;
     uint maxHeapSize;

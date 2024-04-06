@@ -1,7 +1,8 @@
 #include"vm.h"
 #include"common.cl"
 #include"closure.h"
-#include"stackUtils.h"
+// #include"stackUtils.h"
+#include"luaStack.h"
 #include"heapUtils.h"
 #include"opUtils.cl"
 #include"types.cl"
@@ -20,7 +21,7 @@ void getConstDataRange( struct WorkerEnv* env, uint index, uint* start, uint* le
 }
 
 bool op_move( struct WorkerEnv* env, uchar dstReg, ushort srcReg ) {
-    if(setRegister( env->luaStack, env->stackSize, dstReg, getRegister( env->luaStack, srcReg ) )) {
+    if(cls_setRegister( env, dstReg, cls_getRegister( env, srcReg ) )) {
         env->pc++;
         return true;
     }
@@ -52,7 +53,7 @@ bool loadk( struct WorkerEnv* env, uchar reg, uint index ) {
     if( k == 0 ) return false;
 
     //nil bool number str
-    if( setRegister( env->luaStack, env->stackSize, reg, k ) ) {
+    if( cls_setRegister( env, reg, k ) ) {
         env->pc++;
         return true;
     } else {
@@ -71,7 +72,7 @@ href _getUpVal( struct WorkerEnv* env, href closureRef, uint upval ) {
 
 //the table is an upval
 bool getTabUp( struct WorkerEnv* env, uchar reg, uint upvalIndexOfTable, uint tableKey ) {
-    href closure = getStackClosure( env->luaStack );
+    href closure = ls_getClosure( env, env->luaStackHref );
     if( closure == 0 ) return false;
     
     href table = getClosureUpval( env, closure, upvalIndexOfTable );
@@ -85,18 +86,18 @@ bool getTabUp( struct WorkerEnv* env, uchar reg, uint upvalIndexOfTable, uint ta
         int index = indexK( tableKey );
         value = tableGetByConst( env, table, index );
     } else { //use register
-        href key = getRegister( env->luaStack, (uchar)tableKey );
+        href key = cls_getRegister( env, (uchar)tableKey );
         value = tableGetByHeap( env, table, key );
     }
 
     env->pc++;
-    setRegister( env->luaStack, env->stackSize, reg, value );
+    cls_setRegister( env, reg, value );
     return true;
 }
 
 //the table is a register value
 bool op_getTable( struct WorkerEnv* env, uchar destReg, ushort tableReg, ushort tableKey) { //FIXME
-    href table = getRegister( env->luaStack, tableReg );
+    href table = cls_getRegister( env, tableReg );
     if( table == 0 ) return false; //attempt to index nil
 
     if( env->heap[ table ] != T_TABLE )
@@ -107,19 +108,19 @@ bool op_getTable( struct WorkerEnv* env, uchar destReg, ushort tableReg, ushort 
         int index = indexK( tableKey );
         value = tableGetByConst( env, table, index );
     } else {
-        href key = getRegister( env->luaStack, (uchar)tableKey );
+        href key = cls_getRegister( env, (uchar)tableKey );
         value = tableGetByHeap( env, table, key );
     }
 
     env->pc++;
-    setRegister( env->luaStack, env->stackSize, destReg, value );
+    cls_setRegister( env, destReg, value );
     return true;
 }
 
 //set table upval
 // UpVal[A][RK(B)] := RK(C) | UpVal[ tableUpvalIndex A ][ tableKey B ] := tableValue C
 bool op_settabup( struct WorkerEnv* env, uchar a, ushort b, ushort c ) { 
-    href closure = getStackClosure( env->luaStack ); //active function
+    href closure = cls_getClosure( env ); //active function
     if( closure == 0 ) return false;
 
     href table = _getUpVal( env, closure, a ); //table upval of current function
@@ -130,7 +131,7 @@ bool op_settabup( struct WorkerEnv* env, uchar a, ushort b, ushort c ) {
 
 //R(A)[RK(B)] := RK(C) | Registers[ A ][ tableKey B ] := tableValue C
 bool op_settable( struct WorkerEnv* env, uchar a, ushort b, ushort c ) {
-    href table = getRegister( env->luaStack, a );
+    href table = cls_getRegister( env, a );
     if( env->heap[table] != T_TABLE ) return false; //attempt to assign to TYPE
 
     bool ok = _settable( env, table, b, c );
@@ -146,7 +147,7 @@ bool _settable( struct WorkerEnv* env, href table, ushort b, ushort c ) {
         key = kToHeap( env, indexK( b ));
         if( key == 0 ) return false; //failed to allocate key to heap or attempt to index using nil
     } else {
-        key = getRegister( env->luaStack, b );
+        key = cls_getRegister( env, b );
         if( key == 0 ) return false; //attempt to index using nil
     }
 
@@ -154,7 +155,7 @@ bool _settable( struct WorkerEnv* env, href table, ushort b, ushort c ) {
         value = kToHeap( env, indexK( c ));
         if( value == 0 ) return false; //failed to allocate value to heap
     } else {
-        value = getRegister( env->luaStack, c );
+        value = cls_getRegister( env, c );
     }
 
     href newindex = tableGetMetaNewIndex( env, table ); //check for meta event
@@ -172,7 +173,7 @@ bool _settable( struct WorkerEnv* env, href table, ushort b, ushort c ) {
                 args[2] = kToHeap( env, indexK( c ) );
                 if(args[2] == 0) return false; //failed to allocate space for constant
             } else { //c is a register
-                args[2] = getRegister( env->luaStack, c );
+                args[2] = cls_getRegister( env, c );
             }
 
             return callWithArgs( env, newindex, args, 3 );
@@ -185,13 +186,13 @@ bool _settable( struct WorkerEnv* env, href table, ushort b, ushort c ) {
 void returnRange( struct WorkerEnv* env, uchar a, uchar b ) {
     env->returnFlag = true;
     if( b == 0 ) {        //a to top of stack
-        env->returnStart = getRegisterPos( env->luaStack, a );
-        env->nReturn = getNRegisters( env-> luaStack );
+        env->returnStart = cls_getRegisterHref( env, a );
+        env->nReturn = cls_nRegisters( env );
     } else if( b == 1 ) { //no return values
         env->returnStart = 0;
         env->nReturn = 0;
     } else { //b >= 2, b-1 return values
-        env->returnStart = getRegisterPos( env->luaStack, a );
+        env->returnStart = cls_getRegisterHref( env, a );
         env->nReturn = b - 1;
     }
 }
@@ -207,7 +208,7 @@ bool op_call( struct WorkerEnv* env, uchar a, ushort b, ushort c ) {
         }
         keep = keep < env->nReturn ? keep : env->nReturn;
         for(uint r = 0; r < keep; r++) //overwrites function ref on stack used to call
-            if(!setRegister( env->luaStack, env->stackSize, a + r, env->luaStack[ env->returnStart + r ] ))
+            if(!cls_setRegister( env, a + r, getReturn( env, r ) ))
                 return false; //can't imagine this happening, but checked anyway
         
         env->returnFlag = false;
@@ -216,16 +217,16 @@ bool op_call( struct WorkerEnv* env, uchar a, ushort b, ushort c ) {
              // ===========================================================================================
     } else { // | New call
              // ===========================================================================================
-        href func = getRegister( env->luaStack, a ); //should be closure or native func
+        href func = cls_getRegister( env, a ); //should be closure or native func
         uint nargs = 0;
         if(b == 0) { //TOP
-            nargs = getNRegisters( env-> luaStack ) - a;
+            nargs = cls_nRegisters( env ) - a;
         } else if(b == 1) {
             nargs = b-1;
         }
 
         uchar fType = env->heap[ func ];
-        sref srefA = getRegisterPos( env->luaStack, a );
+        href hrefA = cls_getRegisterHref( env->luaStack, a ); //function pos, a+1 is arg 1
 
         if( fType == T_CLOSURE ) {
             uint fID = getClosureFunction( env, func );
@@ -234,21 +235,25 @@ bool op_call( struct WorkerEnv* env, uchar a, ushort b, ushort c ) {
             uint nVarargs = nargs - namedArgs;
 
             //stores old pc for return, fID = funciton index, func = closure
-            if(!pushStackFrame( env->luaStack, env->stackSize, env->pc, fID, func, isVararg ? nVarargs : 0 )) return false;
+            href newStack = allocateLuaStack( env, env->luaStack, env->pc, func, isVararg ? nVarargs : 0 );
+            if( newStack == 0 ) return false;
             env->func = fID;
             env->pc = 0;
+            env->luaStack = newStack
 
-            sref argI = srefA + 1;
+            href argI = hrefA + 1;
             for(uint i = 0; i < namedArgs; i++) { //copy function args to fixed registers
-                href argRef = getRegister( env->luaStack, argI++ );
-                if(!setRegister( env->luaStack, env->stackSize, i, argRef ))
+                href argRef = getHeapInt( env->heap, argI );
+                argI += REGISTER_SIZE;
+                if(!cls_setRegister( env, i, argRef ))
                     return false;
             }
 
             if( isVararg ) {                         //if needed
                 for(uint i = 0; i < nVarargs; i++) { //copy additonal args to varargs
-                    href argRef = getRegister( env->luaStack, argI++ );
-                    setVararg( env->luaStack, i, argRef );
+                    href argRef = getHeapInt( env->heap, argI );
+                    argI += REGISTER_SIZE;
+                    cls_setVararg( env, i, argRef );
                 }
             }
 
@@ -257,7 +262,7 @@ bool op_call( struct WorkerEnv* env, uchar a, ushort b, ushort c ) {
 
         } else if ( fType == T_NATIVE_FUNC ) {
             uint nativeID = getHeapInt( env->heap, func + 1 );
-            bool ok = callNative( env, nativeID, srefA, nargs ); //should read args and put return values
+            bool ok = callNative( env, nativeID, hrefA, nargs ); //should read args and put return values
             if( !ok ) return false;
             env->pc++;
             return true;
@@ -278,7 +283,7 @@ bool op_tailCall( struct WorkerEnv* env, uchar a, ushort b ) {
         }
         keep = keep < env->nReturn ? keep : env->nReturn;
         for(uint r = 0; r < keep; r++) //overwrites function ref on stack used to call
-            if(!setRegister( env->luaStack, env->stackSize, a + r, env->luaStack[ env->returnStart + r ] ))
+            if(!cls_setRegister( env, a + r, getReturn( env, r ) ))
                 return false; //can't imagine this happening, but checked anyway
         
         env->returnFlag = false;
@@ -287,16 +292,16 @@ bool op_tailCall( struct WorkerEnv* env, uchar a, ushort b ) {
              // ===========================================================================================
     } else { // | New tail call
              // ===========================================================================================
-        href func = getRegister( env->luaStack, a ); //should only be closure
+        href func = cls_getRegister( env, a ); //should only be closure
         uint nargs = 0;
         if(b == 0) { //TOP
-            nargs = getNRegisters( env-> luaStack ) - a;
+            nargs = cls_nRegisters( env ) - a;
         } else if(b == 1) {
             nargs = b-1;
         }
 
         uchar fType = env->heap[ func ];
-        sref srefA = getRegisterPos( env->luaStack, a );
+        href hrefA = cls_getRegisterHref( env, a );
 
         if( fType == T_CLOSURE ) {
             uint fID = getClosureFunction( env, func );
@@ -304,25 +309,27 @@ bool op_tailCall( struct WorkerEnv* env, uchar a, ushort b ) {
             bool isVararg = env->isVararg[ fID ];
             uint nVarargs = nargs - namedArgs;
 
-            //reuse current frame | fID = function index, func = closure
-            if(!redefineFrame( env->luaStack, env->stackSize, fID, func, isVararg ? nVarargs : 0 )) return false;
-            env->func = fID;
-            env->pc = 0;
+            //reuse current frame level | fID = function index, func = closure
+            href redefined = redefineLuaStack( env, func, isVararg ? nVarargs : 0 );
+            if( redefined == 0 ) return false;
 
             sref argI = srefA + 1;
             for(uint i = 0; i < namedArgs; i++) { //copy function args to fixed registers
-                href argRef = getRegister( env->luaStack, argI++ );
-                if(!setRegister( env->luaStack, env->stackSize, i, argRef ))
+                href argRef = cls_getRegister( env, argI++ );
+                if(!cls_setRegister( env, i, argRef ))
                     return false;
             }
 
             if( isVararg ) {                         //if needed
                 for(uint i = 0; i < nVarargs; i++) { //copy additonal args to varargs
-                    href argRef = getRegister( env->luaStack, argI++ );
-                    setVararg( env->luaStack, i, argRef );
+                    href argRef = cls_getRegister( env, argI++ );
+                    cls_setVararg( env, i, argRef );
                 }
             }
 
+            env->pc = 0;
+            env->func = getClosureFunction( env, func );
+            env->luaStack = redefined; //no allocations occur during arg copying, so shouldn't have any rare GC issues here
             //next program step should continue in the new stack frame
             return true;
 
@@ -351,7 +358,7 @@ bool _readAsDouble( uchar* dataSource, uint start, double* result ) {
 }
 
 bool op_math( struct WorkerEnv* env, LuaInstruction instruction, OpCode op ) {
-    uchar a = getA( instruction );
+    uchar    a = getA( instruction );
     ushort rkb = getB( instruction );
     ushort rkc = getC( instruction );
 
@@ -366,7 +373,7 @@ bool op_math( struct WorkerEnv* env, LuaInstruction instruction, OpCode op ) {
         if( !_readAsDouble( env->constantsData, constStart, &x ))
             return false; //attempt to op with type
     } else {
-        href val = getRegister( env->luaStack, rkb );
+        href val = cls_getRegister( env, rkb );
         if( !_readAsDouble( env->heap, val, &x ))
             return false; //attempt to op with type
     }
@@ -382,7 +389,7 @@ bool op_math( struct WorkerEnv* env, LuaInstruction instruction, OpCode op ) {
             if( !_readAsDouble( env->constantsData, constStart, &y ))
                 return false; //attempt to op with type
         } else {
-            href val = getRegister( env->luaStack, rkc );
+            href val = cls_getRegister( env, rkc );
             if( !_readAsDouble( env->heap, val, &y ))
                 return false; //attempt to op with type
         }
@@ -425,7 +432,7 @@ bool op_math( struct WorkerEnv* env, LuaInstruction instruction, OpCode op ) {
     }
     
     href ansRef = allocateNumber( env->heap, env->maxHeapSize, ans );
-    if( setRegister( env->luaStack, env->stackSize, a, ansRef ) ) {
+    if( cls_setRegister( env, a, ansRef ) ) {
         env->pc++;
         return true;
     }
@@ -460,7 +467,7 @@ bool doOp( struct WorkerEnv* env, LuaInstruction instruction ) {
             uchar  a = getA( instruction );
             ushort b = getB( instruction );
             ushort c = getC( instruction );
-            if(!setRegister( env->luaStack, env->stackSize, a, b == 0 ? 1 : 3 )) //Heap reserve: 0 nil, 1 false, 3 true
+            if(!cls_setRegister( env, a, b == 0 ? FALSE_HREF : TRUE_HREF )) //Heap reserve: 1 false, 3 true
                 return false;
             env->pc += c != 0 ? 2 : 1;
         }
@@ -470,7 +477,7 @@ bool doOp( struct WorkerEnv* env, LuaInstruction instruction ) {
             ushort b = getB( instruction );
             uint limit = a + b;
             for(uint r = a; r <= limit; r++) {
-                if(!setRegister( env->luaStack, env->stackSize, r, 0 ))
+                if(!cls_setRegister( env, r, 0 )) //NIL_HREF is 0
                     return false;
             }
             env->pc++;
@@ -480,9 +487,9 @@ bool doOp( struct WorkerEnv* env, LuaInstruction instruction ) {
         case OP_GETUPVAL: { // R(A) := upval[B]
             uchar  a = getA( instruction );
             ushort b = getB( instruction );
-            href closure = getStackClosure( env->luaStack );
+            href closure = cls_getClosure( env );
             href upval = _getUpVal( env, closure, b );
-            if(!setRegister( env->luaStack, env->stackSize, a, upval ))
+            if(!cls_setRegister( env, a, upval ))
                 return false;
             env->pc++;
             return true;
@@ -514,8 +521,8 @@ bool doOp( struct WorkerEnv* env, LuaInstruction instruction ) {
         case OP_SETUPVAL: { //UpValue[B] := R(A)
             uchar  a = getA( instruction ); //value register
             ushort b = getB( instruction ); //upval index
-            href closure = getStackClosure( env->luaStack );
-            setClosureUpval( env, closure, b, getRegister( env->luaStack, a ) );
+            href closure = cls_getClosure( env );
+            setClosureUpval( env, closure, b, cls_getRegister( env, a ) );
             return true;
         }
 
@@ -544,7 +551,7 @@ bool doOp( struct WorkerEnv* env, LuaInstruction instruction ) {
                     return false;
             }
             
-            if(!setRegister( env->luaStack, env->stackSize, a, table ))
+            if(!cls_setRegister( env, a, table ))
                 return false;
             env->pc++;
             return true;
@@ -555,7 +562,7 @@ bool doOp( struct WorkerEnv* env, LuaInstruction instruction ) {
             ushort b = getB( instruction );
             ushort c = getC( instruction );
 
-            if( !setRegister( env->luaStack, env->stackSize, a + 1, getRegister( env->luaStack, b ) ) )
+            if( !cls_setRegister( env, a + 1, cls_getRegister( env, b ) ) )
                 return false;
             
             return op_getTable( env, a, b, c ); // ok? pc++
@@ -572,9 +579,9 @@ bool doOp( struct WorkerEnv* env, LuaInstruction instruction ) {
             uchar a = getA( instruction );
             ushort b = getB( instruction );
             returnRange( env, a, b );
-            env->pc = getPreviousPC( env->luaStack );
-            popStackFrame( env->luaStack );
-            env->func = getCurrentFunctionFromStack( env->luaStack ); //frame popped, don't care about pc++
+            env->pc = cls_getPriorPC( env );
+            ls_pop( env );
+            env->func = cls_getFunction( env ); //frame popped, don't care about pc++
             return true;
         }
 
@@ -592,9 +599,9 @@ bool doOp( struct WorkerEnv* env, LuaInstruction instruction ) {
         case OP_NOT: {
             uchar  a = getA( instruction );
             ushort b = getB( instruction );
-            href val = getRegister( env->luaStack, b );
+            href val = cls_getRegister( env, b );
             //2 is constant ref for 
-            if( setRegister( env->luaStack, env->stackSize, a, isTruthy( val ) ? FALSE_HREF : TRUE_HREF ) ) {
+            if( cls_setRegister( env, a, isTruthy( val ) ? FALSE_HREF : TRUE_HREF ) ) {
                 env->pc++;
                 return true;
             }
@@ -604,14 +611,14 @@ bool doOp( struct WorkerEnv* env, LuaInstruction instruction ) {
         case OP_LEN: { // R(A) := # R(B)
             uchar  a = getA( instruction );
             ushort b = getB( instruction );
-            href val = getRegister( env->luaStack, b );
+            href val = cls_getRegister( env, b );
 
             switch( env->heap[ val ] ) {
                 case T_STRING: {
                     uint length = getHeapInt( env->heap, val+1 );
                     href r = allocateInt( env->heap, env->maxHeapSize, length );
                     if( r == 0 ) return false;
-                    if( setRegister( env->luaStack, env->stackSize, a, r ) ) {
+                    if( cls_setRegister( env, a, r ) ) {
                         env->pc++;
                         return true;
                     }
@@ -625,8 +632,8 @@ bool doOp( struct WorkerEnv* env, LuaInstruction instruction ) {
                         args[0] = val;
                         if( callWithArgs( env, metaEvent, args, 1 )) {
                             if( env->returnFlag ) {
-                                href r1 = env->luaStack[ env->returnStart ];
-                                if(setRegister( env->luaStack, env->stackSize, a, r1 )) {
+                                href r1 = getReturn( env, 0 );
+                                if(cls_setRegister( env, a, r1 )) {
                                     env->pc++;
                                     return true;
                                 }
@@ -637,7 +644,7 @@ bool doOp( struct WorkerEnv* env, LuaInstruction instruction ) {
                         uint length = tableLen( env->heap, val );
                         href r = allocateInt( env->heap, env->maxHeapSize, length );
                         if( r == 0 ) return false; //out of memory
-                        if( setRegister( env->luaStack, env->stackSize, a, r )) {
+                        if( cls_setRegister( env, a, r )) {
                             env->pc++;
                             return true;
                         }
@@ -676,7 +683,7 @@ bool doOp( struct WorkerEnv* env, LuaInstruction instruction ) {
             uchar* dataSourceA, dataSourceB;
             href indexA, indexB;
 
-            uchar a = getA( instruction );
+            uchar  a = getA( instruction );
             ushort b = getB( instruction );
             ushort c = getC( instruction );
             
@@ -686,7 +693,7 @@ bool doOp( struct WorkerEnv* env, LuaInstruction instruction ) {
                 getConstDataRange( env, indexK( b ), &indexA, &_ );
             } else {
                 dataSourceA = env->heap;
-                indexA = getRegister( env->luaStack, b );
+                indexA = cls_getRegister( env, b );
             }
 
             if( isK( c ) ) {
@@ -695,7 +702,7 @@ bool doOp( struct WorkerEnv* env, LuaInstruction instruction ) {
                 getConstDataRange( env, indexK( c ), &indexB, &_ );
             } else {
                 dataSourceB = env->heap;
-                indexB = getRegister( env->luaStack, c );
+                indexB = cls_getRegister( env, c );
             }
 
             bool result;
@@ -717,7 +724,7 @@ bool doOp( struct WorkerEnv* env, LuaInstruction instruction ) {
         case OP_TEST: {      //     TEST        A C     if (boolean(R(A)) != C) then PC++
             uchar  a = getA( instruction );
             bool   c = getC( instruction ) != 0;
-            bool val = isTruthy(getRegister( env->luaStack, a ));
+            bool val = isTruthy(cls_getRegister( env, a ));
             env->pc += (val != c) ? 2 : 1;
             return true;
         }
@@ -726,9 +733,9 @@ bool doOp( struct WorkerEnv* env, LuaInstruction instruction ) {
             uchar  a = getA( instruction );
             ushort b = getB( instruction );
             bool   c = getC( instruction ) != 0;
-            bool val = isTruthy( getRegister( env->luaStack, b ) );
+            bool val = isTruthy( cls_getRegister( env, b ) );
             if( val != c ) {
-                if(!setRegister( env->luaStack, env->stackSize, a, getRegister( env->luaStack, b ))) {
+                if(!cls_setRegister( env, a, cls_getRegister( env, b ))) {
                     throwSO();
                     return false;
                 }
@@ -756,14 +763,14 @@ bool doOp( struct WorkerEnv* env, LuaInstruction instruction ) {
             //R(a+3) -> ext loop var
             
             //R(A) = R(A) - R(A+2) //init - step
-            href initRef = getRegister( env->luaStack, a   );
-            href stepRef = getRegister( env->luaStack, a+2 );
+            href initRef = cls_getRegister( env, a   );
+            href stepRef = cls_getRegister( env, a+2 );
             double initVal, stepVal; //anything below 2^53 has a whole number representation, well past 2^32 from int
             _readAsDouble( env->heap, initRef, initVal );
             _readAsDouble( env->heap, stepRef, stepVal ); 
             href shiftedRef = allocateNumber( env->heap, env->maxHeapSize, initVal - stepVal );
             if( shiftedRef == 0 ) { throwOOM( env ); return false; }
-            if( !setRegister( env->luaStack, env->stackSize, a, shiftedRef ) ) { throwSO( env ); return false; }
+            if( !cls_setRegister( env, a, shiftedRef ) ) { throwSO( env ); return false; }
 
             //pc += sBx +1
             env->pc += sBx + 1;
@@ -780,9 +787,9 @@ bool doOp( struct WorkerEnv* env, LuaInstruction instruction ) {
             uchar a = getA( instruction );
             int sBx = getsBx( instruction );
 
-            href internalRef = getRegister( env->luaStack, a );
-            href limitRef    = getRegister( env->luaStack, a + 1 );
-            href stepRef     = getRegister( env->luaStack, a + 2 );
+            href internalRef = cls_getRegister( env, a );
+            href limitRef    = cls_getRegister( env, a + 1 );
+            href stepRef     = cls_getRegister( env, a + 2 );
 
             double internal, limit, step;
             _readAsDouble( env->heap, internalRef, &internal );
@@ -793,10 +800,10 @@ bool doOp( struct WorkerEnv* env, LuaInstruction instruction ) {
             if( internal <= limit ) {
                 //allocate and re-assign internal counter to register
                 internalRef = allocateNumber( env->heap, env->maxHeapSize, internal );
-                setRegister( env->luaStack, env->stackSize, a, internalRef );
+                cls_setRegister( env, a, internalRef );
 
                 //set external var used in for loop
-                setRegister( env->luaStack, env->stackSize, a + 3, internalRef); //nothing will modify the value on the heap, safe to copy
+                cls_setRegister( env, a + 3, internalRef); //nothing will modify the value on the heap, safe to copy
                 
                 //jump back to the start
                 env->pc += sBx;
@@ -805,7 +812,7 @@ bool doOp( struct WorkerEnv* env, LuaInstruction instruction ) {
             return true;
         }                     
         case OP_TFORCALL: { //  A C     R(A+3), ... ,R(A+2+C) := R(A)(R(A+1), R(A+2)); 
-            uchar a = getA( instruction );
+            uchar  a = getA( instruction );
             ushort c = getC( instruction );
 
             //R(A) itterator func
@@ -816,9 +823,9 @@ bool doOp( struct WorkerEnv* env, LuaInstruction instruction ) {
             //call R(A) with ( state, controlVar )
             //results are returned to loop vars R(A+3), ... R(A+2+C)
 
-            href closure = getRegister( env->luaStack, a );
-            href state = getRegister( env->luaStack, a + 1);
-            href ctrlVar = getRegister( env->luaStack, a + 2 );
+            href closure = cls_getRegister( env, a     );
+            href   state = cls_getRegister( env, a + 1 );
+            href ctrlVar = cls_getRegister( env, a + 2 );
 
             href args[2];
             args[0] = state;
@@ -827,9 +834,8 @@ bool doOp( struct WorkerEnv* env, LuaInstruction instruction ) {
                 return false;
 
             for( uint r = 0; r < c; r++ ) {
-                href val = ((!env->returnFlag) || (r >= env->nReturn)) ? //no return, or past return value count
-                    0 : env->luaStack[env->returnStart + r]; //nil : return value
-                if(!setRegister( env->luaStack, env->stackSize, a + 3 + r, val ))
+                href val = getReturn( env, r ); //nil : return value
+                if(!cls_setRegister( env, a + 3 + r, val ))
                     return false;
             }
             return true;
@@ -838,10 +844,10 @@ bool doOp( struct WorkerEnv* env, LuaInstruction instruction ) {
             uchar a = getA( instruction );
             int sBx = getsBx( instruction );
 
-            href test = getRegister( env->luaStack, a + 1 );
+            href test = cls_getRegister( env, a + 1 );
             if( test != 0 ) {
-                href nxt = getRegister( env->luaStack, a + 1 );
-                setRegister( env->luaStack, env->stackSize, a, nxt );
+                href nxt = cls_getRegister( env, a + 1 );
+                cls_setRegister( env, a, nxt );
                 env->pc += sBx;
             }
             env->pc++;
@@ -851,7 +857,7 @@ bool doOp( struct WorkerEnv* env, LuaInstruction instruction ) {
             ushort b = getB( instruction ); //nElements
             ushort c = getC( instruction ); //blockNum (batch of values)
 
-            href tableRef = getRegister( env->luaStack, a );
+            href tableRef = cls_getRegister( env, a );
 
             uint offset = (c-1) * LFIELDS_PER_FLUSH;
             
@@ -859,7 +865,7 @@ bool doOp( struct WorkerEnv* env, LuaInstruction instruction ) {
             href arrayPart;
             uint aSize, aCap;
             for(ushort i = 1; i <= b; i++) { //[1, b] not [0, b)
-                href value = getRegister( lua->luaStack, a + i );
+                href value = cls_getRegister( env, a + i );
                 if( !tableSetList( env, tableRef, &arrayPart, &size, &cap, offset + i, value ) )
                     return false;
             }
@@ -874,15 +880,15 @@ bool doOp( struct WorkerEnv* env, LuaInstruction instruction ) {
 
             uint nRegisters;
             if( b == 0 ) {
-                b = getNVarargs( env->luaStack );
+                b = cls_nVarargs( env );
             } else {
                 nRegisters = b - 1;
             }
 
 
             for( uint i = 0; i < nRegisters; i++ ) {
-                href value = getVararg( env->luaStack, i );
-                if( !setRegister( env->luaStack, env->stackSize, a + i, value ) )
+                href value = cls_getVararg( env, i );
+                if( !cls_setRegister( env, a + i, value ) )
                     return false;
             }
             return true;
@@ -914,31 +920,31 @@ bool callWithArgs( struct WorkerEnv* env, href closure, href* args, uint nargs )
     
     env->func = getClosureFunction( env, closure );
 
-
     uint namedArgs = env->numParams[ env->func ];
     bool isVararg = env->isVararg[ env->func ];
     uint nVarargs = nargs - namedArgs;
 
-    if(!pushStackFrame( env->luaStack, env->stackSize, env->pc, env->func, closure, nVarargs ))
-        return false;
+    href ls = allocateLuaStack( env, env->luaStack, env->pc, closure, nVarargs );
+    if( ls == 0 ) return false;
+    ls_push( env, ls )
 
     if( nargs > 0 ) {
         for( uint n = 0; n < namedArgs; n++ ) {
-            if(!setRegister( env->luaStack, env->stackSize, n, args[n] ))
+            if(!cls_setRegister( env, n, args[n] ))
                 return false;
         }
         if( isVararg ) {
             uint a = namedArgs;
             for(uint v = 0; v < nVarargs; v++) {
-                setVararg( env->luaStack, v, args[a] );
+                cls_setVararg( env, v, args[a] );
             }
         }
     }
     
     env->returnFlag = false;
-    sref callFrame = env->luaStack[0];
+    uint callDepth = cls_getDepth( env );
 
-    while( callFrame <= env->luaStack[0] ) { //wait till popped
+    while( (env->luaStack != 0) && (callFrame <= cls_getDepth( env )) ) { //wait till popped
         if(!stepProgram( env ) || hasError( env )) {
             return false;
         } 

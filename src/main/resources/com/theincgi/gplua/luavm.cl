@@ -38,7 +38,7 @@ __kernel void exec(
     __global unsigned int* lastLinesDefined,
     __global        uchar* numParams,
     __global         bool* isVararg, //could be true or passed number of args & set that way
-    __global        uchar* maxStackSize,
+    __global        uchar* maxStackSizes,
 
     //code
     __global          uint* codeIndexes,
@@ -71,12 +71,12 @@ __kernel void exec(
     struct WorkerEnv workerEnv;
 
     //VM setup
-    uint stackSize = stackSizes[0];
-    uint heapSize  = stackSizes[1];
-    uint errorSize = stackSizes[2];
+    // uint stackSize = stackSizes[0];
+    uint heapSize  = stackSizes[0];
+    uint errorSize = stackSizes[1];
 
     uchar* localHeap  = &(heap[ heapSize * glid ]);
-     uint* localStack = &(luaStack[ stackSize * glid ]);
+    //  uint* localStack = &(luaStack[ stackSize * glid ]);
     initHeap( localHeap, heapSize );
 
     href stringTable = newTable( localHeap, heapSize );
@@ -85,11 +85,13 @@ __kernel void exec(
 
     // int func = 0,a,b,c,pc=0; //func here refers to code, not a heap ref
     {
-        workerEnv.luaStack = localStack;
-        workerEnv.stackSize = stackSize;
+        // workerEnv.luaStack = localStack;
+        // workerEnv.stackSize = stackSize;
 
         workerEnv.heap = localHeap;
         workerEnv.maxHeapSize = heapSize;
+
+        workerEnv.maxStackSizes = maxStackSizes;
 
         // workerEnv.error = errorOutput;
         // workerEnv.errorSize = errorSize;

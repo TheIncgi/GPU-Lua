@@ -3,6 +3,7 @@
 #include"common.cl"
 #include"types.cl"
 #include"heapUtils.h"
+#include"luaStack.h"
 #include"vm.h"
 #include"errorMsg.cl"
 
@@ -75,7 +76,7 @@ bool heapEquals( struct WorkerEnv* env, uchar* dataSourceA, href indexA, uchar* 
                 if(!ok) return false;
 
                 if( env->returnFlag && env->nReturn >= 1) {
-                    return isTruthy( env->luaStack[ env->returnStart ] );
+                    return isTruthy( getReturn( env, 0 ) );
                 }
             }
             
@@ -164,7 +165,7 @@ bool compareLessThan( struct WorkerEnv* env, uchar* dataSourceA, uint indexA, uc
                 if(!ok) return false;
 
                 if( env->returnFlag && env->nReturn >= 1) {
-                    return isTruthy( env->luaStack[ env->returnStart ] );
+                    return isTruthy( getReturn( env, 0 ) );
                 }
                 return false; //no return value
             } 
@@ -251,7 +252,7 @@ bool compareLessThanOrEqual( struct WorkerEnv* env, uchar* dataSourceA, uint ind
                 if(!ok) return false;
 
                 if( env->returnFlag && env->nReturn >= 1) {
-                    return isTruthy( env->luaStack[ env->returnStart ] );
+                    return isTruthy( getReturn( env, 0 ) );
                 }
                 return false; //no return value
             } 
