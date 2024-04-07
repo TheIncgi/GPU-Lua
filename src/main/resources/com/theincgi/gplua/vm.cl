@@ -50,6 +50,7 @@ href kToHeap( struct WorkerEnv* env, uint index ) {
 
 bool loadk( struct WorkerEnv* env, uchar reg, uint index ) { 
     href k = kToHeap( env, index );
+    printf("K: %d\n", k);
     if( k == 0 ) return false;
 
     //nil bool number str

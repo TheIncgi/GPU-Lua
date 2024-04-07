@@ -64,105 +64,105 @@ public class KernelTestBase extends TestCommons {
 		return kernel.enqueueNDRange(queue, new int[] {1}, events.toArray(new CLEvent[events.size()]));
 	}
 	
-	public LinkedList<StackFrame> readStackFrames( int[] stack ) {
-		var frames = new LinkedList<StackFrame>();
-		var frameStart = stack[0]; //start of top frame
-		
-		//itterate from top of stack going down
-		while(frameStart > 0) {
-			var frame = new StackFrame(stack, frameStart);
-			frames.addFirst(frame);
-			
-			if(frame.returnBase != null) {
-				frameStart = frame.returnBase;
-			} else {
-				break;
-			}
-		}
-		return frames;
-	}
+//	public LinkedList<StackFrame> readStackFrames( int[] stack ) {
+//		var frames = new LinkedList<StackFrame>();
+//		var frameStart = stack[0]; //start of top frame
+//		
+//		//itterate from top of stack going down
+//		while(frameStart > 0) {
+//			var frame = new StackFrame(stack, frameStart);
+//			frames.addFirst(frame);
+//			
+//			if(frame.returnBase != null) {
+//				frameStart = frame.returnBase;
+//			} else {
+//				break;
+//			}
+//		}
+//		return frames;
+//	}
 	
-	public void printFrames(LinkedList<StackFrame> frames) {
-		System.out.println("======= STACK =======");
-		for(var it = frames.descendingIterator(); it.hasNext();) {
-			var frame = it.next();
-			System.out.println( frame );
-		}
-	}
-	
-	public static class StackFrame {
-		
-		Integer returnPC;
-		Integer returnBase;
-		
-		int top;
-		int firstFixedRegister;
-		int function;
-		int closure;
-		int[] varargs;
-		int[] registers;
-		public boolean isFirst;
-		public int base;
-		
-		public StackFrame( int[] stack, int frameBase ) {
-			isFirst = frameBase == 1;
-			this.base = frameBase;
-			top = stack[ frameBase ]; //first empty register of this frame or stack pop values
-			firstFixedRegister = stack[ frameBase + 1 ];
-			function = stack[ frameBase + 2 ];
-			closure = stack[ frameBase + 3 ];
-			
-			int nvarargs = firstFixedRegister - frameBase - 4;
-			int nregisters = top - firstFixedRegister;
-			
-			
-			varargs = new int[ nvarargs ];
-			registers = new int[ nregisters ];
-			
-			int i = frameBase + 4;
-			for(int j = 0; i < firstFixedRegister; j++, i++) {
-				varargs[j] = stack[i];
-			}
-			
-			for(int j = 0; i < top; i++, j++) {
-				registers[j] = stack[i];
-			}
-			
-			if(!isFirst) {
-				returnPC   = stack[ frameBase - 2 ];
-				returnBase = stack[ frameBase - 1 ];
-			}
-		}
-		
-		@Override
-		public String toString() {
-			var out = "";
-			if(!isFirst)
-				out = """
-				|- old base: %d
-				|- old PC:   %d
-				------	
-				""".formatted(returnBase, returnPC);
-			
-			out += "FRAME @ " + base+"\n";
-			
-			out += "|Registers: ("+registers.length+")\n";
-			for(int i = registers.length-1; i >= 0; i--) {
-				out += "| %3d | %d\n".formatted(i, registers[i]);
-			}
-			
-			out += "|Varargs: ("+varargs.length+")\n";
-			for(int i = varargs.length-1; i >= 0; i--) {
-				out += "| %3d | %d\n".formatted(i, varargs[i]);
-			}
-			
-			out += """
-			|Closure href: %d
-			|Function: %d
-			""".formatted(closure, function);
-			
-			return out;
-		}
-	}
+//	public void printFrames(LinkedList<StackFrame> frames) {
+//		System.out.println("======= STACK =======");
+//		for(var it = frames.descendingIterator(); it.hasNext();) {
+//			var frame = it.next();
+//			System.out.println( frame );
+//		}
+//	}
+//	
+//	public static class StackFrame {
+//		
+//		Integer returnPC;
+//		Integer returnBase;
+//		
+//		int top;
+//		int firstFixedRegister;
+//		int function;
+//		int closure;
+//		int[] varargs;
+//		int[] registers;
+//		public boolean isFirst;
+//		public int base;
+//		
+//		public StackFrame( int[] stack, int frameBase ) {
+//			isFirst = frameBase == 1;
+//			this.base = frameBase;
+//			top = stack[ frameBase ]; //first empty register of this frame or stack pop values
+//			firstFixedRegister = stack[ frameBase + 1 ];
+//			function = stack[ frameBase + 2 ];
+//			closure = stack[ frameBase + 3 ];
+//			
+//			int nvarargs = firstFixedRegister - frameBase - 4;
+//			int nregisters = top - firstFixedRegister;
+//			
+//			
+//			varargs = new int[ nvarargs ];
+//			registers = new int[ nregisters ];
+//			
+//			int i = frameBase + 4;
+//			for(int j = 0; i < firstFixedRegister; j++, i++) {
+//				varargs[j] = stack[i];
+//			}
+//			
+//			for(int j = 0; i < top; i++, j++) {
+//				registers[j] = stack[i];
+//			}
+//			
+//			if(!isFirst) {
+//				returnPC   = stack[ frameBase - 2 ];
+//				returnBase = stack[ frameBase - 1 ];
+//			}
+//		}
+//		
+//		@Override
+//		public String toString() {
+//			var out = "";
+//			if(!isFirst)
+//				out = """
+//				|- old base: %d
+//				|- old PC:   %d
+//				------	
+//				""".formatted(returnBase, returnPC);
+//			
+//			out += "FRAME @ " + base+"\n";
+//			
+//			out += "|Registers: ("+registers.length+")\n";
+//			for(int i = registers.length-1; i >= 0; i--) {
+//				out += "| %3d | %d\n".formatted(i, registers[i]);
+//			}
+//			
+//			out += "|Varargs: ("+varargs.length+")\n";
+//			for(int i = varargs.length-1; i >= 0; i--) {
+//				out += "| %3d | %d\n".formatted(i, varargs[i]);
+//			}
+//			
+//			out += """
+//			|Closure href: %d
+//			|Function: %d
+//			""".formatted(closure, function);
+//			
+//			return out;
+//		}
+//	}
 	
 }

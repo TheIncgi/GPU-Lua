@@ -29,7 +29,7 @@ href allocateLuaStack( struct WorkerEnv* env, href priorStack, uint priorPC, hre
                                      1 
         +           STACKFRAME_RESERVE 
         +     nVarargs * REGISTER_SIZE 
-        + maxStackSize * REGISTER_SIZE //maxStacksize might already include vararg space, idk, this is safe for now
+        + maxStackSize * REGISTER_SIZE //maxStacksize looks like it only refers to registers
     );
     if( stack == 0 ) return 0;
 
@@ -39,7 +39,7 @@ href allocateLuaStack( struct WorkerEnv* env, href priorStack, uint priorPC, hre
     putHeapInt( heap, stack +  9, STACKFRAME_RESERVE + nVarargs * REGISTER_SIZE ); //top, first empty slot, relative to stackHref
     putHeapInt( heap, stack + 13, STACKFRAME_RESERVE + nVarargs * REGISTER_SIZE ); //first reg, relative to stackHref
     putHeapInt( heap, stack + 17, closure ); 
-    putHeapInt( heap, stack + 21, maxStackSize ); 
+    putHeapInt( heap, stack + 21, maxStackSize ); //probably refers to the number of registers
     putHeapInt( heap, stack + 25, depth ); 
 
     return stack;
@@ -122,7 +122,11 @@ bool ls_setRegister( struct WorkerEnv* env, href frame, uint reg, href value ) {
     for( sref r = top; r < regPos; r += REGISTER_SIZE )
         putHeapInt( env->heap, frame + r, 0 );
     
-    putHeapInt( env->heap, regPos, value );
+    putHeapInt( env->heap, frame + regPos, value );
+    
+    if( regPos >= top )
+        putHeapInt( env->heap, frame + 9, regPos + REGISTER_SIZE );
+
     return true;
 }
 

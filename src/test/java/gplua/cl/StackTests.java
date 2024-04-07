@@ -2,6 +2,7 @@ package gplua.cl;
 
 import static org.junit.Assert.assertTrue;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
 
 import java.io.FileNotFoundException;
 import java.io.IOException;
@@ -185,99 +186,92 @@ public class StackTests extends KernelTestBase {
 		assertEquals(0, first.lsNRegisters() );
 	}
 	
-//	@Test
-//	void setVararg() throws FileNotFoundException, IOException {
-//		var events = setupProgram("""
-//		initStack( env.luaStack, 1, 2, 3 ); //3 varargs
-//		
-//		setVararg( env.luaStack, 0, 97 );
-//		setVararg( env.luaStack, 1, 98 );
-//		setVararg( env.luaStack, 2, 99 );
-//		""", 
-//		LuaSrcUtil.readBytecode("print.out"),
-//		4096, //heap
-//		1024, //stack
-//		32    //log/err
-//		);
-//		
-//		var done  = run(events);
-//		var stack = args.luaStack.readData(queue, done);
-//		
-//		var frames = readStackFrames(stack);
-//		
+	@Test
+	void setVararg() throws FileNotFoundException, IOException {
+		var events = setupProgram("""
+		href stack = allocateLuaStack( &env, 0, 0, mainClosure, 3 );
+		
+		ls_setVararg( &env, stack, 0, 97 );
+		ls_setVararg( &env, stack, 1, 98 );
+		ls_setVararg( &env, stack, 2, 99 );
+		
+		returnInfo[0] = stack;
+		""", 
+		LuaSrcUtil.readBytecode("print.out"),
+		6142 //heap
+		);
+		
+		var done  = run(events);
+		var heap  = args.heap.readData(queue, done);
+		var returnInfo = args.returnInfo.readData(queue);
+		
+		var stack = getChunkData(heap, returnInfo[0]);
+
+		System.out.println(stack);
+		
+		assertEquals(97, stack.lsGetVararg(0));
+		assertEquals(98, stack.lsGetVararg(1));
+		assertEquals(99, stack.lsGetVararg(2));
+	}
+	
+	@Test
+	void setRegister() throws FileNotFoundException, IOException, InterruptedException {
+		var events = setupProgram("""
+		href stack = allocateLuaStack( &env, 0, 0, mainClosure, 3 );
+		
+		ls_setRegister( &env, stack, 3, 105 );
+		returnInfo[0] = stack;
+		""", 
+		LuaSrcUtil.compile("local a, b, c, d = 1,2,3,4 return a,b,c,d"),
+		6172 //heap
+		);
+		
+		var done  = run(events);
+		var heap  = args.heap.readData(queue, done);
+		var returnInfo = args.returnInfo.readData(queue);
+		
+		var stack = getChunkData(heap, returnInfo[0]);
+
+		System.out.println(stack);
+		
+		assertEquals(4,   stack.lsNRegisters());
+		assertEquals(0,   stack.lsGetRegister(0));
+		assertEquals(0,   stack.lsGetRegister(1));
+		assertEquals(0,   stack.lsGetRegister(2));
+		assertEquals(105,   stack.lsGetRegister(3));
+	}
+	
+	@Test
+	void loadK() throws FileNotFoundException, IOException {
+		var events = setupProgram("""
+		href stack = allocateLuaStack( &env, 0, 0, mainClosure, 3 );
+		env.luaStack = stack;
+		
+		bool ok = loadk( &env, 1, 0 ); //reg 1, const 0
+		returnInfo[ 0 ] = stack;
+		""", 
+		LuaSrcUtil.readBytecode("print.out"), //print"hello"
+		5112 //heap
+		);
+		
+		var done  = run(events);
+		var heap  = args.heap.readData(queue, done);
+		var returnInfo = args.returnInfo.readData(queue);
+		
+		var stack = getChunkData(heap, returnInfo[0]);
+
+		System.out.println(stack);
+		
 //		printFrames( frames );
-//		
-//		var firstFrame = frames.peekFirst();
-//		
-//		assertEquals(97, firstFrame.varargs[0]);
-//		assertEquals(98, firstFrame.varargs[1]);
-//		assertEquals(99, firstFrame.varargs[2]);
-//	}
-//	
-//	@Test
-//	void setRegister() throws FileNotFoundException, IOException {
-//		var events = setupProgram("""
-//		initStack( env.luaStack, 1, 2, 3 ); //3 varargs
-//		
-//		setRegister( env.luaStack, env.stackSize, 3, 105 );
-//		""", 
-//		LuaSrcUtil.readBytecode("print.out"),
-//		4096, //heap
-//		1024, //stack
-//		32    //log/err
-//		);
-//		
-//		var done  = run(events);
-//		var stack = args.luaStack.readData(queue, done);
-//		
-//		var frames = readStackFrames(stack);
-//		
-//		printFrames( frames );
-//		
-//		var firstFrame = frames.peekFirst();
-//		
-//		assertEquals(4,   firstFrame.registers.length);
-//		assertEquals(0,   firstFrame.registers[0]);
-//		assertEquals(0,   firstFrame.registers[1]);
-//		assertEquals(0,   firstFrame.registers[2]);
-//		assertEquals(105, firstFrame.registers[3]);
-//	}
-//	
-//	@Test
-//	void loadK() throws FileNotFoundException, IOException {
-//		var events = setupProgram("""
-//		initStack( env.luaStack, 1, 2, 3 ); //3 varargs
-//		
-//		bool ok = loadk( &env, 3, 0 ); //reg 3, const 0
-//		errorOutput[ 0 ] = ok ? 1 : 0; //log
-//		""", 
-//		LuaSrcUtil.readBytecode("print.out"), //print"hello"
-//		5112, //heap
-//		1024, //stack
-//		32    //log/err
-//		);
-//		
-//		var done  = run(events);
-//		var stack = args.luaStack.readData(queue, done);
-//		var heap = args.heap.readData(queue);
-//		var log  = args.errorBuffer.readData(queue);
-//		
-//		var frames = readStackFrames(stack);
-//		
-////		printFrames( frames );
-////		dumpHeap(heap);
-//		
-//		assertEquals(1, log[0], "allocation failed");
-//		
-//		var firstFrame = frames.peekFirst();
-//		var regHref = firstFrame.registers[3];
-//		var heapValue = getChunkData(heap, regHref);
-//		
-////		System.out.println(heapValue);
-//		
-//		assertEquals("print", heapValue.stringValue());
-//	}
-//	
+//		dumpHeap(heap);
+		
+		var regHref = stack.lsGetRegister(1);
+		assertNotEquals(0, regHref);
+		
+		var value = getChunkData(heap, regHref);
+		assertEquals("print", value.stringValue());
+	}
+	
 //	@Test
 //	void getTabUp() throws FileNotFoundException, IOException {
 //		var events = setupProgram("""		
