@@ -78,6 +78,9 @@ public abstract class TestCommons {
 	}
 	
 	public static record TaggedMemory(int allocationIndex, boolean inUse, boolean marked, byte[] data) {
+		public static final int STACKFRAME_RESERVE = 1 + (6*4);
+		public static final int REGISTER_SIZE = 4;
+ 
 		public int readInt(int offset) throws IOException {
 			return readIntAt(data, offset);
 		}
@@ -145,6 +148,67 @@ public abstract class TestCommons {
 		public int stringLength() throws IOException {
 			assertType(LuaTypes.STRING);
 			return readInt( 1 );
+		}
+		
+		public int lsGetPriorStack() throws IOException {
+			assertType(LuaTypes.LUA_STACK);
+			return readInt( 1 );
+		}
+		
+		public int lsGetPriorPC() throws IOException {
+			assertType(LuaTypes.LUA_STACK);
+			return readInt( 5 );
+		}
+		
+		public int lsGetTop() throws IOException {
+			assertType(LuaTypes.LUA_STACK);
+			return readInt( 9 );
+		}
+		
+		public int lsGetFirstRegPos() throws IOException {
+			assertType(LuaTypes.LUA_STACK);
+			return readInt( 13 );
+		}
+		
+		public int lsGetClosure() throws IOException {
+			assertType(LuaTypes.LUA_STACK);
+			return readInt( 17 );
+		}
+		
+		public int lsGetMaxStackSize() throws IOException {
+			assertType(LuaTypes.LUA_STACK);
+			return readInt( 21 );
+		}
+		
+		public int lsGetDepth() throws IOException {
+			assertType(LuaTypes.LUA_STACK);
+			return readInt( 25 );
+		}
+		
+		public int lsNVarargs() throws IOException {
+			assertType(LuaTypes.LUA_STACK);
+			return (lsGetFirstRegPos() - STACKFRAME_RESERVE) / REGISTER_SIZE;
+		}
+		
+		public int lsNRegisters() throws IOException {
+			assertType(LuaTypes.LUA_STACK);
+			return (lsGetTop() - lsGetFirstRegPos()) / REGISTER_SIZE;
+		}
+		
+		public int lsGetVararg( int i ) throws IOException {
+			assertType(LuaTypes.LUA_STACK);
+			if( i >= lsNVarargs() )
+				throw new ArrayIndexOutOfBoundsException(i);
+			return readInt( STACKFRAME_RESERVE + i*REGISTER_SIZE );
+		}
+		
+		public int lsGetRegister( int i ) throws IOException {
+			assertType(LuaTypes.LUA_STACK);
+			int first = lsGetFirstRegPos();
+			int pos = first + i * REGISTER_SIZE;
+			if( pos >= lsGetTop() )
+				throw new ArrayIndexOutOfBoundsException( i );
+			return readInt( pos );
 		}
 		
 		public String stringValue() throws IOException {
@@ -228,15 +292,35 @@ public abstract class TestCommons {
 				}
 				case LuaTypes.SUBSTRING: {
 					builder.append("SUBSTRING:\n")
-						.append("  Ref:     \n").append(readInt(1))
-						.append("  Start:   \n").append(readInt(5))
-						.append("  Length:  \n").append(readInt(9));
+						.append(  "  Ref:     ").append(readInt(1))
+						.append("\n  Start:   ").append(readInt(5))
+						.append("\n  Length:  ").append(readInt(9));
 //					.append("  Preview: \"").append().append("\"");
 					break;
 				}
 				case LuaTypes.NATIVE_FUNC: {
 					builder.append("NATIVE FUNC:\n")
 						.append("  ID: ").append(readInt(1));
+					break;
+				}
+				
+				case LuaTypes.LUA_STACK: {
+					builder.append("LUA STACK:\n")
+						.append(  "  PriorStack: ").append( lsGetPriorStack() )
+						.append("\n  PriorPC:    ").append( lsGetPriorPC() )
+						.append("\n  Top:        ").append( lsGetTop() )
+						.append("\n  First:      ").append( lsGetFirstRegPos() )
+						.append("\n  Closure:    ").append( lsGetClosure() )
+						.append("\n  maxStack:   ").append( lsGetMaxStackSize() )
+						.append("\n  depth:      ").append( lsGetDepth() )
+						.append("\n  Varargs: ("+ lsNVarargs() +")\n");
+					for(int v = 0; v < lsNVarargs(); v++) {
+						builder.append("    [%3d] %d\n".formatted(v, lsGetVararg(v)));
+					}
+					builder.append("  Registers: ("+ lsNRegisters() +")\n");
+					for(int r = 0; r < lsNRegisters(); r++) {
+						builder.append("    [%3d] %d\n".formatted(r, lsGetRegister(r)));
+					}
 					break;
 				}
 				default:

@@ -14,7 +14,8 @@ href heapString(struct WorkerEnv* env, string str);
 href _heapString(struct WorkerEnv* en, string str, uint strLen);
 //buffer size must be at least INT_STRING_BUFFER_SIZE, anything smaller may cause array index out of bounds
 void intToCharbuf( int value, char* buffer );
-href concatRaw( struct WorkerEnv* env, string* strings, uint nStrings );
+void copyToBuf(string str, char* buf);
+href concatRaw( struct WorkerEnv* env, char** strings, uint nStrings, uint* lengths );
 //min size 19
-void typeName( uint type, string* buffer, uint bufferSize );
+void typeName( uint type, char* buffer, uint bufferSize );
 #endif

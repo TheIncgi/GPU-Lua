@@ -11,11 +11,12 @@ public class LuaTypes {
 		TABLE = 5,
 		FUNC = 6,
 		USERDATA = 7,
-//		THREAD = 8, //not supported
+		THREAD = 8,
 		ARRAY = 0x50,
 		HASHMAP = 0x51,
 		CLOSURE = 0x52,
 		SUBSTRING = 0x54,
 		NATIVE_FUNC = 0x56,
-		ERROR = 0x57;
+		ERROR = 0x57, //deprecated
+	    LUA_STACK = 0x58;
 }

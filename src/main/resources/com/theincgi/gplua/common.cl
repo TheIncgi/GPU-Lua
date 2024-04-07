@@ -47,4 +47,16 @@ uint strLen( string str ) {
     return size;
 }
 
+uint strBufLen( char* str ) {
+    int size = 0;
+    while( size >= 0 ) {
+        if( str[size] == 0 )
+            break;
+        size++;
+    }
+    if(size <= 0)
+        return 0;
+    return size;
+}
+
 #endif

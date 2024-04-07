@@ -12,7 +12,7 @@ void _cn_argErr( struct WorkerEnv* env, uchar arg, uchar expectedType, uchar got
 }
 
 href _cn_argAssert( struct WorkerEnv* env, href a, uchar arg, uchar type ) {
-    href argRef = getHeapInt( a + arg * REGISTER_SIZE);//env->luaStack[ a + arg ];
+    href argRef = getHeapInt( env->heap, a + arg * REGISTER_SIZE ); //env->luaStack[ a + arg ];
     uchar argType = env->heap[ argRef ];
     
     if(argType == T_INT)

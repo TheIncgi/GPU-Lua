@@ -1,5 +1,5 @@
 #include"luaStack.h"
-#include"common.h"
+#include"common.cl"
 #include"heapUtils.h"
 #include"stackUtils.h"
 #include"vm.h"
@@ -18,7 +18,7 @@
 href allocateLuaStack( struct WorkerEnv* env, href priorStack, uint priorPC, href closure, uint nVarargs ) {
     uchar* heap = env->heap;
     uint funcIndex = getClosureFunction( env, closure );
-    uint maxStacksize = env.maxStackSizes[ funcIndex ];
+    uint maxStackSize = env->maxStackSizes[ funcIndex ];
 
     uint depth = 0;
     if( priorStack != 0 ) {
@@ -28,7 +28,7 @@ href allocateLuaStack( struct WorkerEnv* env, href priorStack, uint priorPC, hre
     href stack = allocateHeap( heap, env->maxHeapSize, 
                                      1 
         +           STACKFRAME_RESERVE 
-        +      varargs * REGISTER_SIZE 
+        +     nVarargs * REGISTER_SIZE 
         + maxStackSize * REGISTER_SIZE //maxStacksize might already include vararg space, idk, this is safe for now
     );
     if( stack == 0 ) return 0;
@@ -36,8 +36,8 @@ href allocateLuaStack( struct WorkerEnv* env, href priorStack, uint priorPC, hre
     heap[stack] = T_LUA_STACK;
     putHeapInt( heap, stack +  1, priorStack ); //0 if none
     putHeapInt( heap, stack +  5, priorPC    ); // 0 if none
-    putHeapInt( heap, stack +  9, STACKFRAME_RESERVE + nVarargs ); //top, first empty slot, relative to stackHref
-    putHeapInt( heap, stack + 13, STACKFRAME_RESERVE + nVarargs ); //first reg, relative to stackHref
+    putHeapInt( heap, stack +  9, STACKFRAME_RESERVE + nVarargs * REGISTER_SIZE ); //top, first empty slot, relative to stackHref
+    putHeapInt( heap, stack + 13, STACKFRAME_RESERVE + nVarargs * REGISTER_SIZE ); //first reg, relative to stackHref
     putHeapInt( heap, stack + 17, closure ); 
     putHeapInt( heap, stack + 21, maxStackSize ); 
     putHeapInt( heap, stack + 25, depth ); 
@@ -54,7 +54,7 @@ uint ls_getPriorPC( struct WorkerEnv* env, href frame ) {
 }
 
 uint ls_getDepth( struct WorkerEnv* env, href frame ) {
-    return getHeapInt( heap, frame + 25 );
+    return getHeapInt( env->heap, frame + 25 );
 }
 
 href ls_getClosure( struct WorkerEnv* env, href frame ) {
@@ -67,7 +67,7 @@ uint ls_getFunction( struct WorkerEnv* env, href frame ) {
 }
 
 sref ls_getVarargSref( struct WorkerEnv* env, href frame, uint varg ) {
-    return STACKFRAME_RESERVE + vararg * REGISTER_SIZE;
+    return STACKFRAME_RESERVE + varg * REGISTER_SIZE;
 }
 
 sref ls_getRegisterSref( struct WorkerEnv* env, href frame, uint reg ) {
@@ -93,7 +93,7 @@ href ls_getRegisterHref( struct WorkerEnv* env, href frame, uint reg ) {
 
 
 href ls_getVararg( struct WorkerEnv* env, href frame, uint varg ) {
-    return getHeapInt( env->heap, ls_getVarargHref( env, varg) );
+    return getHeapInt( env->heap, ls_getVarargHref( env, frame, varg ) );
 }
 
 href ls_getRegister( struct WorkerEnv* env, href frame, uint reg ) {
@@ -140,17 +140,17 @@ bool ls_pop( struct WorkerEnv* env ) {
     if( env->luaStack == 0 )
         return false;
     
-    href prior = ls_getPriorStack( env, env->luaStackHref );
-    uint pc = ls_getPriorPC( env, env->luaStackHref );
+    href prior = ls_getPriorStack( env, env->luaStack );
+    uint pc = ls_getPriorPC( env, env->luaStack );
     env->pc = pc;
-    env->luaStackHref = prior;
+    env->luaStack = prior;
     return true;
 }
 
 void ls_push( struct WorkerEnv* env, href luaStack ) {
     env->pc = 0;
     env->func = ls_getFunction( env, luaStack );
-    env->luaStackHref = luaStack;
+    env->luaStack = luaStack;
 }
 
 //helpers for CurrentLuaStack (cls)
@@ -196,7 +196,7 @@ href cls_getRegister( struct WorkerEnv* env, uint reg ) {
 void cls_setVararg( struct WorkerEnv* env, uint varg, href value ) {
     ls_setVararg( env, env->luaStack, varg, value );
 }
-bool cls_setRegister( struct WorkerEnv* env, href frame, uint reg, href value ) {
+bool cls_setRegister( struct WorkerEnv* env, uint reg, href value ) {
     return ls_setRegister( env, env->luaStack, reg, value );
 }
 uint cls_nVarargs( struct WorkerEnv* env ) {
@@ -216,7 +216,7 @@ href getReturn( struct WorkerEnv* env, uint r ) {
 
 href redefineLuaStack( struct WorkerEnv* env, href closure, uint nVarargs ) {
     href old = env->luaStack;
-    return redefined = allocateLuaStack( 
+    return allocateLuaStack( 
         env, 
         ls_getPriorStack( env, old ),
         ls_getPriorPC( env, old ),

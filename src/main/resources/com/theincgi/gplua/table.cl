@@ -199,12 +199,12 @@ bool tableRawSet( struct WorkerEnv* env, href tableIndex, href key, href value )
 //arrayPart & arraySize/capacity will be solved if arrayPart is 0
 bool tableSetList( struct WorkerEnv* env, href tableIndex, href* arrayPart, uint* size, uint* cap, uint key, href value ) {
     if( *arrayPart == 0 ) {
-        *arrayPart = tableCreateArrayPart( env->heap, env->maxHeapSize ); //probably already created, but just to be safe
+        *arrayPart = tableCreateArrayPart( env->heap, env->maxHeapSize, tableIndex ); //probably already created, but just to be safe
         *size = arraySize( env->heap, *arrayPart );
         *cap  = arrayCapacity( env->heap, *arrayPart );
     }
     
-    if( (key-1) < cap ) {
+    if( (key-1) < *cap ) {
         arraySet( env->heap, *arrayPart, key-1, value );
         return true;
     } else {

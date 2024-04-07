@@ -48,20 +48,22 @@ void intToCharbuf( int value, char* buffer ) {
         buffer[ c++ ] = '-';
         value = -value;
     }
-    uint digits = (uint)ceil(log10(value));
+    uint digits = (uint)ceil(log10((double)value));
     for(uint digitPos = digitPos-1; digitPos >= 0; digitPos--) { //left to right
-        buffer[ c++ ] = '0' + ( (int)( value / exp10(digitPos) ) );
+        buffer[ c++ ] = '0' + ( (int)( value / exp10((double)digitPos) ) );
     }
     buffer[ c ] = 0;
 }
 
-href concatRaw( struct WorkerEnv* env, string* strings, uint nStrings ) {
+//lenghts can't be dynamicly allocated, so just need to pass in array with right size
+href concatRaw( struct WorkerEnv* env, char** strings, uint nStrings, uint* lengths ) {
     //TODO check for dupes in string table
     uchar* heap = env->heap;
     uint totalLen = 1; //null teminated
-    uint lengths[ nStrings ];
+    
     for( uint s = 0; s < nStrings; s++ ) {
-        totalLen += lengths[s] = strLen( strings[s] );
+        lengths[s] = strBufLen( strings[s] );
+        totalLen += lengths[s];
     }
     
     href str = allocateHeap( heap, env->maxHeapSize, 5 + totalLen );
@@ -73,11 +75,18 @@ href concatRaw( struct WorkerEnv* env, string* strings, uint nStrings ) {
     uint w = 0;
     for( uint s = 0; s < nStrings; s++ ) {
         for( uint sChar = 0; sChar < lengths[s]; sChar++ ) {
-            heap[ w++ ] = strings[sChar];
+            heap[ w++ ] = (uchar) strings[sChar];
         }
     }
 
     return str;
+}
+
+void copyToBuf( string str, char* buf ) {
+    uint len = strLen( str );
+    for(uint i = 0; i < len; i++)
+        buf[i] = str[i];
+    buf[len] = 0;
 }
 
 //min size 19

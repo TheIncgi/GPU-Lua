@@ -38,11 +38,11 @@ public class KernelTestBase extends TestCommons {
 		return LuaSrcUtil.readBytecode(compiled.getPath());
 	}
 	
-	public List<CLEvent> setupProgram( String src, String luaFileName, int heapSize, int stackSize, int errSize ) throws IOException, InterruptedException {
-		return setupProgram(src, getSrc(luaFileName), heapSize, stackSize, errSize);
+	public List<CLEvent> setupProgram( String src, String luaFileName, int heapSize ) throws IOException, InterruptedException {
+		return setupProgram(src, getSrc(luaFileName), heapSize);
 	}
 	
-	public List<CLEvent> setupProgram( String src, byte[] byteCode, int heapSize, int stackSize, int errSize ) throws IOException {
+	public List<CLEvent> setupProgram( String src, byte[] byteCode, int heapSize ) throws IOException {
 		program = context.createProgram( src );
 		program.addInclude("src/main/resources/com/theincgi/gplua");
 		program.build();
@@ -50,9 +50,8 @@ public class KernelTestBase extends TestCommons {
 		
 		var events = args.loadBytecode(byteCode, queue);
 		events.add(args.heap.fillEmpty(heapSize, queue));
-		events.add(args.luaStack.fillEmpty(stackSize, queue));
-		events.add(args.errorBuffer.fillEmpty(errSize, queue));
-		events.addAll(args.setStackSizes(queue, stackSize, heapSize, errSize, workSize));
+//		events.add(args.luaStack.fillEmpty(stackSize, queue));
+		events.addAll(args.setStackSizes(queue, heapSize, workSize));
 		events.add(args.setMaxExecution(queue, 30_000));
 		events.add(args.returnInfo.fillEmpty(2, queue));
 		

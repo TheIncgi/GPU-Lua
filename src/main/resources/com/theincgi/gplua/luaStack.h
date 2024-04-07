@@ -1,6 +1,9 @@
 #ifndef LUASTACK_H
 #define LUASTACK_H
 
+#include"vm.h"
+#include"common.cl"
+
 //type + 6 ints
 #define STACKFRAME_RESERVE (1 + 6*4)
 #define REGISTER_SIZE 4
@@ -9,7 +12,7 @@ href allocateLuaStack( struct WorkerEnv* env, href priorStack, uint priorPC, hre
 
 href ls_getPriorStack( struct WorkerEnv* env, href frame );
 uint ls_getPriorPC( struct WorkerEnv* env, href frame );
-uint ls_getDepth( struct WorkerEnv* env, href frame )
+uint ls_getDepth( struct WorkerEnv* env, href frame );
 href ls_getClosure( struct WorkerEnv* env, href frame );
 uint ls_getFunction( struct WorkerEnv* env, href frame );
 
@@ -28,7 +31,8 @@ bool ls_setRegister( struct WorkerEnv* env, href frame, uint reg, href value );
 uint ls_nVarargs( struct WorkerEnv* env, href frame );
 uint ls_nRegisters( struct WorkerEnv* env, href frame );
 
-bool ls_pop( struct WorkerEnv* env );
+bool ls_pop( struct WorkerEnv* env );\
+void ls_push( struct WorkerEnv* env, href luaStack );
 
 //helpers for CurrentLuaStack (cls)
 href cls_getPriorStack( struct WorkerEnv* env );
@@ -45,7 +49,7 @@ href cls_getRegisterHref( struct WorkerEnv* env, uint reg );
 href cls_getVararg( struct WorkerEnv* env, uint varg );
 href cls_getRegister( struct WorkerEnv* env, uint reg );
 void cls_setVararg( struct WorkerEnv* env, uint varg, href value );
-bool cls_setRegister( struct WorkerEnv* env, href frame, uint reg, href value );
+bool cls_setRegister( struct WorkerEnv* env, uint reg, href value );
 uint cls_nVarargs( struct WorkerEnv* env );
 uint cls_nRegisters( struct WorkerEnv* env );
 

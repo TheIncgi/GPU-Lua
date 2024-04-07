@@ -28,41 +28,65 @@ void throwSO( struct WorkerEnv* env ) {
 }
 
 void throwUnexpectedBytecodeOp( struct WorkerEnv* env, int op ) {
+    char msg[ 24 ];
+    copyToBuf( "bytecode: unhandled op ", msg );
+
     char ibuf[ INT_STRING_BUFFER_SIZE ];
-    intToCharbuf( op, ibuf, INT_STRING_BUFFER_SIZE );
-    strings strs[2];
-    strs[0] = "bytecode: unhandled op ";
+    intToCharbuf( op, ibuf );
+
+    char* strs[2];
+    strs[0] = msg;
     strs[1] = ibuf;
-    throwHref( env, concatRaw( env, strs, 2 ));
+
+    uint lenBuf[2];
+
+    throwHref( env, concatRaw( env, strs, 2, lenBuf ));
 }
 
 void throwCall( struct WorkerEnv* env, uint type ) {
+    char msg[ 17 ];
+    copyToBuf( "attempt to call ", msg );
+
     char buffer[ TYPE_NAME_BUFFER_SIZE ];
     typeName( type, buffer, TYPE_NAME_BUFFER_SIZE );
 
-    string strs[2];
-    strs[0] = "attempt to call ";
+    char* strs[2];
+    strs[0] = msg;
     strs[1] = buffer;
-
-    throwHref( env, concatRaw( env, strs, 2 ));
+    
+    uint lenBuf[2];
+    throwHref( env, concatRaw( env, strs, 2, lenBuf ));
 }
 
+//for use with math ops, string op must not be more than 2 long
 void err_attemptToPerform( struct WorkerEnv* env, uint typeA, string op, uint typeB ) {
-    string strs[6];
+    char msg[ 20 ];
+    copyToBuf( "attempt to perform ", msg );
+
+    char space[ 2 ];
+    space[0] = ' ';
+    space[1] = 0;
+
     char buffer1[ TYPE_NAME_BUFFER_SIZE ];
     char buffer2[ TYPE_NAME_BUFFER_SIZE ];
 
     typeName( typeA, buffer1, TYPE_NAME_BUFFER_SIZE );
     typeName( typeB, buffer2, TYPE_NAME_BUFFER_SIZE );
 
-    strs[0] = "attempt to perform ";
+    char opBuf[3];
+    copyToBuf( op, opBuf );
+
+    char* strs[6];
+    strs[0] = msg;
     strs[1] = buffer1;
-    strs[2] = " ";
-    strs[3] = op;
-    strs[4] = " "
+    strs[2] = space;
+    strs[3] = opBuf;
+    strs[4] = space;
     strs[5] = buffer2;
 
-    throwHref( env, concatRaw( env, strs, 6 ) );
+    uint lenBuf[6];
+
+    throwHref( env, concatRaw( env, strs, 6, lenBuf ) );
 }
 
 

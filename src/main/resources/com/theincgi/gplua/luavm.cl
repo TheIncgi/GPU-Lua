@@ -7,9 +7,10 @@
 #include"opUtils.cl"
 #include"strings.h"
 #include"globals.cl"
-#include"stackUtils.h"
+// #include"stackUtils.h"
 #include"vm.h"
 #include"closure.h"
+#include"luaStack.h"
 
 
 //manually include .cl for headers since openCL doesn't do that
@@ -19,8 +20,9 @@
 #include"hashmap.cl"
 #include"heapUtils.cl"
 #include"strings.cl"
-#include"stackUtils.cl"
+// #include"stackUtils.cl"
 #include"closure.cl"
+#include"luaStack.cl"
 			
 
 __kernel void exec(

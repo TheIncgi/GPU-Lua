@@ -55,7 +55,7 @@ bool op_settable( struct WorkerEnv* env, uchar a, ushort b, ushort c );
 bool _settable( struct WorkerEnv* env, href table, ushort b, ushort c );
 
 void returnRange( struct WorkerEnv* env, uchar a, uchar b);
-
+bool isTruthy( href value );
 bool doOp( struct WorkerEnv* env, LuaInstruction instruction );
 
 bool _readAsDouble( uchar* dataSource, uint start, double* result );

@@ -142,7 +142,7 @@ bool compareLessThan( struct WorkerEnv* env, uchar* dataSourceA, uint indexA, uc
         case T_TABLE: { //TODO: metatable __eq
             if( dataSourceA != dataSourceB || dataSourceA != env->heap ) { //all tables are on the heap
                 string unexpected = "internal err: table not on heap";
-                throwErr( unexpected );
+                throwErr( env, unexpected );
                 return false;
             }
 
@@ -160,7 +160,7 @@ bool compareLessThan( struct WorkerEnv* env, uchar* dataSourceA, uint indexA, uc
                 args[0] = indexA;
                 args[1] = indexB;
 
-                bool ok = callWithArgs( env, metaA, args, 2 );
+                bool ok = callWithArgs( env, meta, args, 2 );
                 //error set by callWithArgs if not ok
                 if(!ok) return false;
 
@@ -229,7 +229,7 @@ bool compareLessThanOrEqual( struct WorkerEnv* env, uchar* dataSourceA, uint ind
         case T_TABLE: { //TODO: metatable __eq
             if( dataSourceA != dataSourceB || dataSourceA != env->heap ) { //all tables are on the heap
                 string unexpected = "internal err: table not on heap";
-                throwErr( unexpected );
+                throwErr( env, unexpected );
                 return false;
             }
 
@@ -247,7 +247,7 @@ bool compareLessThanOrEqual( struct WorkerEnv* env, uchar* dataSourceA, uint ind
                 args[0] = indexA;
                 args[1] = indexB;
 
-                bool ok = callWithArgs( env, metaA, args, 2 );
+                bool ok = callWithArgs( env, meta, args, 2 );
                 //error set by callWithArgs if not ok
                 if(!ok) return false;
 
