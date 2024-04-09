@@ -71,13 +71,7 @@ bool heapEquals( struct WorkerEnv* env, uchar* dataSourceA, href indexA, uchar* 
                 args[1] = indexB;
 
                 return false;
-                bool ok = callWithArgs( env, metaA, args, 2 );
-                //if not ok, error should be set by callWithArgs
-                if(!ok) return false;
-
-                if( env->returnFlag && env->nReturn >= 1) {
-                    return isTruthy( getReturn( env, 0 ) );
-                }
+                return setupCallWithArgs( env, metaA, args, 2 );
             }
             
             return false; //no event or event returned nil
@@ -160,14 +154,7 @@ bool compareLessThan( struct WorkerEnv* env, uchar* dataSourceA, uint indexA, uc
                 args[0] = indexA;
                 args[1] = indexB;
 
-                bool ok = callWithArgs( env, meta, args, 2 );
-                //error set by callWithArgs if not ok
-                if(!ok) return false;
-
-                if( env->returnFlag && env->nReturn >= 1) {
-                    return isTruthy( getReturn( env, 0 ) );
-                }
-                return false; //no return value
+                return setupCallWithArgs( env, meta, args, 2 );
             } 
             //else fall through to error
         }
@@ -247,14 +234,8 @@ bool compareLessThanOrEqual( struct WorkerEnv* env, uchar* dataSourceA, uint ind
                 args[0] = indexA;
                 args[1] = indexB;
 
-                bool ok = callWithArgs( env, meta, args, 2 );
+                return setupCallWithArgs( env, meta, args, 2 );
                 //error set by callWithArgs if not ok
-                if(!ok) return false;
-
-                if( env->returnFlag && env->nReturn >= 1) {
-                    return isTruthy( getReturn( env, 0 ) );
-                }
-                return false; //no return value
             } 
             //else fall through to error
         }

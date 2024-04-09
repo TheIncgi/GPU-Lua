@@ -145,9 +145,17 @@ bool ls_pop( struct WorkerEnv* env ) {
         return false;
     
     href prior = ls_getPriorStack( env, env->luaStack );
-    uint pc = ls_getPriorPC( env, env->luaStack );
-    env->pc = pc;
+    if( prior == 0 ) {
+        env->luaStack = 0;
+        env->func = 0;
+        env->pc = 0;
+        return true;
+    }
+    
+    env->pc = ls_getPriorPC( env, env->luaStack );
+    env->func = ls_getFunction( env, prior );
     env->luaStack = prior;
+
     return true;
 }
 

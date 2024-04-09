@@ -14,4 +14,8 @@ strings table should be treated as weak keys
 
 strings table can be a hash set since the value we look up is the reference to the string based on hash (currently duplicate as key = key)
 
-if sweep region covers return values, mark the object
+check for other callWithArgs / return where not using getReturn( env, r )
+heap mark needs updating
+
+Table, getByConst / getByHeap
+change recursion to instead use a while loop, defining recursive call causes crash...

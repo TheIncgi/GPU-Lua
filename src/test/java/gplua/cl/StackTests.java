@@ -272,137 +272,122 @@ public class StackTests extends KernelTestBase {
 		assertEquals("print", value.stringValue());
 	}
 	
-//	@Test
-//	void getTabUp() throws FileNotFoundException, IOException {
-//		var events = setupProgram("""		
-//		href mainClosure = createClosure( &env, 0, globals, 1 );
-//		setClosureUpval( &env, mainClosure, 0, env.globals );
-//		
-//		initStack( env.luaStack, 0, mainClosure, 0 ); //func 0, mainClosure, 0 varargs
-//		
-//		bool ok = getTabUp( &env, 2, 0, 0 | 0x100 );
-//		errorOutput[ 0 ] = ok ? 1 : 0; //log
-//		""", 
-//		LuaSrcUtil.readBytecode("returnMath.out"), //return math
-//		6000, //heap
-//		1024, //stack
-//		32    //log/err
-//		);
-//		
-//		var done  = run(events);
-//		var stack = args.luaStack.readData(queue, done);
-//		var heap = args.heap.readData(queue);
-//		var log  = args.errorBuffer.readData(queue);
-//		
-//		var frames = readStackFrames(stack);
-//		
-//		printFrames( frames );
-//		dumpHeap(heap);
-//		
-//		assertEquals(1, log[0], "allocation failed");
-//		
-//		var firstFrame = frames.peekFirst();
-//		var regHref = firstFrame.registers[2];
-//		var heapValue = getChunkData(heap, regHref);
-//		
-////				System.out.println(heapValue);
-//		
-//		assertEquals( LuaTypes.TABLE, heapValue.type() );
-//	}
-//	
-//	@Test
-//	void readInstruction() throws FileNotFoundException, IOException {
-//		var events = setupProgram("""		
-//		
-//		LuaInstruction inst = env.code[ env.codeIndexes[ env.func ] + env.pc ];
-//		
-//		putHeapInt( errorOutput,  0,            inst   );
-//		putHeapInt( errorOutput,  4, getOpcode( inst ) );
-//		putHeapInt( errorOutput,  8, getA(      inst ) );
-//		putHeapInt( errorOutput, 12, getB(      inst ) );
-//		putHeapInt( errorOutput, 16, getC(      inst ) );
-//		
-//		""", 
-//		LuaSrcUtil.readBytecode("math.log.out"), //return math.log( 10 )
-//		6000, //heap
-//		1024, //stack
-//		2048    //log/err
-//		);
-//		
-//		var done  = run(events);
-////		var stack = args.luaStack.readData(queue, done);
-////		var heap = args.heap.readData(queue);
-//		var log  = args.errorBuffer.readData(queue);
-//		
-//		int inst 	= readIntAt(log,  0);
-//		int opCode 	= readIntAt(log,  4);
-//		int a 		= readIntAt(log,  8);
-//		int b 		= readIntAt(log, 12);
-//		int c 		= readIntAt(log, 16);
-////		var frames = readStackFrames(stack);
-//		
-//		
-//		assertEquals(     6, opCode, "opcode wrong");
-//		assertEquals(     0,      a, "a (target register)");
-//		assertEquals(     0,      b, "b (table upval index (_ENV)) ");
-//		assertEquals( 0x100,      c, "c (key, const or reg) ");
-//		
-//		
-//	}
-//	
-//	@Test
-//	void nativeCall() throws FileNotFoundException, IOException {
-//		var events = setupProgram("""		
-//		href mainClosure = createClosure( &env, 0, globals, 1 ); //upvals, 1 (_ENV)
-//		setClosureUpval( &env, mainClosure, 0, env.globals );    //_ENV
-//		
-//		//initStack( env.luaStack, 0, mainClosure, 0 ); //func 0, mainClosure, 0 varargs
-//		
-//		bool ok = 
-//		  call( &env, mainClosure );
-//		
-//		errorOutput[ 0 ] = ok ? 1 : 0; //log
-//		errorOutput[ 1 ] = env.returnFlag ? 1 : 0;
-//		putHeapInt( errorOutput, 2, env.code[ env.codeIndexes[ env.func ] + env.pc ] );
-//		
-//		if( !env.returnFlag ) return;
-//		
-//		putHeapInt( errorOutput, 6, env.luaStack[ env.returnStart ] );
-//		""", 
-//		LuaSrcUtil.readBytecode("math.log.out"), //return math.log( 10 )
-//		6000, //heap
-//		1024, //stack
-//		2048    //log/err
-//		);
-//		
-//		var done  = run(events);
-//		var stack = args.luaStack.readData(queue, done);
-//		var heap = args.heap.readData(queue);
-//		var log  = args.errorBuffer.readData(queue);
-//		
-//		var ok = log[0] == 1;
-//		var returned = log[1] == 1;
-//		//debug
-////		var lastInst = readIntAt(log, 2);
-////		System.out.println("last instr: ");
-////		System.out.println("  OP: " + (lastInst & 0x3F));
-////		System.out.println("   A: " + ((lastInst >> 6) & 0xFF));
-////		System.out.println("   B: " + ((lastInst >> 23) & 0x1FF));
-////		System.out.println("   C: " + ((lastInst >> 14) & 0x1FF));
-////		System.out.println("K(C): " + ((lastInst >> 14) & 0xFF));
-//		var returnValueHref = readIntAt(log, 6);
-//		
-//		var frames = readStackFrames(stack);
-//		
-//		printFrames( frames );
-//		dumpHeap(heap);
-//		
-//		assertTrue("call says it failed", ok);
-//		assertTrue("should have returnFlag true", returned);
-//		
-//		var result = getChunkData(heap, returnValueHref);
-//		assertEquals(LuaTypes.NUMBER, result.type());
-//		assertEquals(Math.log(10), result.doubleValue(), .0000001d);	
-//	}
+	@Test
+	void getTabUp() throws FileNotFoundException, IOException {
+		var events = setupProgram("""		
+		href stack = allocateLuaStack( &env, 0, 0, mainClosure, 3 );
+		env.luaStack = stack;
+		
+		getTabUp( &env, 1, 0, 0 | 0x100 );
+		returnInfo[ 0 ] = stack;
+		""", 
+		LuaSrcUtil.readBytecode("returnMath.out"), //return math
+		6222 //heap
+		);
+		
+		var done  = run(events);
+		var heap  = args.heap.readData(queue, done);
+		var returnInfo = args.returnInfo.readData(queue);
+		
+		var stack = getChunkData(heap, returnInfo[0]);
+
+		System.out.println(stack);
+		
+		dumpHeap(heap);
+		
+		
+		var regHref = stack.lsGetRegister(1);
+		var heapValue = getChunkData(heap, regHref);
+		
+		assertEquals( LuaTypes.TABLE, heapValue.type() );
+	}
+	
+	@Test
+	void readInstruction() throws FileNotFoundException, IOException {
+		var events = setupProgram("""		
+		
+		LuaInstruction inst = env.code[ env.codeIndexes[ env.func ] + env.pc ];
+		
+		href arr = newArray( env.heap, env.maxHeapSize, 5 );
+		returnInfo[0] = arr; 
+		
+		arraySet( env.heap, arr, 0,            inst );
+		arraySet( env.heap, arr, 1, getOpcode( inst ) );
+		arraySet( env.heap, arr, 2, getA(      inst ) );
+		arraySet( env.heap, arr, 3, getB(      inst ) );
+		arraySet( env.heap, arr, 4, getC(      inst ) );
+		""", 
+		LuaSrcUtil.readBytecode("math.log.out"), //return math.log( 10 )
+		6000 //heap
+		);
+		
+		var done  = run(events);
+		var heap  = args.heap.readData(queue, done);
+		var returnInfo = args.returnInfo.readData(queue);
+		
+		var arr = getChunkData(heap, returnInfo[0]);
+		
+		int inst    = arr.arrayRef(0);
+		int opCode  = arr.arrayRef(1);
+		int a       = arr.arrayRef(2);
+		int b       = arr.arrayRef(3);
+		int c       = arr.arrayRef(4);
+				
+		assertEquals(     6, opCode, "opcode wrong");
+		assertEquals(     0,      a, "a (target register)");
+		assertEquals(     0,      b, "b (table upval index (_ENV)) ");
+		assertEquals( 0x100,      c, "c (key, const or reg) ");
+		
+		
+	}
+	
+	@Test
+	void nativeCall() throws FileNotFoundException, IOException {
+		var events = setupProgram("""		
+//		href stack = allocateLuaStack( &env, 0, 0, mainClosure, 3 );
+//		env.luaStack = stack;
+		
+		printf("CALL\\n");
+		bool ok = call( &env, mainClosure );
+		printf("POST_CALL\\n");
+		
+		//propper usage, from luavm.cl
+		if( ok && env.returnFlag ) {
+			printf("RETURN\\n");
+	        returnInfo[ 0 ] = 0; //no err
+	        returnInfo[ 1 ] = env.returnStart;
+	        returnInfo[ 2 ] = env.nReturn;
+	    } else if( env.error ) {
+			printf("ERROR\\n");
+	        returnInfo[ 0 ] = env.error;
+	        returnInfo[ 1 ] = 0;
+	        returnInfo[ 2 ] = 0;
+	    } else {
+			printf("NO RETURN VALUE\\n OK: %d\\n RF: %d\\n", ok? 1 : 0, env.returnFlag ? 1 : 0 );
+	        returnInfo[ 0 ] = 0;
+	        returnInfo[ 1 ] = 0;
+	        returnInfo[ 2 ] = 0;
+	    }
+		""", 
+		LuaSrcUtil.readBytecode("math.log.out"), //return math.log( 10 )
+		8000 //heap
+		);
+		
+		var done  = run(events);
+		var heap  = args.heap.readData(queue, done);
+		var returnInfo = args.returnInfo.readData(queue);
+
+		dumpHeap(heap);
+		
+		var err = getChunkData(heap, returnInfo[0]);
+		assertEquals(1, returnInfo[2], err.toString() );
+		
+		var r1Href = readIntAt(heap, returnInfo[1]);
+		var val = getChunkData(heap, r1Href);
+		
+		
+		assertEquals(LuaTypes.NUMBER, val.type());
+		assertEquals(Math.log(10), val.doubleValue(), .0000001d);	
+	}
 	
 }

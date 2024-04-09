@@ -121,14 +121,17 @@ __kernel void exec(
     bool ok = call( &workerEnv, mainClosure ); //callWithArgs is also available as an option
 
     if( ok && workerEnv.returnFlag ) {
-        returnInfo[ 0 ] = workerEnv.returnStart;
-        returnInfo[ 1 ] = workerEnv.nReturn;
+        returnInfo[ 0 ] = 0; //no err
+        returnInfo[ 1 ] = workerEnv.returnStart;
+        returnInfo[ 2 ] = workerEnv.nReturn;
     } else if( workerEnv.error ) {
         returnInfo[ 0 ] = workerEnv.error;
-        returnInfo[ 0 ] = 1;
+        returnInfo[ 1 ] = 0;
+        returnInfo[ 2 ] = 0;
     } else {
         returnInfo[ 0 ] = 0;
-        returnInfo[ 0 ] = 0;
+        returnInfo[ 1 ] = 0;
+        returnInfo[ 2 ] = 0;
     }
 }
 

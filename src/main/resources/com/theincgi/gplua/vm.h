@@ -10,7 +10,7 @@ struct WorkerEnv {
     // uint stackSize;
 
     href luaStack;
-    uint* maxStackSizes;
+    uchar* maxStackSizes;
 
     uchar* heap;
     uint maxHeapSize;
@@ -36,7 +36,7 @@ struct WorkerEnv {
     uint pc;
 
     href error; //0 is ok
-
+    
     bool returnFlag;
     uint returnStart;
     ushort nReturn;
@@ -52,7 +52,7 @@ bool getTabUp( struct WorkerEnv* env, uchar reg, uint upvalIndexOfTable, uint ta
 bool op_getTable( struct WorkerEnv* env, uchar destReg, ushort tableReg, ushort tableKey);
 bool op_settabup( struct WorkerEnv* env, uchar a, ushort b, ushort c );
 bool op_settable( struct WorkerEnv* env, uchar a, ushort b, ushort c );
-bool _settable( struct WorkerEnv* env, href table, ushort b, ushort c );
+char _settable( struct WorkerEnv* env, href table, ushort b, ushort c );
 
 void returnRange( struct WorkerEnv* env, uchar a, uchar b);
 bool isTruthy( href value );
@@ -60,6 +60,7 @@ bool doOp( struct WorkerEnv* env, LuaInstruction instruction );
 
 bool _readAsDouble( uchar* dataSource, uint start, double* result );
 bool call( struct WorkerEnv* env, href closure );
+bool setupCallWithArgs( struct WorkerEnv* env, href closure, href* args, uint nargs );
 bool callWithArgs( struct WorkerEnv* env, href closure, href* args, uint nargs );
 
 #endif

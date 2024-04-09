@@ -1,6 +1,7 @@
 #include"vm.h"
 #include"common.cl"
 #include"closure.h"
+#include"table.h"
 // #include"stackUtils.h"
 #include"luaStack.h"
 #include"heapUtils.h"
@@ -50,7 +51,6 @@ href kToHeap( struct WorkerEnv* env, uint index ) {
 
 bool loadk( struct WorkerEnv* env, uchar reg, uint index ) { 
     href k = kToHeap( env, index );
-    printf("K: %d\n", k);
     if( k == 0 ) return false;
 
     //nil bool number str
@@ -121,49 +121,78 @@ bool op_getTable( struct WorkerEnv* env, uchar destReg, ushort tableReg, ushort 
 //set table upval
 // UpVal[A][RK(B)] := RK(C) | UpVal[ tableUpvalIndex A ][ tableKey B ] := tableValue C
 bool op_settabup( struct WorkerEnv* env, uchar a, ushort b, ushort c ) { 
+    if( env->returnFlag ) {
+        env->pc++;
+        env->returnFlag = false;
+        return true;
+    }
     href closure = cls_getClosure( env ); //active function
     if( closure == 0 ) return false;
-
     href table = _getUpVal( env, closure, a ); //table upval of current function
     if( env->heap[table] != T_TABLE ) return false; //attempt to assign to TYPE
 
-    return _settable( env, table, b, c );    
+    char result = _settable( env, table, b, c );
+    if( result == 1 ) { 
+        env->pc++;
+        return true;
+    } else if( result == -1 ) {
+        return true; //__newindex call triggered
+    } else {
+        return false;
+    }
 }
 
 //R(A)[RK(B)] := RK(C) | Registers[ A ][ tableKey B ] := tableValue C
 bool op_settable( struct WorkerEnv* env, uchar a, ushort b, ushort c ) {
+    if( env->returnFlag ) {
+        env->pc++;
+        env->returnFlag = false;
+        return true;
+    }
+
     href table = cls_getRegister( env, a );
     if( env->heap[table] != T_TABLE ) return false; //attempt to assign to TYPE
 
-    bool ok = _settable( env, table, b, c );
-    if( ok ) env->pc++;
-    return ok;
+    char result = _settable( env, table, b, c );
+    if( result == 1 ) { 
+        env->pc++;
+        return true;
+    } else if( result == -1 ) {
+        return true; //__newindex call triggered
+    } else {
+        return false;
+    }
 }
 
 //shared logic of settabup and settable
-bool _settable( struct WorkerEnv* env, href table, ushort b, ushort c ) {
+//0 fail with err
+//-1 __newindex call
+//1 set
+char _settable( struct WorkerEnv* env, href table, ushort b, ushort c ) {
     href key, value;
 
     if( isK( b ) ) {
         key = kToHeap( env, indexK( b ));
-        if( key == 0 ) return false; //failed to allocate key to heap or attempt to index using nil
+        if( key == 0 ) return 0; //failed to allocate key to heap or attempt to index using nil
     } else {
         key = cls_getRegister( env, b );
-        if( key == 0 ) return false; //attempt to index using nil
+        if( key == 0 ) return 0; //attempt to index using nil
     }
 
     if( isK( c )) {
         value = kToHeap( env, indexK( c ));
-        if( value == 0 ) return false; //failed to allocate value to heap
+        if( value == 0 ) return 0; //failed to allocate value to heap
     } else {
         value = cls_getRegister( env, c );
     }
 
+    
     href newindex = tableGetMetaNewIndex( env, table ); //check for meta event
     if( env->heap[newindex] == T_CLOSURE ) { //T_FUNC isn't callable, needs upvals & such
         bool isNew = false;
 
         isNew = tableGetByHeap( env, table, key ) == 0; //check if current value is nil
+
 
         if( isNew ) { //current value is nil
             href args[3]; // __newindex( myTable, key, value )
@@ -172,16 +201,20 @@ bool _settable( struct WorkerEnv* env, href table, ushort b, ushort c ) {
 
             if( isK( c ) ) { // c is a constant
                 args[2] = kToHeap( env, indexK( c ) );
-                if(args[2] == 0) return false; //failed to allocate space for constant
+                if(args[2] == 0) return 0; //failed to allocate space for constant
             } else { //c is a register
                 args[2] = cls_getRegister( env, c );
             }
 
-            return callWithArgs( env, newindex, args, 3 );
+            printf("%d", isNew ? 1 : 0, newindex, args );
+            setupCallWithArgs( env, newindex, args, 3 ); //queue call, catch results after return
+            return -1;
         }
     } //else no usable meta-event __newindex
 
-    return tableRawSet( env, table, key, value );
+    if(tableRawSet( env, table, key, value ))
+        return 1;
+    return 0;
 }
 
 void returnRange( struct WorkerEnv* env, uchar a, uchar b ) {
@@ -449,6 +482,35 @@ bool isTruthy( href value ) {
 bool doOp( struct WorkerEnv* env, LuaInstruction instruction ) {
     // LuaInstruction instruction = code[ codeIndexes[func] + pc ];
     OpCode op = getOpcode( instruction );
+
+    printf("Op: %d\n", op);
+    // if( op != OP_GETTABUP 
+    //  && op != OP_GETTABLE 
+    //  && op != OP_LOADK 
+    //  && op != OP_CALL 
+    //  && op != OP_RETURN
+    // ) {
+    //     printf("QUIT on op %d | Return = %d\n", op, OP_RETURN);
+    //     printf("==Return? %d\n", op == OP_RETURN ? 1 : 0 );
+    //     return false;
+    // }
+
+    // if( op == OP_RETURN ) {
+    //     printf("QUIT on Return %d | Return = %d\n", op, OP_RETURN);
+    //     return false;
+    // }
+
+    // if( op != OP_GETTABUP 
+    //  && op != OP_GETTABLE 
+    //  && op != OP_LOADK 
+    //  && op != OP_CALL 
+    // //  && op != OP_RETURN
+    // ) {
+    //     printf("QUIT!!! on op %d | Return = %d\n", op, OP_RETURN);
+    //     printf("==Return? %d\n", op == OP_RETURN ? 1 : 0 );
+    //     return false;
+    // }
+
     switch( op ) {
         
         case OP_MOVE: { // R(A) := R(B)
@@ -581,9 +643,8 @@ bool doOp( struct WorkerEnv* env, LuaInstruction instruction ) {
             uchar a = getA( instruction );
             ushort b = getB( instruction );
             returnRange( env, a, b );
-            env->pc = cls_getPriorPC( env );
-            ls_pop( env );
-            env->func = cls_getFunction( env ); //frame popped, don't care about pc++
+            ls_pop( env ); //pc, func, env->luaStack all updated
+            //frame popped, don't care about pc++
             return true;
         }
 
@@ -612,6 +673,16 @@ bool doOp( struct WorkerEnv* env, LuaInstruction instruction ) {
 
         case OP_LEN: { // R(A) := # R(B)
             uchar  a = getA( instruction );
+
+            if( env->returnFlag ) {
+                href r1 = getReturn( env, 0 );
+                if(!cls_setRegister( env, a, r1 )) {
+                    return false;
+                }
+                env->pc++;
+                return true;
+            }
+
             ushort b = getB( instruction );
             href val = cls_getRegister( env, b );
 
@@ -632,14 +703,8 @@ bool doOp( struct WorkerEnv* env, LuaInstruction instruction ) {
                     if( env->heap[metaEvent] == T_CLOSURE ) {
                         href args[1];
                         args[0] = val;
-                        if( callWithArgs( env, metaEvent, args, 1 )) {
-                            if( env->returnFlag ) {
-                                href r1 = getReturn( env, 0 );
-                                if(cls_setRegister( env, a, r1 )) {
-                                    env->pc++;
-                                    return true;
-                                }
-                            }
+                        if( setupCallWithArgs( env, metaEvent, args, 1 )) {
+                            return true; //continue on return
                         }
                         return false;
                     } else {
@@ -682,6 +747,16 @@ bool doOp( struct WorkerEnv* env, LuaInstruction instruction ) {
         case OP_LT: // <
         case OP_LE: // <=
         {// if ((RK(B) OP RK(C)) ~= A) then pc++
+            if( env->returnFlag ) {
+                if(env->nReturn >= 1) {
+                    bool result = isTruthy( getReturn( env, 0 ) );
+                    env->pc += result ? 1 : 2;  //skips next if not eq
+                } else { //treat as false
+                    env->pc += 2;
+                }
+                env->returnFlag = false;
+            }
+
             uchar* dataSourceA;
             uchar* dataSourceB;
             href indexA, indexB;
@@ -723,7 +798,6 @@ bool doOp( struct WorkerEnv* env, LuaInstruction instruction ) {
                     return false;
             } 
             
-            env->pc += result ? 1 : 2;  //skips next if not eq
             return true;
         }
         
@@ -782,6 +856,7 @@ bool doOp( struct WorkerEnv* env, LuaInstruction instruction ) {
             env->pc += sBx + 1;
             return true;
         }
+
         case OP_FORLOOP: {   //   A sBx   R(A)+=R(A+2); //increment internal
                             //     if R(A) <?= R(A+1) then { pc+=sBx; R(A+3)=R(A) }
             
@@ -816,10 +891,23 @@ bool doOp( struct WorkerEnv* env, LuaInstruction instruction ) {
             }
             env->pc++;
             return true;
-        }                     
+        }        
+
         case OP_TFORCALL: { //  A C     R(A+3), ... ,R(A+2+C) := R(A)(R(A+1), R(A+2)); 
             uchar  a = getA( instruction );
             ushort c = getC( instruction );
+
+            if( env->returnFlag ) {
+                for( uint r = 0; r < c; r++ ) {
+                    href val = getReturn( env, r ); //nil : return value
+                    if(!cls_setRegister( env, a + 3 + r, val ))
+                        return false;
+                    
+                    env->returnFlag = false;
+                    env->pc++;
+                    return true;
+                }
+            }
 
             //R(A) itterator func
             //R(A+1) state
@@ -836,28 +924,23 @@ bool doOp( struct WorkerEnv* env, LuaInstruction instruction ) {
             href args[2];
             args[0] = state;
             args[1] = ctrlVar;
-            if(!callWithArgs( env, closure, args, 2 ))
+            if(!setupCallWithArgs( env, closure, args, 2 ))
                 return false;
 
-            for( uint r = 0; r < c; r++ ) {
-                href val = getReturn( env, r ); //nil : return value
-                if(!cls_setRegister( env, a + 3 + r, val ))
-                    return false;
-            }
             return true;
         }
-        case OP_TFORLOOP: { //  A sBx   if R(A+1) ~= nil then { R(A)=R(A+1); pc += sBx }
-            uchar a = getA( instruction );
-            int sBx = getsBx( instruction );
+        // case OP_TFORLOOP: { //  A sBx   if R(A+1) ~= nil then { R(A)=R(A+1); pc += sBx }
+        //     uchar a = getA( instruction );
+        //     int sBx = getsBx( instruction );
 
-            href test = cls_getRegister( env, a + 1 );
-            if( test != 0 ) {
-                href nxt = cls_getRegister( env, a + 1 );
-                cls_setRegister( env, a, nxt );
-                env->pc += sBx;
-            }
-            env->pc++;
-        }
+        //     href test = cls_getRegister( env, a + 1 );
+        //     if( test != 0 ) {
+        //         href nxt = cls_getRegister( env, a + 1 );
+        //         cls_setRegister( env, a, nxt );
+        //         env->pc += sBx;
+        //     }
+        //     env->pc++;
+        // }
         case OP_SETLIST: {   //   A B C   R(A)[(C-1)*FPF+i] := R(A+i), 1 <= i <= B       
             uchar  a = getA( instruction ); //table, a+1... = values
             ushort b = getB( instruction ); //nElements
@@ -880,17 +963,16 @@ bool doOp( struct WorkerEnv* env, LuaInstruction instruction ) {
         case OP_CLOSURE: {  //   A Bx    R(A) := closure(KPROTO[Bx])                    
 
         }
+
         case OP_VARARG: {   //    A B     R(A), R(A+1), ..., R(A+B-2) = vararg           
             uchar  a = getA( instruction );
             ushort b = getB( instruction );
-
             uint nRegisters;
             if( b == 0 ) {
                 b = cls_nVarargs( env );
             } else {
                 nRegisters = b - 1;
             }
-
 
             for( uint i = 0; i < nRegisters; i++ ) {
                 href value = cls_getVararg( env, i );
@@ -910,7 +992,6 @@ bool doOp( struct WorkerEnv* env, LuaInstruction instruction ) {
 
 bool stepProgram( struct WorkerEnv* env ) {
     LuaInstruction instruction = env->code[ env->codeIndexes[ env->func ] + env->pc ];
-
     return doOp( env, instruction );
 }
 
@@ -918,7 +999,8 @@ bool call( struct WorkerEnv* env, href closure ) {
     href args[0];
     return callWithArgs( env, closure, args, 0 );
 }
-bool callWithArgs( struct WorkerEnv* env, href closure, href* args, uint nargs ) {
+
+bool setupCallWithArgs( struct WorkerEnv* env, href closure, href* args, uint nargs ) {
     if( env->heap[closure] != T_CLOSURE ) {
         throwCall( env, env->heap[closure] );
         return false;
@@ -948,13 +1030,21 @@ bool callWithArgs( struct WorkerEnv* env, href closure, href* args, uint nargs )
     }
     
     env->returnFlag = false;
+    
+    return true;
+}
+
+bool callWithArgs( struct WorkerEnv* env, href closure, href* args, uint nargs ) {
+    if( !setupCallWithArgs(env, closure, args, nargs) )
+        return false;
+    
     uint callDepth = cls_getDepth( env );
 
     while( (env->luaStack != 0) && (callDepth <= cls_getDepth( env )) ) { //wait till popped
-        if(!stepProgram( env ) || hasError( env )) {
+        if( (!stepProgram( env )) || hasError( env )) {
             return false;
         } 
     }
-
+    
     return true;
 }

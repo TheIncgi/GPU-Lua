@@ -53,7 +53,7 @@ public class KernelTestBase extends TestCommons {
 //		events.add(args.luaStack.fillEmpty(stackSize, queue));
 		events.addAll(args.setStackSizes(queue, heapSize, workSize));
 		events.add(args.setMaxExecution(queue, 30_000));
-		events.add(args.returnInfo.fillEmpty(2, queue));
+		events.add(args.returnInfo.fillEmpty(3, queue)); //[errHref, rStart, rLen];
 		
 		args.applyArgs(kernel);
 		

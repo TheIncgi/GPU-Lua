@@ -235,23 +235,31 @@ href tableGetMetaNewIndex( struct WorkerEnv* env, href table ) {
     return tableGetMetaEvent( env, table, metakey );
 }
 
+href _tableRecurseGetByHeap( struct WorkerEnv* env, href table, href key ) {
+    return tableGetByHeap( env, table, key );
+}
+
 href tableGetByHeap( struct WorkerEnv* env, href table, href key ) {
     uint keySize = heapObjectLength( env->heap, key );
 
-    href value = tableRawGet( env->heap, table, env->heap, key, keySize );
-    if( value != 0 ) return value;
+    href value = 0;
+    while( table != 0 && value == 0 ) {
+        value = tableRawGet( env->heap, table, env->heap, key, keySize );
+        if( value != 0 ) return value;
 
-    href metaIndex = tableGetMetaIndex( env, table );
-    if( metaIndex == 0 ) return 0;
-
-    uchar indexType = env->heap[ metaIndex ];
-    if( indexType == T_TABLE ) {
-        return tableGetByHeap( env, metaIndex, key );
-    } else if ( indexType == T_FUNC ) {
-        return 0; //TODO call
+        href metaIndex = tableGetMetaIndex( env, table );
+        if( metaIndex == 0 ) return 0;
+        uchar indexType = env->heap[ metaIndex ];
+        if( indexType == T_TABLE ) {
+            table = metaIndex;
+            continue;
+        } else if ( indexType == T_FUNC ) {
+            return 0; //TODO call
+        }
+        return 0;
     }
-    return 0;
 }
+
 
 href tableGetByConst( struct WorkerEnv* env, href table, int key ) {
     if(table == 0) return 0;
@@ -259,18 +267,22 @@ href tableGetByConst( struct WorkerEnv* env, href table, int key ) {
     getConstDataRange( env, key, &constStart, &constLen );
 
     if(constLen == 0) return 0;
+    
+    href value = 0;
+    while( table != 0 && value == 0 ) {
+        value = tableRawGet( env->heap, table, env->constantsData, constStart, constLen );
+        if( value != 0 ) return value;
+        
+        href metaIndex = tableGetMetaIndex( env, table );
 
-    href value = tableRawGet( env->heap, table, env->constantsData, constStart, constLen );
-    if( value != 0 ) return value;
-
-    href metaIndex = tableGetMetaIndex( env, table );
-    if( metaIndex == 0 ) return 0;
-
-    uchar metaIndexType = env->heap[ metaIndex ];
-    if( metaIndexType == T_TABLE ) {
-        return tableGetByConst( env, metaIndex, key );
-    } else if ( metaIndexType == T_FUNC ) {
-        return 0; //TODO call
+        if( metaIndex == 0 ) return 0;
+        uchar metaIndexType = env->heap[ metaIndex ];
+        if( metaIndexType == T_TABLE ) {
+            table = metaIndex;
+            continue;
+        } else if ( metaIndexType == T_FUNC ) {
+            return 0; //TODO call
+        }
+        return 0;
     }
-    return 0;
 }

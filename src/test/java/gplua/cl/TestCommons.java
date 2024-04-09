@@ -46,7 +46,7 @@ public abstract class TestCommons {
 	
 	public static TaggedMemory getChunkData( byte[] heap, int allocationIndex ) throws IOException {
 		if(allocationIndex == 0)
-			return null;
+			return new TaggedMemory(0, true, false, new byte[1]);
 		DataInputStream dis = new DataInputStream(new ByteArrayInputStream(heap));
 		int tagPos = allocationIndex - 4;
 		dis.skip(tagPos);
