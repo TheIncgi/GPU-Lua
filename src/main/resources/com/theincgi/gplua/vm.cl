@@ -8,7 +8,7 @@
 #include"opUtils.cl"
 #include"types.cl"
 #include"natives.cl"
-#include"comparison.cl"
+#include"comparison.h"
 #include"errorMsg.cl"
 
 void getConstDataRange( struct WorkerEnv* env, uint index, uint* start, uint* len ) {

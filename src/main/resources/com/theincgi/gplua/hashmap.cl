@@ -3,7 +3,7 @@
 #include"heapUtils.h"
 #include"common.cl"
 #include"types.cl"
-#include"comparison.cl"
+#include"comparison.h"
 #include"array.h"
 #include"vm.h"
 

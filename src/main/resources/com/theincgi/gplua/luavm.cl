@@ -11,6 +11,7 @@
 #include"vm.h"
 #include"closure.h"
 #include"luaStack.h"
+#include"comparison.h"
 
 
 //manually include .cl for headers since openCL doesn't do that
@@ -23,6 +24,7 @@
 // #include"stackUtils.cl"
 #include"closure.cl"
 #include"luaStack.cl"
+#include"comparison.cl"
 			
 
 __kernel void exec(
