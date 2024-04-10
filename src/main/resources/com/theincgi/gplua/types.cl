@@ -18,6 +18,7 @@
 #define T_NATIVE_FUNC 0x56
 #define T_ERROR 0x57 //todo, remove, use string instead & env->error
 #define T_LUA_STACK 0x58
+#define T_UPVAL 0x59
 
 bool isNumber( uint type ) {
     return type == T_INT || type == T_NUMBER;
