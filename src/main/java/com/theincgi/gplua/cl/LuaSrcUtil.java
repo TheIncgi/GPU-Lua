@@ -7,10 +7,13 @@ import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Scanner;
+import java.util.function.IntFunction;
 
 //https://www.luac.nl/ is handy for viewing human readable bytecode
 public class LuaSrcUtil {
 	
+	public static String LUA52 = "lua52";
 	public static String LUAC = "luac52";
 	
 	/** format corresponding to non-number-patched lua, all numbers are floats or doubles<br>
@@ -31,6 +34,7 @@ public class LuaSrcUtil {
 	/**
 	 * string.dump can be used instead if a lua env is available
 	 * bytecode = string.dump( load( src ) ) --convert from string to function to bytecode (string of bytes)
+	 * @param file where to save the temp file to
 	 * @throws IOException 
 	 * @throws InterruptedException 
 	 * */
@@ -44,6 +48,41 @@ public class LuaSrcUtil {
 		if( proc.getErrorStream().available() > 0 ) {
 			throw new LuaCompileException( new String(proc.getErrorStream().readAllBytes()) );
 		}
+	}
+	
+	
+	public static byte[] compile(String srcCode) throws IOException, InterruptedException {
+		srcCode = "function SRC()\n" + srcCode + "\nend local b = string.dump( SRC )";
+		boolean asBinary = false; //somehow the output is messed up when binary output is used :\ 
+		                          //an embeded lua env would be best, like LuaJ or some other option.
+		if( asBinary  ) { 
+			srcCode += " print(b)";
+		} else {
+			srcCode += " print(string.byte(b,1,#b))";
+		}
+		var rt = Runtime.getRuntime();
+		var proc = rt.exec(new String[] {LUA52, "-"});
+		proc.getOutputStream().write(srcCode.getBytes());
+		proc.getOutputStream().flush();
+		proc.getOutputStream().close();
+		proc.waitFor();
+		if( proc.getErrorStream().available() > 0 ) {
+			throw new LuaCompileException( new String(proc.getErrorStream().readAllBytes()) );
+		}
+		
+		if( asBinary ) {
+			return proc.getInputStream().readAllBytes();
+		}
+		Scanner s = new Scanner(proc.getInputStream());
+		var list = new ArrayList<Byte>();
+		while(s.hasNextInt()) {
+			list.add((byte) s.nextInt());
+		}
+		s.close();
+		var bytes = new byte[list.size()];
+		for(int i = 0; i<bytes.length; i++)
+			bytes[i] = list.get(i);
+		return bytes;
 	}
 	
 	public static boolean isUpdated(File src, File compiled) {

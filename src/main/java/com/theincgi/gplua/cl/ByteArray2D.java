@@ -38,6 +38,19 @@ public class ByteArray2D {
 		if(buffer != null)
 			close();
 		
+		if( data.size() == 0 || (data.size()  == 1 && data.get(0).length == 0)) {
+			buffer = context.createByteBuffer(usage, 1);
+			indexBuffer = context.createIntBuffer(usage, 2);
+			
+			pointer = Pointer.pointerToArray(new byte[] {0});
+			indexPointer = Pointer.pointerToArray(new byte[] {0,0});
+			
+			var bufferWrite = buffer.write(queue, pointer, false);
+			var indexWrite = indexBuffer.write(queue, indexPointer, false);
+			
+			return List.of(bufferWrite, indexWrite);
+		}
+		
 		int flatLen = flattenedLength(data);
 		buffer = context.createByteBuffer(usage, flatLen);
 		indexBuffer = context.createIntBuffer(usage, data.size() * 2);

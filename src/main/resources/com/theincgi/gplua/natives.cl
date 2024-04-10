@@ -4,15 +4,15 @@
 #include"vm.h"
 #include"globals.cl"
 #include"common.cl"
-
+#include"luaStack.h"
 
 
 void _cn_argErr( struct WorkerEnv* env, uchar arg, uchar expectedType, uchar gotType ) {
 
 }
 
-href _cn_argAssert( struct WorkerEnv* env, sref a, uchar arg, uchar type ) {
-    href argRef = env->luaStack[ a + arg ];
+href _cn_argAssert( struct WorkerEnv* env, href a, uchar arg, uchar type ) {
+    href argRef = getHeapInt( env->heap, a + arg * REGISTER_SIZE ); //env->luaStack[ a + arg ];
     uchar argType = env->heap[ argRef ];
     
     if(argType == T_INT)
@@ -41,7 +41,7 @@ double _cn_argDouble( struct WorkerEnv* env, href arg ) {
   * sref a - location where the native func is on the stack, args start at a+1
   *          return values are put at a
   */
-bool callNative( struct WorkerEnv* env, uint nativeID, sref a, uint nargs ) {
+bool callNative( struct WorkerEnv* env, uint nativeID, href a, uint nargs ) {
     switch( nativeID ) {
         case NF_MATH_LOG: {
             //args
@@ -52,7 +52,8 @@ bool callNative( struct WorkerEnv* env, uint nativeID, sref a, uint nargs ) {
             //return
             href r1 = allocateNumber( env->heap, env->maxHeapSize, result );
             if( r1 == 0 ) return false;
-            env->luaStack[ a ] = r1;
+            putHeapInt( env->heap, a, r1 );
+            // env->luaStack[ a ] = r1;
             return true;
         }
     }

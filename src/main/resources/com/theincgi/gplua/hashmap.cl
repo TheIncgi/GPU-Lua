@@ -3,8 +3,9 @@
 #include"heapUtils.h"
 #include"common.cl"
 #include"types.cl"
-#include"comparison.cl"
+#include"comparison.h"
 #include"array.h"
+#include"vm.h"
 
 href newHashmap(uchar* heap, uint maxHeapSize, uint capacity) {
     href mapIndex = allocateHeap( heap, maxHeapSize, 9);
@@ -31,7 +32,9 @@ href hashmapGetValsPart( uchar* heap, href mapIndex ) {
     return getHeapInt( heap, mapIndex + 5);
 }
 
-bool hashmapPut( uchar* heap, uint maxHeap, href mapIndex, href keyHeapIndex, href valueHeapIndex ) {
+bool hashmapPut( struct WorkerEnv* env, href mapIndex, href keyHeapIndex, href valueHeapIndex ) {
+    uchar* heap = env->heap;
+    uint maxHeap = env->maxHeapSize;
     uint keyHash  = heapHash( heap, keyHeapIndex ); 
     href keysPart = hashmapGetKeysPart( heap, mapIndex );
     href valsPart = hashmapGetValsPart( heap, mapIndex );
@@ -46,7 +49,7 @@ bool hashmapPut( uchar* heap, uint maxHeap, href mapIndex, href keyHeapIndex, hr
     for(uint offset = 0; offset < searchLimit; offset++) {
         uint i = (hashIndex + offset) % capacity;
         href globalKeyIndex = keysPart + i;
-        if(heapEquals( heap, arrayGet(heap, keysPart, i), keyHeapIndex)) { //value in stored keys == provided key
+        if(heapEquals( env, heap, arrayGet(heap, keysPart, i), heap, keyHeapIndex)) { //value in stored keys == provided key
             arraySet( heap, keysPart, i, isErase ? 0 : keyHeapIndex );     //add or remove key
             arraySet( heap, valsPart, i, valueHeapIndex );                //set value
             return true; //found and removed or set
@@ -89,7 +92,8 @@ bool hashmapPut( uchar* heap, uint maxHeap, href mapIndex, href keyHeapIndex, hr
     }
 }
 
-href hashmapGet(uchar* heap, href mapIndex, href key) {
+href hashmapGet(struct WorkerEnv* env, href mapIndex, href key) {
+    uchar* heap = env->heap;
     uint hash = heapHash( heap, key );
     href keysPart = getHeapInt( heap, mapIndex + 1);
     href valsPart = getHeapInt( heap, mapIndex + 5);
@@ -99,7 +103,7 @@ href hashmapGet(uchar* heap, href mapIndex, href key) {
     uint searchLimit = MAP_MAX_SEARCH < capacity ? MAP_MAX_SEARCH : capacity;
     for(uint offset = 0; offset < searchLimit; offset++) { //i = search location (array index) | j = search count
         uint i = (hashIndex + offset) % capacity;
-        if(heapEquals( heap, arrayGet(heap, keysPart, i), key)) { //value in stored keys == provided key
+        if(heapEquals( env, heap, arrayGet(heap, keysPart, i), heap, key)) { //value in stored keys == provided key
             return arrayGet( heap, valsPart, i );
         } 
     }

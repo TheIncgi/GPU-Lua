@@ -19,16 +19,31 @@ class GlobalsTest extends HeapTestBase {
 	
 	public static final String header = 
 			"""
+			// headers & cl files without headers
+			#include"types.cl"
+			#include"common.cl"
 			#include"heapUtils.h"
+			#include"array.h"
 			#include"table.h"
+			#include"opUtils.cl"
 			#include"strings.h"
 			#include"globals.cl"
+			#include"vm.h"
+			#include"closure.h"
+			#include"comparison.h"
+			#include"luaStack.h"
 			
+			
+			//manually include .cl for headers since openCL doesn't do that
+			#include"vm.cl"
 			#include"table.cl"
 			#include"array.cl"
 			#include"hashmap.cl"
 			#include"heapUtils.cl"
 			#include"strings.cl"
+			#include"closure.cl"
+			#include"comparison.cl"
+			#include"luaStack.cl"
 			
 			__kernel void exec(
 			    __global const uint* stackSizes,
@@ -42,6 +57,12 @@ class GlobalsTest extends HeapTestBase {
 					
 				uint maxHeapSize = stackSizes[0];
 				uint logBufSize = stackSizes[1];
+				
+				struct WorkerEnv env;
+				env.heap = heap;
+				env.maxHeapSize = maxHeapSize;
+				env.returnFlag = false;
+				env.nReturn = 0;
 					
 			""";
 	public static final String footer = "\n}";
@@ -68,8 +89,10 @@ class GlobalsTest extends HeapTestBase {
 		var events = setupProgram("""
 		initHeap( heap, maxHeapSize );
 		href strTable = newTable( heap, maxHeapSize );
+		env.stringTable = strTable;
 		
-		href globals = createGlobals(heap, maxHeapSize, strTable);
+		href globals = createGlobals( &env );
+		env.globals = globals;
 		
 		putHeapInt( log, 0, strTable );
 		putHeapInt( log, 4, globals );

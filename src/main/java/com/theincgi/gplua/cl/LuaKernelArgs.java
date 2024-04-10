@@ -18,12 +18,13 @@ public class LuaKernelArgs {
 //	public final IntArray1D workSize;
 	//call info stack??
 //	public final ByteArray1D luaState;
-	public final IntArray1D luaStack;
-	public final IntArray1D stackSizes; // [callInfo, luaStack, heapSize]
+//	public final IntArray1D luaStack;
+	public final IntArray1D heapSize; // [heapSize]
 //	public final IntArray1D errorPointer
-	public final StringBuffer errorBuffer;
+	/**
+	 * Marked for future removal, T_ERROR on the heap combined with stack return values will be prefered moving forward
+	 * */
 	public final ByteArray1D heap;
-//	public final LongArray1D heapNext;
 	public final LongArray1D maxExecutionTime; //[millis]
 	
 	
@@ -34,15 +35,15 @@ public class LuaKernelArgs {
 	public final ByteArray1D isVarargBuffer;
 	public final ByteArray1D maxStackSizeBuffer;
 	
-	//public final IntArray1D codeLengthsBuffer;
 	public final IntArray2D codeBuffer;
 	
-	//public final IntArray1D constantsLengthsBuffer;
 	public final ByteArray3D constantsBuffer;
 	public final IntArray1D protoLengthsBuffer;
 	
-	//public final IntArray1D upvalsLengths;
 	public final ByteArray2D upvals;
+	
+	/**{start on stack, len}*/
+	public final IntArray1D returnInfo;
 	//end of bytecode args
 	
 	IntArray1D nFunctions; //and closures
@@ -51,13 +52,8 @@ public class LuaKernelArgs {
 	public LuaKernelArgs(CLContext context) {
 		this.context = context;
 		
-//		workSize = new IntArray1D(context, Input);
-//		luaState = new ByteArray1D(context, InputOutput);
-		luaStack = new IntArray1D(context, InputOutput);     //io
-		stackSizes = new IntArray1D(context, Input);
-		errorBuffer = new StringBuffer(context, InputOutput);  //io
+		heapSize = new IntArray1D(context, Input);
 		heap = new ByteArray1D(context, InputOutput);          //io
-//		heapNext = new LongArray1D(context, InputOutput);      //io
 		maxExecutionTime = new LongArray1D(context, Input);
 		
 		linesDefinedBuffer = new IntArray1D(context, Input);
@@ -77,6 +73,8 @@ public class LuaKernelArgs {
 		upvals = new ByteArray2D(context, Input);
 		
 		nFunctions = new IntArray1D(context, Input);
+		
+		returnInfo = new IntArray1D(context, InputOutput);
 	}
 	
 	public List<CLEvent> loadBytecode( byte[] bytecode, CLQueue queue ) throws IOException {
@@ -102,6 +100,8 @@ public class LuaKernelArgs {
 		//events.add( upvalsLengths.loadData(flat.upvalsLengths, queue));
 		events.addAll( upvals.loadData(flat.upvals, queue));
 		
+		events.add( returnInfo.fillEmpty(3, queue) );
+		
 		return events;
 	}
 	
@@ -109,18 +109,13 @@ public class LuaKernelArgs {
 //		return this.workSize.loadData(workSize, queue);
 //	}
 	
-	public List<CLEvent> setStackSizes(CLQueue queue, int luaStacks, int heap, int errorBuffer, int[] workDim) {
+	public List<CLEvent> setStackSizes(CLQueue queue, int heap, int[] workDim) {
 		int x = 0;
 		for(var w : workDim) x += w;
-		luaStacks *= x;
 		heap *= x;
 		
-		var eventA = this.stackSizes.loadData(List.of(luaStacks, heap, errorBuffer), queue);
-//		var eventB = this.luaState.fillEmpty(luaState, queue);
-		this.luaStack.noData(luaStacks);
+		var eventA = this.heapSize.loadData(List.of( heap ), queue);
 		this.heap.noData(heap);
-//		var eventE = this.heapNext.fillEmpty(1, queue);
-		this.errorBuffer.noData(errorBuffer);
 		
 		return List.of(eventA);
 	}
@@ -131,15 +126,9 @@ public class LuaKernelArgs {
 	
 	public void applyArgs(CLKernel kernel) {
 		kernel.setArgs(
-			//workSize.arg(),
-//			callInfoStack.arg(),
-//			luaState.arg(),
-			luaStack.arg(),
-			stackSizes.arg(),
-			errorBuffer.arg(),
+			heapSize.arg(),
 			maxExecutionTime.arg(),
 			heap.arg(),
-//			heapNext.arg(),
 			
 			nFunctions.arg(),
 			linesDefinedBuffer.arg(),
@@ -148,19 +137,17 @@ public class LuaKernelArgs {
 			isVarargBuffer.arg(),
 			maxStackSizeBuffer.arg(),
 			
-			//codeLengthsBuffer.arg(),
 			codeBuffer.indexArg(),
 			codeBuffer.arg(),
 			
-			//constantsLengthsBuffer.arg(),
 			constantsBuffer.indexArg(),
 			constantsBuffer.secondaryIndexArg(),
 			constantsBuffer.arg(),
 			protoLengthsBuffer.arg(),
 			
-			//upvalsLengths.arg(),
 			upvals.indexArg(),
-			upvals.arg()
+			upvals.arg(),
+			returnInfo.arg()
 		);
 	}
 	

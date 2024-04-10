@@ -20,6 +20,10 @@ typedef uint sref;
 
 typedef __constant char* string;
 
+#define NIL_HREF 0
+#define FALSE_HREF 2
+#define TRUE_HREF 4
+
 union doubleUnion{
     long lbits;
     double dbits;
@@ -32,6 +36,18 @@ uint resizeRule( uint oldSize ) {
 }
 
 uint strLen( string str ) {
+    int size = 0;
+    while( size >= 0 ) {
+        if( str[size] == 0 )
+            break;
+        size++;
+    }
+    if(size <= 0)
+        return 0;
+    return size;
+}
+
+uint strBufLen( char* str ) {
     int size = 0;
     while( size >= 0 ) {
         if( str[size] == 0 )

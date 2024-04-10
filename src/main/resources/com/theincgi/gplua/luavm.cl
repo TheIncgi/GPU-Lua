@@ -1,24 +1,38 @@
+// headers & cl files without headers
 #include"types.cl"
+#include"common.cl"
 #include"heapUtils.h"
 #include"array.h"
-#include"common.cl"
 #include"table.h"
 #include"opUtils.cl"
-#include"hashmap.cl"
+#include"strings.h"
 #include"globals.cl"
-// #include"opUtils.cl"
-#include"stackUtils.cl"
+// #include"stackUtils.h"
 #include"vm.h"
+#include"closure.h"
+#include"luaStack.h"
+#include"comparison.h"
 
+
+//manually include .cl for headers since openCL doesn't do that
 #include"vm.cl"
-
+#include"table.cl"
+#include"array.cl"
+#include"hashmap.cl"
+#include"heapUtils.cl"
+#include"strings.cl"
+// #include"stackUtils.cl"
+#include"closure.cl"
+#include"luaStack.cl"
+#include"comparison.cl"
+			
 
 __kernel void exec(
     // __global const uint * workSize,
     // __global      uchar* luaState,
-    __global       uint* luaStack,
-    __global const uint* stackSizes,
-    __global       char* errorOutput,
+    // __global       uint* luaStack,
+    __global const uint* heapSize,
+    // __global       char* errorOutput,
     __global const long* maxExecutionTime,
     __global uchar* heap,
     
@@ -28,7 +42,7 @@ __kernel void exec(
     __global unsigned int* lastLinesDefined,
     __global        uchar* numParams,
     __global         bool* isVararg, //could be true or passed number of args & set that way
-    __global        uchar* maxStackSize,
+    __global        uchar* maxStackSizes,
 
     //code
     __global          uint* codeIndexes,
@@ -43,8 +57,8 @@ __kernel void exec(
     
     //upvals
     __global          int* upvalsIndex,
-    __global        uchar* upvals //[function #][ index*2 ] - 2 byte pairs, bool "in stack" & upval index
-    
+    __global        uchar* upvals, //[function #][ index*2 ] - 2 byte pairs, bool "in stack" & upval index
+    __global          int* returnInfo
     //debug info?
 ) {
 
@@ -61,28 +75,28 @@ __kernel void exec(
     struct WorkerEnv workerEnv;
 
     //VM setup
-    uint stackSize = stackSizes[0];
-    uint heapSize  = stackSizes[1];
-    uint errorSize = stackSizes[2];
+    // uint stackSize = stackSizes[0];
 
-    uchar* localHeap  = &(heap[ heapSize * glid ]);
-     uint* localStack = &(luaStack[ stackSize * glid ]);
+    uchar* localHeap  = &(heap[ heapSize[0] * glid ]);
+    //  uint* localStack = &(luaStack[ stackSize * glid ]);
+    initHeap( localHeap, heapSize[0] );
 
-    href stringTable = newTable( localHeap, heapSize );
+    href stringTable = newTable( localHeap, heapSize[0] );
     //TODO allow heap retention as a param/flag/setting
     //TODO consider shared globals to reduce memory usage
-    href globals = createGlobals( localHeap, heapSize, stringTable );
 
     // int func = 0,a,b,c,pc=0; //func here refers to code, not a heap ref
     {
-        workerEnv.luaStack = localStack;
-        workerEnv.stackSize = stackSize;
+        // workerEnv.luaStack = localStack;
+        // workerEnv.stackSize = stackSize;
 
         workerEnv.heap = localHeap;
-        workerEnv.maxHeapSize = heapSize;
+        workerEnv.maxHeapSize = heapSize[0];
 
-        workerEnv.error = errorOutput;
-        workerEnv.errorSize = errorSize;
+        workerEnv.maxStackSizes = maxStackSizes;
+
+        // workerEnv.error = errorOutput;
+        // workerEnv.errorSize = errorSize;
 
         workerEnv.codeIndexes = codeIndexes;
         workerEnv.code = code;
@@ -93,57 +107,40 @@ __kernel void exec(
         workerEnv.constantsSecondaryIndex = constantsSecondaryIndex;
         workerEnv.constantsData = constantsData;
 
-        workerEnv.globals = globals;
+        workerEnv.error = 0; // no error
+
         workerEnv.stringTable = stringTable;
+        workerEnv.globals = createGlobals( &workerEnv );
 
         workerEnv.returnFlag = false;
     }
-    //stack, funcHref, closureHref, numVarargs
-    // initStack( localStack, 0, 0, 0 ); //no closure for main maybe? idk, what's even in it?
+   
+    href mainClosure = createClosure( &workerEnv, 0, workerEnv.globals, 1 ); //function 0, 1 upval(_ENV)
+    setClosureUpval( &workerEnv, mainClosure, 0, workerEnv.globals );
 
-    while() {
-        
+    bool ok = call( &workerEnv, mainClosure ); //callWithArgs is also available as an option
 
-        
+    if( ok && workerEnv.returnFlag ) {
+        returnInfo[ 0 ] = 0; //no err
+        returnInfo[ 1 ] = workerEnv.returnStart;
+        returnInfo[ 2 ] = workerEnv.nReturn;
+    } else if( workerEnv.error ) {
+        returnInfo[ 0 ] = workerEnv.error;
+        returnInfo[ 1 ] = 0;
+        returnInfo[ 2 ] = 0;
+    } else {
+        returnInfo[ 0 ] = 0;
+        returnInfo[ 1 ] = 0;
+        returnInfo[ 2 ] = 0;
     }
-    //exec logic
-
-    //varargs v = NONE
-    
-
 }
 
 // ERASE as they are implemented
 // /*----------------------------------------------------------------------
 //     name            args    description
 //     ------------------------------------------------------------------------*/
-//     OP_MOVE,/*      A B     R(A) := R(B)                                    */
-//     OP_LOADK,/*     A Bx    R(A) := Kst(Bx)                                 */
 //     OP_LOADKX,/*    A       R(A) := Kst(extra arg)                          */
-//     OP_LOADBOOL,/*  A B C   R(A) := (Bool)B; if (C) pc++                    */
-//     OP_LOADNIL,/*   A B     R(A), R(A+1), ..., R(A+B) := nil                */
-//     OP_GETUPVAL,/*  A B     R(A) := UpValue[B]                              */
 
-//     OP_GETTABUP,/*  A B C   R(A) := UpValue[B][RK(C)]                       */
-//     OP_GETTABLE,/*  A B C   R(A) := R(B)[RK(C)]                             */
-
-//     OP_SETTABUP,/*  A B C   UpValue[A][RK(B)] := RK(C)                      */
-//     OP_SETUPVAL,/*  A B     UpValue[B] := R(A)                              */
-//     OP_SETTABLE,/*  A B C   R(A)[RK(B)] := RK(C)                            */
-
-//     OP_NEWTABLE,/*  A B C   R(A) := {} (size = B,C)                         */
-
-//     OP_SELF,/*      A B C   R(A+1) := R(B); R(A) := R(B)[RK(C)]             */
-
-//     OP_ADD,/*       A B C   R(A) := RK(B) + RK(C)                           */
-//     OP_SUB,/*       A B C   R(A) := RK(B) - RK(C)                           */
-//     OP_MUL,/*       A B C   R(A) := RK(B) * RK(C)                           */
-//     OP_DIV,/*       A B C   R(A) := RK(B) / RK(C)                           */
-//     OP_MOD,/*       A B C   R(A) := RK(B) % RK(C)                           */
-//     OP_POW,/*       A B C   R(A) := RK(B) ^ RK(C)                           */
-//     OP_UNM,/*       A B     R(A) := -R(B)                                   */
-//     OP_NOT,/*       A B     R(A) := not R(B)                                */
-//     OP_LEN,/*       A B     R(A) := length of R(B)                          */
 
 //     OP_CONCAT,/*    A B C   R(A) := R(B).. ... ..R(C)                       */
 
@@ -155,9 +152,7 @@ __kernel void exec(
 //     OP_TEST,/*      A C     if not (R(A) <=> C) then pc++                   */
 //     OP_TESTSET,/*   A B C   if (R(B) <=> C) then R(A) := R(B) else pc++     */
 
-//     OP_CALL,/*      A B C   R(A), ... ,R(A+C-2) := R(A)(R(A+1), ... ,R(A+B-1)) */
 //     OP_TAILCALL,/*  A B C   return R(A)(R(A+1), ... ,R(A+B-1))              */
-//     OP_RETURN,/*    A B     return R(A), ... ,R(A+B-2)      (see note)      */
 
 //     OP_FORLOOP,/*   A sBx   R(A)+=R(A+2);
 //                             if R(A) <?= R(A+1) then { pc+=sBx; R(A+3)=R(A) }*/

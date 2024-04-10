@@ -36,11 +36,15 @@ uint tableLen( uchar* heap, href heapIndex ) {
 }
 
 href tableCreateArrayPart( uchar* heap, uint maxHeapSize, href tableHeapIndex ) {
+    return tableCreateArrayPartWithSize( heap, maxHeapSize, tableHeapIndex, TABLE_INIT_ARRAY_SIZE );
+}
+
+href tableCreateArrayPartWithSize( uchar* heap, uint maxHeapSize, href tableHeapIndex, uint initalSize ) {
     href current = tableGetArrayPart( heap, tableHeapIndex );
     if( current != 0 )
         return current; //already exists
     
-    href arrayPart = newArray( heap, maxHeapSize, TABLE_INIT_ARRAY_SIZE );
+    href arrayPart = newArray( heap, maxHeapSize, initalSize );
     
     if( arrayPart == 0 )
         return false; //couldn't create array
@@ -50,11 +54,15 @@ href tableCreateArrayPart( uchar* heap, uint maxHeapSize, href tableHeapIndex ) 
 }
 
 href tableCreateHashedPart( uchar* heap, uint maxHeapSize, href tableHeapIndex ) {
+    return tableCreateHashedPartWithSize( heap, maxHeapSize, tableHeapIndex, HASHMAP_INIT_SIZE );
+}
+
+href tableCreateHashedPartWithSize( uchar* heap, uint maxHeapSize, href tableHeapIndex, uint initalSize ) {
     href current = tableGetHashedPart( heap, tableHeapIndex );
     if( current != 0 )
         return current; //already exists
 
-    href hashedPart = newHashmap( heap, maxHeapSize, HASHMAP_INIT_SIZE );
+    href hashedPart = newHashmap( heap, maxHeapSize, initalSize );
     
     if( hashedPart == 0 )
         return false; //couldn't create map
@@ -150,7 +158,9 @@ bool tableResizeArray( uchar* heap, uint maxHeapSize, href tableIndex, uint newS
     return true;
 }
 
-bool tableRawSet( uchar* heap, uint maxHeapSize, href tableIndex, href key, href value ) {
+bool tableRawSet( struct WorkerEnv* env, href tableIndex, href key, href value ) {
+    uchar* heap = env->heap;
+    uint maxHeapSize = env->maxHeapSize;
     uchar keyType = heap[key];
     bool  erase   = value == 0;
     if( keyType == T_INT ) {
@@ -182,38 +192,75 @@ bool tableRawSet( uchar* heap, uint maxHeapSize, href tableIndex, href key, href
     if( hashedPart == 0 )
         return false; //out of memory
 
-    return hashmapPut( heap, maxHeapSize, hashedPart, key, value );
+    return hashmapPut( env, hashedPart, key, value );
 }
 
-href tableGetMetaIndex( struct WorkerEnv* env, href table ) {
-     href meta = tableGetMetatable( env->heap, table );
+//For use with setlist op to avoid temp heap values
+//arrayPart & arraySize/capacity will be solved if arrayPart is 0
+bool tableSetList( struct WorkerEnv* env, href tableIndex, href* arrayPart, uint* size, uint* cap, uint key, href value ) {
+    if( *arrayPart == 0 ) {
+        *arrayPart = tableCreateArrayPart( env->heap, env->maxHeapSize, tableIndex ); //probably already created, but just to be safe
+        *size = arraySize( env->heap, *arrayPart );
+        *cap  = arrayCapacity( env->heap, *arrayPart );
+    }
+    
+    if( (key-1) < *cap ) {
+        arraySet( env->heap, *arrayPart, key-1, value );
+        return true;
+    } else {
+        href hkey = allocateInt( env->heap, env->maxHeapSize, key );
+        return tableRawSet( env, tableIndex, hkey, value );
+    }
+}
+
+href tableGetMetaEvent( struct WorkerEnv* env, href table, string eventName ) {
+    href meta = tableGetMetatable( env->heap, table );
     if( meta == 0 ) return 0;
 
     href metahash = tableGetHashedPart( env->heap, meta );
     if( metahash == 0 ) return 0;
 
-    string metakey = "__index";
-    href metaIndex = hashmapStringGet( env->heap, metahash, metakey, strLen( metakey ));
+    string metakey = "__newindex";
+    href metaIndex = hashmapStringGet( env->heap, metahash, eventName, strLen( eventName ));
     return metaIndex;
+}
+
+href tableGetMetaIndex( struct WorkerEnv* env, href table ) {
+    string metakey = "__index";
+    return tableGetMetaEvent( env, table, metakey );
+}
+
+href tableGetMetaNewIndex( struct WorkerEnv* env, href table ) {
+    string metakey = "__newindex";
+    return tableGetMetaEvent( env, table, metakey );
+}
+
+href _tableRecurseGetByHeap( struct WorkerEnv* env, href table, href key ) {
+    return tableGetByHeap( env, table, key );
 }
 
 href tableGetByHeap( struct WorkerEnv* env, href table, href key ) {
     uint keySize = heapObjectLength( env->heap, key );
 
-    href value = tableRawGet( env->heap, table, env->heap, key, keySize );
-    if( value != 0 ) return value;
+    href value = 0;
+    while( table != 0 && value == 0 ) {
+        value = tableRawGet( env->heap, table, env->heap, key, keySize );
+        if( value != 0 ) return value;
 
-    href metaIndex = tableGetMetaIndex( env, table );
-    if( metaIndex == 0 ) return 0;
-
-    uchar indexType = env->heap[ metaIndex ];
-    if( indexType == T_TABLE ) {
-        return tableGetByHeap( env, metaIndex, key );
-    } else if ( indexType == T_FUNC ) {
-        return 0; //TODO call
+        href metaIndex = tableGetMetaIndex( env, table );
+        if( metaIndex == 0 ) return 0;
+        uchar indexType = env->heap[ metaIndex ];
+        if( indexType == T_TABLE ) {
+            table = metaIndex;
+            continue;
+        } else if ( indexType == T_FUNC ) {
+            return 0; //TODO call
+        }
+        return 0;
     }
     return 0;
 }
+
 
 href tableGetByConst( struct WorkerEnv* env, href table, int key ) {
     if(table == 0) return 0;
@@ -221,18 +268,23 @@ href tableGetByConst( struct WorkerEnv* env, href table, int key ) {
     getConstDataRange( env, key, &constStart, &constLen );
 
     if(constLen == 0) return 0;
+    
+    href value = 0;
+    while( table != 0 && value == 0 ) {
+        value = tableRawGet( env->heap, table, env->constantsData, constStart, constLen );
+        if( value != 0 ) return value;
+        
+        href metaIndex = tableGetMetaIndex( env, table );
 
-    href value = tableRawGet( env->heap, table, env->constantsData, constStart, constLen );
-    if( value != 0 ) return value;
-
-    href metaIndex = tableGetMetaIndex( env, table );
-    if( metaIndex == 0 ) return 0;
-
-    uchar metaIndexType = env->heap[ metaIndex ];
-    if( metaIndexType == T_TABLE ) {
-        return tableGetByConst( env, metaIndex, key );
-    } else if ( metaIndexType == T_FUNC ) {
-        return 0; //TODO call
+        if( metaIndex == 0 ) return 0;
+        uchar metaIndexType = env->heap[ metaIndex ];
+        if( metaIndexType == T_TABLE ) {
+            table = metaIndex;
+            continue;
+        } else if ( metaIndexType == T_FUNC ) {
+            return 0; //TODO call
+        }
+        return 0;
     }
     return 0;
 }
