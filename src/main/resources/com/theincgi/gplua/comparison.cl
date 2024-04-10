@@ -71,7 +71,7 @@ bool heapEquals( struct WorkerEnv* env, uchar* dataSourceA, href indexA, uchar* 
                 href args[2];
                 args[0] = indexA;
                 args[1] = indexB;
-                return false; //disabling this means that metaA and metaB don't get optimized away, some recursion happens or missing import(?) then which causes out of resources
+                
                 return setupCallWithArgs( env, metaA, args, 2 );
             }
             

@@ -55,4 +55,5 @@ uint cls_nRegisters( struct WorkerEnv* env );
 
 href getReturn( struct WorkerEnv* env, uint r );
 href redefineLuaStack( struct WorkerEnv* env, href closure, uint nVarargs );
+
 #endif

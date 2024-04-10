@@ -23,8 +23,9 @@ void throwErr( struct WorkerEnv* env, string msg ) {
 }
 
 void throwSO( struct WorkerEnv* env ) {
-    string msg = "StackOverflow";
-    throwErr( env, msg );
+    //out of resources related to this call, caused by comparison _eq setupCallWithArgs cls_setRegister
+    // string msg = "StackOverflow";
+    // throwErr( env, msg );
 }
 
 void throwUnexpectedBytecodeOp( struct WorkerEnv* env, int op ) {
