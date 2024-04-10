@@ -28,9 +28,10 @@ class GlobalsTest extends HeapTestBase {
 			#include"opUtils.cl"
 			#include"strings.h"
 			#include"globals.cl"
-			#include"stackUtils.h"
 			#include"vm.h"
 			#include"closure.h"
+			#include"comparison.h"
+			#include"luaStack.h"
 			
 			
 			//manually include .cl for headers since openCL doesn't do that
@@ -40,8 +41,9 @@ class GlobalsTest extends HeapTestBase {
 			#include"hashmap.cl"
 			#include"heapUtils.cl"
 			#include"strings.cl"
-			#include"stackUtils.cl"
 			#include"closure.cl"
+			#include"comparison.cl"
+			#include"luaStack.cl"
 			
 			__kernel void exec(
 			    __global const uint* stackSizes,

@@ -100,7 +100,7 @@ public class LuaKernelArgs {
 		//events.add( upvalsLengths.loadData(flat.upvalsLengths, queue));
 		events.addAll( upvals.loadData(flat.upvals, queue));
 		
-		events.add( returnInfo.fillEmpty(2, queue) );
+		events.add( returnInfo.fillEmpty(3, queue) );
 		
 		return events;
 	}

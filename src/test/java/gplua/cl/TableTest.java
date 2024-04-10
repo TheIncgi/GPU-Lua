@@ -26,6 +26,9 @@ class TableTest extends HeapTestBase {
 	#include"table.h"
 	#include"strings.h"
 	#include"vm.h"
+	#include"comparison.h"
+	#include"luaStack.h"
+	#include"closure.h"
 	
 	#include"table.cl"
 	#include"array.cl"
@@ -33,6 +36,9 @@ class TableTest extends HeapTestBase {
 	#include"heapUtils.cl"
 	#include"strings.cl"
 	#include"vm.cl"
+	#include"comparison.cl"
+	#include"luaStack.cl"
+	#include"closure.cl"
 	
 	__kernel void exec(
 	    __global const uint* stackSizes,

@@ -12,6 +12,8 @@ import org.junit.jupiter.api.TestInstance.Lifecycle;
 
 import com.nativelibs4java.opencl.CLEvent;
 import com.nativelibs4java.opencl.JavaCL;
+import com.theincgi.gplua.CLLuaException;
+import com.theincgi.gplua.cl.HeapUtils;
 import com.theincgi.gplua.cl.LuaKernelArgs;
 import com.theincgi.gplua.cl.LuaSrcUtil;
 import com.theincgi.gplua.cl.LuaTypes;
@@ -45,9 +47,7 @@ public class LuaTests extends KernelTestBase {
 		
 		var events = args.loadBytecode(byteCode, queue);
 		events.add(args.heap.fillEmpty(heapSize, queue));
-		events.add(args.luaStack.fillEmpty(stackSize, queue));
-		events.add(args.errorBuffer.fillEmpty(errSize, queue));
-		events.addAll(args.setStackSizes(queue, stackSize, heapSize, errSize, workSize));
+		events.addAll(args.setStackSizes(queue, heapSize, workSize));
 		events.add(args.setMaxExecution(queue, 30_000));
 		
 		args.applyArgs(kernel);
@@ -57,13 +57,21 @@ public class LuaTests extends KernelTestBase {
 	
 	public TaggedMemory[] runAndReturn(List<CLEvent> afterEvents) throws IOException {
 		var event = run( afterEvents );
-		var stack = args.luaStack.readData(queue, event); //TODO async read
+		//TODO async read
 		var heap = args.heap.readData(queue);
 		var returnRange = args.returnInfo.readData(queue);
 		
-		var values = new TaggedMemory[ returnRange[1] ];
+		int errHref = returnRange[0];
+		int returnStart = returnRange[1];
+		int nReturn = returnRange[2];
+		
+		if( errHref > 0 ) {
+			throw new CLLuaException( getChunkData(heap, errHref) );
+		}
+		
+		var values = new TaggedMemory[ nReturn ];
 		for(int i = 0; i < values.length; i++) {
-			var href = stack[returnRange[0] + i];
+			int href = readIntAt(heap, returnStart + i * REGISTER_SIZE);
 			values[i] = getChunkData(heap, href);
 		}
 		return values;

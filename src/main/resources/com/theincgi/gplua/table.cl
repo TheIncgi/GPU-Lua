@@ -258,6 +258,7 @@ href tableGetByHeap( struct WorkerEnv* env, href table, href key ) {
         }
         return 0;
     }
+    return 0;
 }
 
 
@@ -285,4 +286,5 @@ href tableGetByConst( struct WorkerEnv* env, href table, int key ) {
         }
         return 0;
     }
+    return 0;
 }

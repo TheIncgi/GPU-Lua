@@ -30,9 +30,9 @@
 __kernel void exec(
     // __global const uint * workSize,
     // __global      uchar* luaState,
-    __global       uint* luaStack,
-    __global const uint* stackSizes,
-    __global       char* errorOutput,
+    // __global       uint* luaStack,
+    __global const uint* heapSize,
+    // __global       char* errorOutput,
     __global const long* maxExecutionTime,
     __global uchar* heap,
     
@@ -76,14 +76,12 @@ __kernel void exec(
 
     //VM setup
     // uint stackSize = stackSizes[0];
-    uint heapSize  = stackSizes[0];
-    uint errorSize = stackSizes[1];
 
-    uchar* localHeap  = &(heap[ heapSize * glid ]);
+    uchar* localHeap  = &(heap[ heapSize[0] * glid ]);
     //  uint* localStack = &(luaStack[ stackSize * glid ]);
-    initHeap( localHeap, heapSize );
+    initHeap( localHeap, heapSize[0] );
 
-    href stringTable = newTable( localHeap, heapSize );
+    href stringTable = newTable( localHeap, heapSize[0] );
     //TODO allow heap retention as a param/flag/setting
     //TODO consider shared globals to reduce memory usage
 
@@ -93,7 +91,7 @@ __kernel void exec(
         // workerEnv.stackSize = stackSize;
 
         workerEnv.heap = localHeap;
-        workerEnv.maxHeapSize = heapSize;
+        workerEnv.maxHeapSize = heapSize[0];
 
         workerEnv.maxStackSizes = maxStackSizes;
 

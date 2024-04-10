@@ -205,8 +205,7 @@ char _settable( struct WorkerEnv* env, href table, ushort b, ushort c ) {
             } else { //c is a register
                 args[2] = cls_getRegister( env, c );
             }
-
-            printf("%d", isNew ? 1 : 0, newindex, args );
+            
             setupCallWithArgs( env, newindex, args, 3 ); //queue call, catch results after return
             return -1;
         }
@@ -481,36 +480,8 @@ bool isTruthy( href value ) {
 //TODO switch to void, error status checked via function now
 bool doOp( struct WorkerEnv* env, LuaInstruction instruction ) {
     // LuaInstruction instruction = code[ codeIndexes[func] + pc ];
+
     OpCode op = getOpcode( instruction );
-
-    printf("Op: %d\n", op);
-    // if( op != OP_GETTABUP 
-    //  && op != OP_GETTABLE 
-    //  && op != OP_LOADK 
-    //  && op != OP_CALL 
-    //  && op != OP_RETURN
-    // ) {
-    //     printf("QUIT on op %d | Return = %d\n", op, OP_RETURN);
-    //     printf("==Return? %d\n", op == OP_RETURN ? 1 : 0 );
-    //     return false;
-    // }
-
-    // if( op == OP_RETURN ) {
-    //     printf("QUIT on Return %d | Return = %d\n", op, OP_RETURN);
-    //     return false;
-    // }
-
-    // if( op != OP_GETTABUP 
-    //  && op != OP_GETTABLE 
-    //  && op != OP_LOADK 
-    //  && op != OP_CALL 
-    // //  && op != OP_RETURN
-    // ) {
-    //     printf("QUIT!!! on op %d | Return = %d\n", op, OP_RETURN);
-    //     printf("==Return? %d\n", op == OP_RETURN ? 1 : 0 );
-    //     return false;
-    // }
-
     switch( op ) {
         
         case OP_MOVE: { // R(A) := R(B)
