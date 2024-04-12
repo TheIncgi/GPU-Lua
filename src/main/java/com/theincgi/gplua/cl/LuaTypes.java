@@ -18,5 +18,6 @@ public class LuaTypes {
 		SUBSTRING = 0x54,
 		NATIVE_FUNC = 0x56,
 		ERROR = 0x57, //deprecated
-	    LUA_STACK = 0x58;
+	    LUA_STACK = 0x58,
+	    UPVAL = 0x59;
 }

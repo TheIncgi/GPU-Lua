@@ -12,6 +12,7 @@
 #include"closure.h"
 #include"luaStack.h"
 #include"comparison.h"
+#include"upval.h"
 
 
 //manually include .cl for headers since openCL doesn't do that
@@ -25,6 +26,7 @@
 #include"closure.cl"
 #include"luaStack.cl"
 #include"comparison.cl"
+#include"upval.cl"
 			
 
 __kernel void exec(
@@ -106,6 +108,9 @@ __kernel void exec(
         workerEnv.constantsPrimaryIndex = constantsPrimaryIndex;
         workerEnv.constantsSecondaryIndex = constantsSecondaryIndex;
         workerEnv.constantsData = constantsData;
+
+        workerEnv.upvalsIndex = upvalsIndex;
+        workerEnv.upvals = upvals;
 
         workerEnv.error = 0; // no error
 

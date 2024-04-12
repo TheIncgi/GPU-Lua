@@ -29,6 +29,7 @@ public class StackTests extends KernelTestBase {
 			#include"closure.h"
 			#include"luaStack.h"
 			#include"comparison.h"
+			#include"upval.h"
 			
 			#include"table.cl"
 			#include"array.cl"
@@ -40,6 +41,7 @@ public class StackTests extends KernelTestBase {
 			#include"closure.cl"
 			#include"luaStack.cl"
 			#include"comparison.cl"
+			#include"upval.cl"
 			
 			__kernel void exec(
 			    __global const  uint* heapSize,

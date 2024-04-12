@@ -18,9 +18,13 @@ import com.theincgi.gplua.cl.LuaKernelArgs;
 import com.theincgi.gplua.cl.LuaSrcUtil;
 import com.theincgi.gplua.cl.LuaTypes;
 
+//Need to inspect the bytecode?
+//check out https://www.luac.nl/
+
 @TestInstance(Lifecycle.PER_CLASS)
 public class LuaTests extends KernelTestBase {
 	
+	byte[] heap;
 	
 	@BeforeAll
 	void beforeAll() throws IOException {
@@ -40,7 +44,7 @@ public class LuaTests extends KernelTestBase {
 	}
 	
 	
-	public List<CLEvent> setupProgram( String luaSrc, int heapSize, int stackSize, int errSize ) throws IOException, InterruptedException {
+	public List<CLEvent> setupProgram(String luaSrc, int heapSize) throws IOException, InterruptedException {
 		var byteCode = LuaSrcUtil.compile(luaSrc);
 		
 		args = new LuaKernelArgs(context);
@@ -58,7 +62,7 @@ public class LuaTests extends KernelTestBase {
 	public TaggedMemory[] runAndReturn(List<CLEvent> afterEvents) throws IOException {
 		var event = run( afterEvents );
 		//TODO async read
-		var heap = args.heap.readData(queue);
+		heap = args.heap.readData(queue);
 		var returnRange = args.returnInfo.readData(queue);
 		
 		int errHref = returnRange[0];
@@ -82,7 +86,7 @@ public class LuaTests extends KernelTestBase {
 		var events = setupProgram("""
 		local y = 5
 		return 3 + y	
-		""", 6000, 1024, 32);
+		""", 6000);
 		var results = runAndReturn(events);
 		
 		assertEquals(1, results.length);
@@ -95,7 +99,7 @@ public class LuaTests extends KernelTestBase {
 		var events = setupProgram("""
 		local y = 5
 		return 3 * y	
-		""", 6000, 1024, 32);
+		""", 6000);
 		var results = runAndReturn(events);
 		
 		assertEquals(1, results.length);
@@ -108,7 +112,7 @@ public class LuaTests extends KernelTestBase {
 		var events = setupProgram("""
 		local y = 5
 		return 3 - y	
-		""", 6000, 1024, 32);
+		""", 6000);
 		var results = runAndReturn(events);
 		
 		assertEquals(1, results.length);
@@ -121,7 +125,7 @@ public class LuaTests extends KernelTestBase {
 		var events = setupProgram("""
 		local y = 5
 		return 3 / y	
-		""", 6000, 1024, 32);
+		""", 6000);
 		var results = runAndReturn(events);
 		
 		assertEquals(1, results.length);
@@ -134,7 +138,7 @@ public class LuaTests extends KernelTestBase {
 		var events = setupProgram("""
 		local y = 2
 		return 3 ^ y	
-		""", 6000, 1024, 32);
+		""", 6000);
 		var results = runAndReturn(events);
 		
 		assertEquals(1, results.length);
@@ -147,7 +151,7 @@ public class LuaTests extends KernelTestBase {
 		var events = setupProgram("""
 		local y = 9
 		return 29 % y	
-		""", 6000, 1024, 32);
+		""", 6000);
 		var results = runAndReturn(events);
 		
 		assertEquals(1, results.length);
@@ -160,12 +164,46 @@ public class LuaTests extends KernelTestBase {
 		var events = setupProgram("""
 		local y = 9
 		return -y	
-		""", 6000, 1024, 32);
+		""", 6000);
 		var results = runAndReturn(events);
 		
 		assertEquals(1, results.length);
 		assertEquals(LuaTypes.INT, results[0].type());
 		assertEquals(-9, results[0].intValue());
+	}
+	
+	@Test
+	public void stackOnlyClosure() throws IOException, InterruptedException { 
+	var events = setupProgram("""
+			local u, v = 45, 51
+			function foo()
+				return v
+			end
+			
+			return foo, v
+			""", 6000);
+			var results = runAndReturn(events);
+			
+			dumpHeap(heap);
+			
+			assertEquals(2, results.length, "expected 2 return values");
+			assertEquals(LuaTypes.CLOSURE, results[0].type(), "return 1 value is not a closure");
+			assertEquals(LuaTypes.INT, results[1].type(), "return 2 is not an int");
+			
+			var closure = results[0];
+			var expectedInt = results[1];
+			
+			var upvalArray = getChunkData(heap, closure.closureUpvalArray());
+			assertEquals(1, upvalArray.arraySize(), "expected 1 upval for foo()");
+			
+			var upval = getChunkData(heap, upvalArray.arrayRef(0) );
+			assertEquals(LuaTypes.UPVAL, upval.type(), "upval has unexpected type");
+			
+			var stack = getChunkData(heap, upval.upvalStack());
+			assertEquals(LuaTypes.LUA_STACK, stack.type(), "tack has unexpected type");
+			
+			var regVal = getChunkData(heap, stack.lsGetRegister( upval.upvalRegister() ));
+			assertEquals(expectedInt.allocationIndex(), regVal.allocationIndex());
 	}
 	
 }

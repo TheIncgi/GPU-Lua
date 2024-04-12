@@ -49,7 +49,7 @@ public class IntArray2D {
 			indexes[ j*2    ] = i;
 			indexes[ j*2 + 1] = a.length;
 			i += a.length;
-			j += 2;
+			j += 1;
 		}
 		
 		pointer = Pointer.pointerToArray(flatData);

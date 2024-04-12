@@ -1,6 +1,7 @@
 #include"upval.h"
 #include"common.cl"
 #include"types.cl"
+#include"luaStack.h"
 
 href allocateUpval( struct WorkerEnv* env,  href stackRef, uchar reg ) {
     href ref = allocateHeap( env->heap, env->maxHeapSize, 9 );
@@ -19,4 +20,21 @@ href getUpvalStackRef( struct WorkerEnv* env, href ref ) {
 
 uchar getUpvalRegister( struct WorkerEnv* env, href ref ) {
     return env->heap[ ref + 5 ];
+}
+
+href getUpvalValue( struct WorkerEnv* env, href ref ) {
+    return ls_getRegister( 
+        env,
+        getUpvalStackRef( env, ref ),
+        getUpvalRegister( env, ref )
+    );
+}
+
+bool setUpvalValue( struct WorkerEnv* env, href ref, href value ) {
+    return ls_setRegister(
+        env,
+        getUpvalStackRef( env, ref ),
+        getUpvalRegister( env, ref ),
+        value
+    );
 }

@@ -27,6 +27,9 @@ struct WorkerEnv {
     int* constantsSecondaryIndex;
     uchar* constantsData;
 
+    int*   upvalsIndex;
+    uchar* upvals; //upval definitions
+
     href globals;
     href stringTable;
     // href constTable; //todo

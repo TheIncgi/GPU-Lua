@@ -10,6 +10,7 @@
 #include"natives.cl"
 #include"comparison.h"
 #include"errorMsg.cl"
+#include"upval.h"
 
 void getConstDataRange( struct WorkerEnv* env, uint index, uint* start, uint* len ) {
     uint fConstStart = env->constantsPrimaryIndex[ env->func * 2     ];
@@ -63,6 +64,7 @@ bool loadk( struct WorkerEnv* env, uchar reg, uint index ) {
     }
 }
 
+//deprecated
 href _getUpVal( struct WorkerEnv* env, href closureRef, uint upval ) {
     if( closureRef == 0 ) return 0;
     return getClosureUpval( env, closureRef, upval );
@@ -78,6 +80,10 @@ bool getTabUp( struct WorkerEnv* env, uchar reg, uint upvalIndexOfTable, uint ta
     
     href table = getClosureUpval( env, closure, upvalIndexOfTable );
     if( table == 0 ) return false;
+
+    if( env->heap[table] == T_UPVAL ) {
+        table = getUpvalValue( env, table );
+    }
 
     if( env->heap[ table ] != T_TABLE )
         return false; //attempt to index TYPE
@@ -128,7 +134,12 @@ bool op_settabup( struct WorkerEnv* env, uchar a, ushort b, ushort c ) {
     }
     href closure = cls_getClosure( env ); //active function
     if( closure == 0 ) return false;
-    href table = _getUpVal( env, closure, a ); //table upval of current function
+    href table = getClosureUpval( env, closure, a );
+    
+    if( env->heap[table] == T_UPVAL ) {
+        table = getUpvalValue( env, table );
+    }
+
     if( env->heap[table] != T_TABLE ) return false; //attempt to assign to TYPE
 
     char result = _settable( env, table, b, c );
@@ -205,7 +216,7 @@ char _settable( struct WorkerEnv* env, href table, ushort b, ushort c ) {
             } else { //c is a register
                 args[2] = cls_getRegister( env, c );
             }
-            
+
             setupCallWithArgs( env, newindex, args, 3 ); //queue call, catch results after return
             return -1;
         }
@@ -523,9 +534,12 @@ bool doOp( struct WorkerEnv* env, LuaInstruction instruction ) {
             uchar  a = getA( instruction );
             ushort b = getB( instruction );
             href closure = cls_getClosure( env );
-            href upval = _getUpVal( env, closure, b );
-            if(!cls_setRegister( env, a, upval ))
+            href upval = getClosureUpval( env, closure, b );
+            
+            if( !cls_setRegister( env, a, getUpvalValue( env, upval )) ) {
                 return false;
+            }
+
             env->pc++;
             return true;
         }
@@ -557,7 +571,11 @@ bool doOp( struct WorkerEnv* env, LuaInstruction instruction ) {
             uchar  a = getA( instruction ); //value register
             ushort b = getB( instruction ); //upval index
             href closure = cls_getClosure( env );
-            setClosureUpval( env, closure, b, cls_getRegister( env, a ) );
+            href upval = getClosureUpval( env, closure, b );
+            if( !setUpvalValue( env, upval, cls_getRegister( env, a ) )) {
+                return false;
+            }
+            env->pc++;
             return true;
         }
 
@@ -931,8 +949,46 @@ bool doOp( struct WorkerEnv* env, LuaInstruction instruction ) {
             }
             return true;
         }
-        case OP_CLOSURE: {  //   A Bx    R(A) := closure(KPROTO[Bx])                    
 
+        case OP_CLOSURE: {  //   A Bx    R(A) := closure(KPROTO[Bx])                    
+            uchar a = getA( instruction ); //register
+            uint bx = getBx( instruction ) + 1; //function id
+
+
+            uint upvalRangeStart = env->upvalsIndex[ bx * 2 ];
+            uint upvalRangeLen = env->upvalsIndex[ bx * 2  + 1 ];
+
+            href closure = createClosure( env, bx + 1, env->globals, upvalRangeLen / 2 );
+
+            //FIXME enabling for stackOnlyClosure test causes most of the heap to disapear when dumped (probably wrote outside a tagged area?)
+            // for( uint i = 0; i < upvalRangeLen; i+=2 ) {
+            //     uint func = bx + 1; //seems 0 isn't used
+            //     bool onStack = env->upvals[ upvalRangeStart + i     ];
+            //     uchar index  = env->upvals[ upvalRangeStart + i + 1 ]; //or register
+
+            //     href stackRef = env->luaStack;
+            //     uint upvalRef = upvalRangeStart;
+                
+            //     while( !onStack ) {
+            //         func = ls_getFunction( env, stackRef );
+            //         upvalRef = env->upvalsIndex[ func * 2 ];
+            //         onStack = env->upvals[ upvalRef + index * 2     ];
+            //         index   = env->upvals[ upvalRef + index * 2 + 1 ];
+            //         stackRef = ls_getPriorStack( env, stackRef );
+            //         if( stackRef == 0 )
+            //             return false;
+            //     }
+                
+            //     href up = allocateUpval( env, stackRef, index );
+            //     if( up == 0 )
+            //         return false;
+                
+            //     setClosureUpval( env, closure, i, up );
+            // } 
+
+            cls_setRegister( env, a, closure );
+            env->pc++;
+            return true;
         }
 
         case OP_VARARG: {   //    A B     R(A), R(A+1), ..., R(A+B-2) = vararg           

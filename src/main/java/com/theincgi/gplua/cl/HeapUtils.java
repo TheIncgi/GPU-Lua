@@ -137,6 +137,21 @@ public class HeapUtils {
 			return readInt( 1 );
 		}
 		
+		public int closureFunction() throws IOException {
+			assertType(LuaTypes.CLOSURE);
+			return readInt(1);
+		}
+		
+		public int closureUpvalArray() throws IOException {
+			assertType(LuaTypes.CLOSURE);
+			return readInt(5);
+		}
+		
+		public int closureFenv() throws IOException {
+			assertType(LuaTypes.CLOSURE);
+			return readInt(9);
+		}
+		
 		public int lsGetPriorStack() throws IOException {
 			assertType(LuaTypes.LUA_STACK);
 			return readInt( 1 );
@@ -196,6 +211,16 @@ public class HeapUtils {
 			if( pos >= lsGetTop() )
 				throw new ArrayIndexOutOfBoundsException( i );
 			return readInt( pos );
+		}
+		
+		public int upvalStack() throws IOException {
+			assertType(LuaTypes.UPVAL);
+			return readInt(1);
+		}
+		
+		public int upvalRegister() {
+			assertType(LuaTypes.UPVAL);
+			return ((int)data[5]) & 0xFF;
 		}
 		
 		public String stringValue() throws IOException {
@@ -272,9 +297,9 @@ public class HeapUtils {
 				}
 				case LuaTypes.CLOSURE: {
 					builder.append("CLOSURE: \n")
-						.append("  Function: ").append(readInt(1)).append("\n")
-						.append("  Upvals:   ").append(readInt(5)).append("\n")
-						.append("  _ENV:     ").append(readInt(9));
+						.append("  Function: ").append(closureFunction()).append("\n")
+						.append("  Upvals:   ").append(closureUpvalArray()).append("\n")
+						.append("  _ENV:     ").append(closureFenv());
 					break;
 				}
 				case LuaTypes.SUBSTRING: {
@@ -308,6 +333,13 @@ public class HeapUtils {
 					for(int r = 0; r < lsNRegisters(); r++) {
 						builder.append("    [%3d] %d\n".formatted(r, lsGetRegister(r)));
 					}
+					break;
+				}
+				
+				case LuaTypes.UPVAL: {
+					builder.append("UPVAL:\n")
+					.append(  "  Stack:     ").append(upvalStack())
+					.append("\n  Register:  ").append(upvalRegister());
 					break;
 				}
 				default:
