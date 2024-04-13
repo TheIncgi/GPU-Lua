@@ -251,11 +251,13 @@ bool op_call( struct WorkerEnv* env, uchar a, ushort b, ushort c ) {
             keep = c - 1;
         }
         keep = keep < env->nReturn ? keep : env->nReturn;
-        for(uint r = 0; r < keep; r++) //overwrites function ref on stack used to call
+        for(uint r = 0; r < keep; r++) {//overwrites function ref on stack used to call
+            printf("op_call#return cls_setRegister( env, %d, %d )\n", a + r, getReturn( env, r ));
             if(!cls_setRegister( env, a + r, getReturn( env, r ) ))
                 return false; //can't imagine this happening, but checked anyway
+        }
         
-        env->returnFlag = false;
+        env->returnFlag = false; //must be set after getReturn( env, r )
         env->pc++;
         return true;
              // ===========================================================================================
@@ -493,6 +495,12 @@ bool doOp( struct WorkerEnv* env, LuaInstruction instruction ) {
     // LuaInstruction instruction = code[ codeIndexes[func] + pc ];
 
     OpCode op = getOpcode( instruction );
+
+    printf("Op: %d PC: %d Depth: %d ReturnFlag: %d", op, env->pc, cls_getDepth( env ), env->returnFlag?1:0);
+    if(env->returnFlag)
+        printf(" [%d, %d]", env->returnStart, env->nReturn );
+    printf("\n");
+
     switch( op ) {
         
         case OP_MOVE: { // R(A) := R(B)
@@ -952,39 +960,39 @@ bool doOp( struct WorkerEnv* env, LuaInstruction instruction ) {
 
         case OP_CLOSURE: {  //   A Bx    R(A) := closure(KPROTO[Bx])                    
             uchar a = getA( instruction ); //register
-            uint bx = getBx( instruction ) + 1; //function id
+            uint bx = getBx( instruction ); //proto id
 
+            // uint funcID = //TODO use protoLengths to determine correct function id and upal ranges
 
             uint upvalRangeStart = env->upvalsIndex[ bx * 2 ];
             uint upvalRangeLen = env->upvalsIndex[ bx * 2  + 1 ];
 
-            href closure = createClosure( env, bx + 1, env->globals, upvalRangeLen / 2 );
+            href closure = createClosure( env, bx, env->globals, upvalRangeLen / 2 );
 
             //FIXME enabling for stackOnlyClosure test causes most of the heap to disapear when dumped (probably wrote outside a tagged area?)
-            // for( uint i = 0; i < upvalRangeLen; i+=2 ) {
-            //     uint func = bx + 1; //seems 0 isn't used
-            //     bool onStack = env->upvals[ upvalRangeStart + i     ];
-            //     uchar index  = env->upvals[ upvalRangeStart + i + 1 ]; //or register
+            for( uint i = 0; i < upvalRangeLen; i+=2 ) {
+                uint func = bx + 1; //seems 0 isn't used
+                bool onStack = env->upvals[ upvalRangeStart + i     ];
+                uchar index  = env->upvals[ upvalRangeStart + i + 1 ]; //or register
 
-            //     href stackRef = env->luaStack;
-            //     uint upvalRef = upvalRangeStart;
+                href stackRef = env->luaStack;
+                uint upvalRef = upvalRangeStart;
                 
-            //     while( !onStack ) {
-            //         func = ls_getFunction( env, stackRef );
-            //         upvalRef = env->upvalsIndex[ func * 2 ];
-            //         onStack = env->upvals[ upvalRef + index * 2     ];
-            //         index   = env->upvals[ upvalRef + index * 2 + 1 ];
-            //         stackRef = ls_getPriorStack( env, stackRef );
-            //         if( stackRef == 0 )
-            //             return false;
-            //     }
+                while( !onStack ) {
+                    func = ls_getFunction( env, stackRef );
+                    upvalRef = env->upvalsIndex[ func * 2 ];
+                    onStack = env->upvals[ upvalRef + index * 2     ];
+                    index   = env->upvals[ upvalRef + index * 2 + 1 ];
+                    stackRef = ls_getPriorStack( env, stackRef );
+                    if( stackRef == 0 )
+                        return false;
+                }
+                href up = allocateUpval( env, stackRef, index );
+                if( up == 0 )
+                    return false;
                 
-            //     href up = allocateUpval( env, stackRef, index );
-            //     if( up == 0 )
-            //         return false;
-                
-            //     setClosureUpval( env, closure, i, up );
-            // } 
+                setClosureUpval( env, closure, i, up );
+            } 
 
             cls_setRegister( env, a, closure );
             env->pc++;

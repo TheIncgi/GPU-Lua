@@ -65,7 +65,7 @@ public class HeapUtils {
 	}
 	
 	public static record TaggedMemory(int allocationIndex, boolean inUse, boolean marked, byte[] data) {
-		public static final int STACKFRAME_RESERVE = 1 + (6*4);
+		public static final int STACKFRAME_RESERVE = 1 + (7*4);
 		public static final int REGISTER_SIZE = 4;
  
 		public int readInt(int offset) throws IOException {

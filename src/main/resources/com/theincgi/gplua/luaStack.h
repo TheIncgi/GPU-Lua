@@ -5,7 +5,7 @@
 #include"common.cl"
 
 //type + 6 ints
-#define STACKFRAME_RESERVE (1 + 6*4)
+#define STACKFRAME_RESERVE (1 + 7*4)
 #define REGISTER_SIZE 4
 
 href allocateLuaStack( struct WorkerEnv* env, href priorStack, uint priorPC, href closure, uint nVarargs );

@@ -4,12 +4,12 @@
 #include"luaStack.h"
 
 href allocateUpval( struct WorkerEnv* env,  href stackRef, uchar reg ) {
-    href ref = allocateHeap( env->heap, env->maxHeapSize, 9 );
+    href ref = allocateHeap( env->heap, env->maxHeapSize, 6 );
     if( ref == 0 ) return 0;
 
     env->heap[ ref ] = T_UPVAL;
     putHeapInt( env->heap, ref + 1, stackRef );
-    env->heap[ 5 ] = reg;
+    env->heap[ ref + 5 ] = reg;
     
     return ref;
 }

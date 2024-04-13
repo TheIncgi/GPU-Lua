@@ -55,7 +55,7 @@ __kernel void exec(
     __global          int* constantsPrimaryIndex,
     __global          int* constantsSecondaryIndex,
     __global        uchar* constantsData, //[function #][byte] - single byte type, followed by value, strings are null terminated
-    __global          int* protoLengths,
+    __global         uint* protoLengths,
     
     //upvals
     __global          int* upvalsIndex,
@@ -111,6 +111,7 @@ __kernel void exec(
 
         workerEnv.upvalsIndex = upvalsIndex;
         workerEnv.upvals = upvals;
+        workerEnv.protoLengths = protoLengths;
 
         workerEnv.error = 0; // no error
 

@@ -193,6 +193,8 @@ public class LuaTests extends KernelTestBase {
 			var closure = results[0];
 			var expectedInt = results[1];
 			
+			assertEquals(1, closure.closureFunction());
+			
 			var upvalArray = getChunkData(heap, closure.closureUpvalArray());
 			assertEquals(1, upvalArray.arraySize(), "expected 1 upval for foo()");
 			
@@ -200,10 +202,53 @@ public class LuaTests extends KernelTestBase {
 			assertEquals(LuaTypes.UPVAL, upval.type(), "upval has unexpected type");
 			
 			var stack = getChunkData(heap, upval.upvalStack());
-			assertEquals(LuaTypes.LUA_STACK, stack.type(), "tack has unexpected type");
+			assertEquals(LuaTypes.LUA_STACK, stack.type(), "stack has unexpected type");
 			
 			var regVal = getChunkData(heap, stack.lsGetRegister( upval.upvalRegister() ));
 			assertEquals(expectedInt.allocationIndex(), regVal.allocationIndex());
+	}
+	
+	@Test
+	public void nonStackClosure() throws IOException, InterruptedException { 
+		var events = setupProgram("""
+			local u,v = 99, 105
+			function p() 
+				u=1
+				local function q()
+					return v 
+				end 
+				return q
+			end
+			
+			local foo = p()
+			return foo, v, p
+			""", 6000);
+		var results = runAndReturn(events);
+		
+		dumpHeap(heap);
+		
+		assertEquals(3, results.length, "expected 3 return values");
+		assertEquals(LuaTypes.CLOSURE, results[0].type(), "return 1 value is not a closure");
+		assertEquals(LuaTypes.INT, results[1].type(), "return 2 is not an int");
+		
+		var closureFoo = results[0];
+		var expectedInt = results[1];
+		var closureP = results[2];
+		
+		assertEquals(1, closureP.closureFunction());
+		assertEquals(2, closureFoo.closureFunction());
+		
+		var upvalArray = getChunkData(heap, closureFoo.closureUpvalArray());
+		assertEquals(1, upvalArray.arraySize(), "expected 1 upval for foo()");
+		
+		var upval = getChunkData(heap, upvalArray.arrayRef(0) );
+		assertEquals(LuaTypes.UPVAL, upval.type(), "upval has unexpected type");
+		
+		var stack = getChunkData(heap, upval.upvalStack());
+		assertEquals(LuaTypes.LUA_STACK, stack.type(), "stack has unexpected type");
+		
+		var regVal = getChunkData(heap, stack.lsGetRegister( upval.upvalRegister() ));
+		assertEquals(expectedInt.allocationIndex(), regVal.allocationIndex());
 	}
 	
 }

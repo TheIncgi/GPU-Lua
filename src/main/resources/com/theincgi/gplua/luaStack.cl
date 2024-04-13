@@ -221,9 +221,9 @@ uint cls_nRegisters( struct WorkerEnv* env ) {
 href getReturn( struct WorkerEnv* env, uint r ) {
     if( !env->returnFlag )
         return 0;
-    if( env->nReturn >= r)
+    if( env->nReturn <= r)
         return 0;
-    return env->heap[ env->returnStart + r * REGISTER_SIZE ];
+    return getHeapInt( env->heap, env->returnStart + r * REGISTER_SIZE );
 }
 
 href redefineLuaStack( struct WorkerEnv* env, href closure, uint nVarargs ) {
