@@ -34,6 +34,10 @@ public class HeapUtils {
 	public static TaggedMemory getChunkData( byte[] heap, int allocationIndex ) throws IOException {
 		if(allocationIndex == 0)
 			return new TaggedMemory(0, true, false, new byte[1]);
+		if(allocationIndex == 1)
+			return new TaggedMemory(1, true, false, new byte[] {LuaTypes.BOOL, 0});
+		if(allocationIndex == 3)
+			return new TaggedMemory(1, true, false, new byte[] {LuaTypes.BOOL, 1});
 		DataInputStream dis = new DataInputStream(new ByteArrayInputStream(heap));
 		int tagPos = allocationIndex - 4;
 		dis.skip(tagPos);
@@ -130,6 +134,11 @@ public class HeapUtils {
 			long lo = ((long)readIntAt(data, 5)) & 0xFFFFFFFFL;
 			long bits = hi | lo;
 			return Double.longBitsToDouble( bits );
+		}
+		
+		public boolean boolValue() {
+			assertType(LuaTypes.BOOL);
+			return data()[1] != 0 ? true : false;
 		}
 		
 		public int stringLength() throws IOException {
@@ -229,7 +238,7 @@ public class HeapUtils {
 		}
 		
 		public String toString() {
-			if(!inUse())
+			if(allocationIndex >= 5 && !inUse())
 				return "[%d : %d] FREE".formatted(allocationIndex, allocationIndex + data.length-1);
 			StringBuilder builder = new StringBuilder();
 			builder.append("[%d : %d] ".formatted(allocationIndex, allocationIndex + data.length-1));
@@ -250,7 +259,7 @@ public class HeapUtils {
 				}
 				case LuaTypes.BOOL: {
 					builder.append("BOOL: ");
-					builder.append( data()[1] != 0 ? "TRUE" : "FALSE" );
+					builder.append( Boolean.toString(boolValue()).toUpperCase() );
 					break;
 				}
 				case LuaTypes.NUMBER: {

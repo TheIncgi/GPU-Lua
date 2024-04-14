@@ -75,8 +75,24 @@ public class ByteArray3D {
 		if(buffer != null)
 			close();
 		
+		
 		int flatLen = flattenedLength3D(data);
 		int secondaryLen = secondaryLength(data);
+		
+		if(flatLen == 0) {
+			indexBuffer = context.createIntBuffer(usage, 2);
+			secondaryIndexBuffer = context.createIntBuffer(usage, 2);
+			buffer = context.createByteBuffer(usage, 1);
+			
+			pointer = Pointer.pointerToArray(new int[] {0});
+			indexPointer = Pointer.pointerToArray(new int[] {0,0});
+			secondaryIndexPointer = Pointer.pointerToArray(new int[] {0,0});
+			
+			var bufferWrite = buffer.write(queue, pointer, false);
+			var indexWrite = indexBuffer.write(queue, indexPointer, false);
+			var indexWrite2 = secondaryIndexBuffer.write(queue, secondaryIndexPointer, false);
+			return List.of(bufferWrite, indexWrite, indexWrite2);
+		}
 		
 		indexBuffer = context.createIntBuffer(usage, data.size() * 2);
 		secondaryIndexBuffer = context.createIntBuffer(usage, secondaryLen * 2);

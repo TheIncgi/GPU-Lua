@@ -1,5 +1,7 @@
 package gplua.cl;
 
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import java.io.IOException;
@@ -184,7 +186,7 @@ public class LuaTests extends KernelTestBase {
 			""", 6000);
 			var results = runAndReturn(events);
 			
-			dumpHeap(heap);
+//			dumpHeap(heap);
 			
 			assertEquals(2, results.length, "expected 2 return values");
 			assertEquals(LuaTypes.CLOSURE, results[0].type(), "return 1 value is not a closure");
@@ -225,7 +227,7 @@ public class LuaTests extends KernelTestBase {
 			""", 6000);
 		var results = runAndReturn(events);
 		
-		dumpHeap(heap);
+//		dumpHeap(heap);
 		
 		assertEquals(3, results.length, "expected 3 return values");
 		assertEquals(LuaTypes.CLOSURE, results[0].type(), "return 1 value is not a closure");
@@ -251,4 +253,39 @@ public class LuaTests extends KernelTestBase {
 		assertEquals(expectedInt.allocationIndex(), regVal.allocationIndex());
 	}
 	
+	@Test
+	public void setList() throws IOException, InterruptedException { 
+		var events = setupProgram("""
+			return {4,5,6}
+			""", 6000);
+		var results = runAndReturn(events);
+		
+//		dumpHeap(heap);
+		
+		assertEquals(1, results.length, "expected 1 return values");
+		
+		var table = results[0];
+		
+		assertEquals(LuaTypes.TABLE, table.type());
+		var arrayPart = getChunkData(heap, table.tableArrayPart());
+		assertEquals(3, arrayPart.arraySize(), "wrong array size");
+		
+		for(int i = 0; i<arrayPart.arraySize(); i++)
+			assertEquals(4 + i, getChunkData(heap, arrayPart.arrayRef(i)).intValue());
+	}
+	
+	@Test
+	public void loadBool() throws IOException, InterruptedException { 
+		var events = setupProgram("""
+			return false, true
+			""", 6000);
+		var results = runAndReturn(events);
+		
+		dumpHeap(heap);
+		
+		assertEquals(2, results.length, "expected 2 return values");
+		
+		assertFalse(results[0].boolValue());
+		assertTrue(results[1].boolValue());
+	}
 }

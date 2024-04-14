@@ -521,9 +521,11 @@ bool doOp( struct WorkerEnv* env, LuaInstruction instruction ) {
             uchar  a = getA( instruction );
             ushort b = getB( instruction );
             ushort c = getC( instruction );
+            printf("loadbool: Reg %d, Bool: %d, pc+=? %d\n", a, b, (c != 0) ? 2 : 1 );
             if(!cls_setRegister( env, a, b == 0 ? FALSE_HREF : TRUE_HREF )) //Heap reserve: 1 false, 3 true
                 return false;
-            env->pc += c != 0 ? 2 : 1;
+            env->pc += (c != 0) ? 2 : 1;
+            return true;
         }
 
         case OP_LOADNIL: { // R(A ... A+B) := nil
@@ -955,6 +957,7 @@ bool doOp( struct WorkerEnv* env, LuaInstruction instruction ) {
                 if( !tableSetList( env, tableRef, &arrayPart, &aSize, &aCap, offset + i, value ) )
                     return false;
             }
+            env->pc++;
             return true;
         }
 

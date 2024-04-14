@@ -21,8 +21,8 @@ typedef uint sref;
 typedef __constant char* string;
 
 #define NIL_HREF 0
-#define FALSE_HREF 2
-#define TRUE_HREF 4
+#define FALSE_HREF 1
+#define TRUE_HREF 3
 
 union doubleUnion{
     long lbits;

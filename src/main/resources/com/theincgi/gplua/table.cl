@@ -206,6 +206,7 @@ bool tableSetList( struct WorkerEnv* env, href tableIndex, href* arrayPart, uint
     
     if( (key-1) < *cap ) {
         arraySet( env->heap, *arrayPart, key-1, value );
+        *size = *size + 1;
         return true;
     } else {
         href hkey = allocateInt( env->heap, env->maxHeapSize, key );
