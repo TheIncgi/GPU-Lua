@@ -281,11 +281,27 @@ public class LuaTests extends KernelTestBase {
 			""", 6000);
 		var results = runAndReturn(events);
 		
-		dumpHeap(heap);
+//		dumpHeap(heap);
 		
 		assertEquals(2, results.length, "expected 2 return values");
 		
 		assertFalse(results[0].boolValue());
 		assertTrue(results[1].boolValue());
+	}
+	
+	@Test
+	public void loadNil() throws IOException, InterruptedException { 
+		var events = setupProgram("""
+			local x = 10
+			x = nil
+			return x
+			""", 6000);
+		var results = runAndReturn(events);
+		
+//		dumpHeap(heap);
+		
+		assertEquals(1, results.length, "expected 1 return values");
+		
+		assertEquals(LuaTypes.NIL, results[0].type());
 	}
 }
