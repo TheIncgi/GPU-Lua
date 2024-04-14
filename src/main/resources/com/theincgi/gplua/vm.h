@@ -29,6 +29,7 @@ struct WorkerEnv {
 
     int*   upvalsIndex;
     uchar* upvals; //upval definitions
+    uint*  protoLengths; //how many protos per function, may be safe to remove (no usage in closure)
 
     href globals;
     href stringTable;
