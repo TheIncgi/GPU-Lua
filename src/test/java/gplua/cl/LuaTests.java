@@ -301,7 +301,24 @@ public class LuaTests extends KernelTestBase {
 //		dumpHeap(heap);
 		
 		assertEquals(1, results.length, "expected 1 return values");
-		
 		assertEquals(LuaTypes.NIL, results[0].type());
+	}
+
+	@Test
+	public void forLoop() throws IOException, InterruptedException { 
+		var events = setupProgram("""
+			i = 0
+			for i = 1, 4 do
+				i = i + 1
+			end
+			return i
+			""", 6000);
+		var results = runAndReturn(events);
+		
+		dumpHeap(heap);
+		
+		var val = results[0];
+		assertEquals(LuaTypes.INT, val.type());
+		assertEquals(4, val.intValue());
 	}
 }

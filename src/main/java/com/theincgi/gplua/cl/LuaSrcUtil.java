@@ -140,7 +140,7 @@ public class LuaSrcUtil {
 		
 		//
 		if ( ( longBits & ( ( 1L << 63 ) - 1 ) ) == 0L ) {
-			return new byte[] {0, 0, 0, 0, 0}; //return LuaValue.ZERO, type as int here
+			return new byte[] {(byte) LuaTypes.INT, 0, 0, 0, 0}; //return LuaValue.ZERO, type as int here
 		}
 		
 		int e = (int)((longBits >> 52) & 0x7ffL) - 1023; //exponent?

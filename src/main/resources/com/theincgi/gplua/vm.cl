@@ -35,6 +35,7 @@ href kToHeap( struct WorkerEnv* env, uint index ) {
     uint constStart; 
     uint constLen;
     getConstDataRange( env, index, &constStart, &constLen );
+    // printf("kToHeap const @ %d w len %d\n", constStart, constLen);
 
     if( constLen == 0 )
         return 0; //const should have at minium 1 byte for type
@@ -42,10 +43,13 @@ href kToHeap( struct WorkerEnv* env, uint index ) {
     href k = allocateHeap( env->heap, env->maxHeapSize, constLen );
     if( k == 0 ) { return false; } //TODO err OOM
 
+    // printf("data: ");
     uint limit = constStart + constLen;
     for( uint r = constStart, w = 0; r < limit; r++, w++ ) {
         env->heap[ k + w ] = env->constantsData[ r ];
+        // printf("%d ", env->constantsData[r]);
     }
+    // printf("\n");
 
     return k;
 }
@@ -191,11 +195,15 @@ char _settable( struct WorkerEnv* env, href table, ushort b, ushort c ) {
     }
 
     if( isK( c )) {
+        // printf("set table with c as constant %d\n", indexK(c));
         value = kToHeap( env, indexK( c ));
+        // printf("C loaded to %d\n", value);
         if( value == 0 ) return 0; //failed to allocate value to heap
     } else {
         value = cls_getRegister( env, c );
     }
+
+    // printf("_setTable %d[%d] = %d\n", table, key, value);
 
     
     href newindex = tableGetMetaNewIndex( env, table ); //check for meta event
@@ -390,7 +398,7 @@ bool op_tailCall( struct WorkerEnv* env, uchar a, ushort b ) {
 
 bool _readAsDouble( uchar* dataSource, uint start, double* result ) {
     if( dataSource[start] == T_INT ) {
-        *result = (double)getHeapInt( dataSource, start +1 );
+        *result = (double)getHeapInt( dataSource, start + 1 );
         return true;
     } else if( dataSource[start] == T_NUMBER ) {
         union doubleUnion d;
@@ -496,10 +504,10 @@ bool doOp( struct WorkerEnv* env, LuaInstruction instruction ) {
 
     OpCode op = getOpcode( instruction );
 
-    //printf("Op: %d PC: %d Depth: %d ReturnFlag: %d", op, env->pc, cls_getDepth( env ), env->returnFlag?1:0);
-    // if(env->returnFlag)
-    //     printf(" [%d, %d]", env->returnStart, env->nReturn );
-    // printf("\n");
+    printf("Op: %d PC: %d Depth: %d ReturnFlag: %d", op, env->pc, cls_getDepth( env ), env->returnFlag?1:0);
+    if(env->returnFlag)
+        printf(" [%d, %d]", env->returnStart, env->nReturn );
+    printf("\n");
 
     switch( op ) {
         
@@ -844,9 +852,12 @@ bool doOp( struct WorkerEnv* env, LuaInstruction instruction ) {
             //R(A) = R(A) - R(A+2) //init - step
             href initRef = cls_getRegister( env, a   );
             href stepRef = cls_getRegister( env, a+2 );
-            double initVal, stepVal; //anything below 2^53 has a whole number representation, well past 2^32 from int
+            double initVal; //anything below 2^53 has a whole number representation, well past 2^32 from int
+            double stepVal;
             _readAsDouble( env->heap, initRef, &initVal );
             _readAsDouble( env->heap, stepRef, &stepVal ); 
+            printf("forPrep: initRef %d, stepRef %d\n", initRef, stepRef);
+            printf("forPrep: init %f, step %f\n", initVal, stepVal);
             href shiftedRef = allocateNumber( env->heap, env->maxHeapSize, initVal - stepVal );
             if( shiftedRef == 0 ) { throwOOM( env ); return false; }
             if( !cls_setRegister( env, a, shiftedRef ) ) { throwSO( env ); return false; }
@@ -873,9 +884,11 @@ bool doOp( struct WorkerEnv* env, LuaInstruction instruction ) {
 
             double internal, limit, step;
             _readAsDouble( env->heap, internalRef, &internal );
+            _readAsDouble( env->heap,     stepRef, &step );
             _readAsDouble( env->heap,    limitRef, &limit );
             
             internal += step;
+            printf("for loop: internal %f, limit %f step %f\n", internal, limit, step);
             
             if( internal <= limit ) {
                 //allocate and re-assign internal counter to register
