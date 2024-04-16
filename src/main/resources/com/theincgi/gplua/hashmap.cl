@@ -49,6 +49,7 @@ bool hashmapPut( struct WorkerEnv* env, href mapIndex, href keyHeapIndex, href v
     for(uint offset = 0; offset < searchLimit; offset++) {
         uint i = (hashIndex + offset) % capacity;
         href globalKeyIndex = keysPart + i;
+        // if(keyHash == 523860797) {printf("Equals at CURRENT: %d == KEY: %d\n", arrayGet(heap, keysPart, i), keyHeapIndex);}
         if(heapEquals( env, heap, arrayGet(heap, keysPart, i), heap, keyHeapIndex)) { //value in stored keys == provided key
             arraySet( heap, keysPart, i, isErase ? 0 : keyHeapIndex );     //add or remove key
             arraySet( heap, valsPart, i, valueHeapIndex );                //set value
@@ -167,11 +168,13 @@ bool hashmapBytesGetIndex(uchar* heap, const href mapIndex, const uchar* dataSrc
 
         uint heapObjSize = heapObjectLength( heap, heapKey );
 
+        // printf(" heapObjSize vs dataLen %d != %d? %d\n", heapObjSize, dataLen, (heapObjSize != dataLen) ? 1 : 0 );
         if( heapObjSize != dataLen )
             continue;
         
         bool match = true;
         for(uint j = 0; j < dataLen; j++) {
+            // printf("%d != %d\n", heap[ heapKey + j ], dataSrc[ dataOffset + j ]);
             if( heap[ heapKey + j ] != dataSrc[ dataOffset + j ] ) {
                 match = false;
                 break;
@@ -181,6 +184,7 @@ bool hashmapBytesGetIndex(uchar* heap, const href mapIndex, const uchar* dataSrc
             continue;
         
         *foundIndex = i;
+        // printf("true\n");
         return true;
     }
     return false;

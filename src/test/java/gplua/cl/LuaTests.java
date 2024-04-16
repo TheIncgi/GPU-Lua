@@ -308,7 +308,7 @@ public class LuaTests extends KernelTestBase {
 	public void forLoop() throws IOException, InterruptedException { 
 		var events = setupProgram("""
 			i = 0
-			for i = 1, 4 do
+			for _ = 1, 4 do
 				i = i + 1
 			end
 			return i

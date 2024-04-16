@@ -37,14 +37,16 @@ bool heapEquals( struct WorkerEnv* env, uchar* dataSourceA, href indexA, uchar* 
 
         case T_STRING:     //should be reused
             if(dataSourceA == dataSourceB) {
-                return indexA == indexB;
+                if(indexA == indexB)
+                    return true;
             }
+            
             int len = getHeapInt( dataSourceA, indexA + 1 );
             if( len != getHeapInt( dataSourceB, indexB + 1 ))
                 return false;
 
             for(int i = 0; i < len; i++ ) {
-                if( dataSourceA[ indexA + i ] != dataSourceB[ indexB + i ] )
+                if( dataSourceA[ indexA + 5 + i ] != dataSourceB[ indexB + 5 + i ] )
                     return false;
             }
             return true;

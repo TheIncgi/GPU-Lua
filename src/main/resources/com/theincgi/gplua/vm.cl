@@ -11,6 +11,8 @@
 #include"comparison.h"
 #include"errorMsg.cl"
 #include"upval.h"
+#include"hashmap.h"
+#include"array.h"
 
 void getConstDataRange( struct WorkerEnv* env, uint index, uint* start, uint* len ) {
     uint fConstStart = env->constantsPrimaryIndex[ env->func * 2     ];
@@ -39,6 +41,30 @@ href kToHeap( struct WorkerEnv* env, uint index ) {
 
     if( constLen == 0 )
         return 0; //const should have at minium 1 byte for type
+
+    if( env->constantsData[ constStart ] == T_STRING ) {
+        //string table -> hashed part hashmapBytesGet
+        href strHash = tableCreateHashedPart( env->heap, env->maxHeapSize, env->stringTable );
+        
+        uint foundIndex;
+        printf("Look for repeated string constant:\n");
+        if( hashmapBytesGetIndex( env->heap, strHash, env->constantsData, constStart, constLen, &foundIndex ) ){
+            href valsPart = hashmapGetValsPart( env->heap, strHash );
+            foundIndex = arrayGet( env->heap, valsPart, foundIndex );
+            printf("FOUND repeated string constant: %d\n", foundIndex);
+            return foundIndex;
+        }
+        href strRef = allocateHeap( env->heap, env->maxHeapSize, constLen );
+        if(strRef == 0) return 0;
+        printf("NOT FOUND, adding %d repeated string constant:\n", strRef);
+        for( uint i = 0; i < constLen; i++ ) {
+            printf("%d ", env->constantsData[ constStart + i ]);
+            env->heap[ strRef + i ] = env->constantsData[ constStart + i ];
+        }
+        printf("\n");
+        hashmapPut( env, strHash, strRef, strRef );
+        return strRef;
+    }
 
     href k = allocateHeap( env->heap, env->maxHeapSize, constLen );
     if( k == 0 ) { return false; } //TODO err OOM
@@ -529,7 +555,7 @@ bool doOp( struct WorkerEnv* env, LuaInstruction instruction ) {
             uchar  a = getA( instruction );
             ushort b = getB( instruction );
             ushort c = getC( instruction );
-            printf("loadbool: Reg %d, Bool: %d, pc+=? %d\n", a, b, (c != 0) ? 2 : 1 );
+            // printf("loadbool: Reg %d, Bool: %d, pc+=? %d\n", a, b, (c != 0) ? 2 : 1 );
             if(!cls_setRegister( env, a, b == 0 ? FALSE_HREF : TRUE_HREF )) //Heap reserve: 1 false, 3 true
                 return false;
             env->pc += (c != 0) ? 2 : 1;
@@ -856,8 +882,8 @@ bool doOp( struct WorkerEnv* env, LuaInstruction instruction ) {
             double stepVal;
             _readAsDouble( env->heap, initRef, &initVal );
             _readAsDouble( env->heap, stepRef, &stepVal ); 
-            printf("forPrep: initRef %d, stepRef %d\n", initRef, stepRef);
-            printf("forPrep: init %f, step %f\n", initVal, stepVal);
+            // printf("forPrep: initRef %d, stepRef %d\n", initRef, stepRef);
+            // printf("forPrep: init %f, step %f\n", initVal, stepVal);
             href shiftedRef = allocateNumber( env->heap, env->maxHeapSize, initVal - stepVal );
             if( shiftedRef == 0 ) { throwOOM( env ); return false; }
             if( !cls_setRegister( env, a, shiftedRef ) ) { throwSO( env ); return false; }
@@ -888,7 +914,7 @@ bool doOp( struct WorkerEnv* env, LuaInstruction instruction ) {
             _readAsDouble( env->heap,    limitRef, &limit );
             
             internal += step;
-            printf("for loop: internal %f, limit %f step %f\n", internal, limit, step);
+            // printf("for loop: internal %f, limit %f step %f\n", internal, limit, step);
             
             if( internal <= limit ) {
                 //allocate and re-assign internal counter to register
