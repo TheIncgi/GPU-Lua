@@ -173,6 +173,7 @@ bool tableRawSet( struct WorkerEnv* env, href tableIndex, href key, href value )
 
         if( arrayPart != 0 ) {
             uint capacity = arrayCapacity( heap, arrayPart );
+            printf("tableRawSet 0 <= %d <= %d\n", keyIndex, capacity);
             if( 0 <= keyIndex && keyIndex <= capacity ) {                 //in array range, including end (first empty)
                 if( keyIndex == capacity ) {                         //appending, may need to grow array
                     //erase is skipped incase it's in the hash part

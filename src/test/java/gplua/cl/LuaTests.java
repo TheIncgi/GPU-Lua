@@ -315,10 +315,59 @@ public class LuaTests extends KernelTestBase {
 			""", 6000);
 		var results = runAndReturn(events);
 		
-		dumpHeap(heap);
+//		dumpHeap(heap);
 		
 		var val = results[0];
 		assertEquals(LuaTypes.INT, val.type());
 		assertEquals(4, val.intValue());
+	}
+	
+	@Test
+	public void stringLength() throws IOException, InterruptedException { 
+		var events = setupProgram("""
+			local str = "hello"
+			return #str
+			""", 6000);
+		var results = runAndReturn(events);
+		
+//		dumpHeap(heap);
+		
+		var val = results[0];
+		assertEquals(LuaTypes.INT, val.type());
+		assertEquals(5, val.intValue());
+	}
+	
+	@Test
+	public void tableLength() throws IOException, InterruptedException { 
+		var events = setupProgram("""
+			local t = {}
+			local a = #t
+			
+			t[1] = true
+			local b = #t
+			
+			t[5] = true
+			local c = #t
+			
+			return t, a, b, c
+			""", 6000);
+		var results = runAndReturn(events);
+		
+		dumpHeap(heap);
+		
+		var table = results[0];
+		System.out.println("T: " + table.allocationIndex());
+		
+		var valA = results[1];
+		assertEquals(LuaTypes.INT, valA.type());
+		assertEquals(0, valA.intValue(), "empty should have len 0");
+		
+		var valB = results[2];
+		assertEquals(LuaTypes.INT, valB.type());
+		assertEquals(1, valB.intValue(), "element at index 1 should be len 1");
+		
+		var valC = results[3];
+		assertEquals(LuaTypes.INT, valC.type());
+		assertEquals(1, valC.intValue(), "hashed index should not change len");
 	}
 }
