@@ -425,4 +425,40 @@ public class LuaTests extends KernelTestBase {
 			assertEquals(expected[i], val.boolValue(), "case %d expected %s".formatted(i+1, expected[i]));			
 		}
 	}
+
+	@Test
+	public void varargs() throws IOException, InterruptedException { 
+		var events = setupProgram("""
+			function foo( a, ... )
+			  local b, c, d = ...
+			  return c, d
+			end
+			
+			function bar( a, ... )
+			  return ...
+			end
+			
+			local x, y, z = foo( 1, 2, 3, 4, 5, 6, 7 )
+			local t, u, v = bar( 1, 2, 3, 4, 5, 6, 7 )
+			
+			return x,y,z, t,u,v
+			""", 6000);
+		var results = runAndReturn(events);
+		
+		dumpHeap(heap);
+		
+		Integer[] expected = new Integer[] { 2, 3, null, 2, 3, 4 };
+		
+		for(int i = 0; i < expected.length; i++) {
+			var val = results[i];
+			if( expected[i] == null ) {
+				assertEquals(LuaTypes.NIL, val.type());
+			} else {
+				assertEquals(LuaTypes.INT, val.type());				
+				assertEquals(expected[i], val.intValue());
+			}
+		}
+		
+		
+	}
 }
