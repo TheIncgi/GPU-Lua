@@ -42,26 +42,29 @@ href kToHeap( struct WorkerEnv* env, uint index ) {
     if( constLen == 0 )
         return 0; //const should have at minium 1 byte for type
 
-    if( env->constantsData[ constStart ] == T_STRING ) {
+    if( env->constantsData[ constStart ] == T_BOOL) {
+        return env->constantsData[ constStart + 1 ] == 0 ? FALSE_HREF : TRUE_HREF;
+
+    } else if( env->constantsData[ constStart ] == T_STRING ) {
         //string table -> hashed part hashmapBytesGet
         href strHash = tableCreateHashedPart( env->heap, env->maxHeapSize, env->stringTable );
         
         uint foundIndex;
-        printf("Look for repeated string constant:\n");
+        // printf("Look for repeated string constant:\n");
         if( hashmapBytesGetIndex( env->heap, strHash, env->constantsData, constStart, constLen, &foundIndex ) ){
             href valsPart = hashmapGetValsPart( env->heap, strHash );
             foundIndex = arrayGet( env->heap, valsPart, foundIndex );
-            printf("FOUND repeated string constant: %d\n", foundIndex);
+            // printf("FOUND repeated string constant: %d\n", foundIndex);
             return foundIndex;
         }
         href strRef = allocateHeap( env->heap, env->maxHeapSize, constLen );
         if(strRef == 0) return 0;
-        printf("NOT FOUND, adding %d repeated string constant:\n", strRef);
+        // printf("NOT FOUND, adding %d repeated string constant:\n", strRef);
         for( uint i = 0; i < constLen; i++ ) {
-            printf("%d ", env->constantsData[ constStart + i ]);
+            // printf("%d ", env->constantsData[ constStart + i ]);
             env->heap[ strRef + i ] = env->constantsData[ constStart + i ];
         }
-        printf("\n");
+        // printf("\n");
         hashmapPut( env, strHash, strRef, strRef );
         return strRef;
     }

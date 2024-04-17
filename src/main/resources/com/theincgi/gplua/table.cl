@@ -143,15 +143,16 @@ bool tableResizeArray( uchar* heap, uint maxHeapSize, href tableIndex, uint newS
         href hashedKeys = hashmapGetKeysPart( heap, hashedPart );
         href hashedVals = hashmapGetValsPart( heap, hashedPart );
 
+        //Note: array part is off by 1, where hashed is exact value
         for( uint i = oldSize; i < newSize; i++ ) {
             putHeapInt( intBuf, 1, i );
 
-            uint* foundIndex;
-            if( hashmapBytesGetIndex( heap, hashedPart, intBuf, 0, 5, foundIndex ) ) {
-                href foundValue = arrayGet( heap, hashedVals, *foundIndex );
-                arraySet( heap, newArray, i, foundValue );   //move into array part
-                arraySet( heap, hashedKeys, *foundIndex, 0 ); //remove from hashmap
-                arraySet( heap, hashedVals, *foundIndex, 0 ); //remove from hasmmap
+            uint foundIndex;
+            if( hashmapBytesGetIndex( heap, hashedPart, intBuf, 0, 5, &foundIndex ) ) {
+                href foundValue = arrayGet( heap, hashedVals, foundIndex );
+                arraySet( heap, newArray, i-1, foundValue ); //move into array part
+                arraySet( heap, hashedKeys, foundIndex, 0 ); //remove from hashmap
+                arraySet( heap, hashedVals, foundIndex, 0 ); //remove from hasmmap
             }
         }
     }
@@ -173,18 +174,23 @@ bool tableRawSet( struct WorkerEnv* env, href tableIndex, href key, href value )
 
         if( arrayPart != 0 ) {
             uint capacity = arrayCapacity( heap, arrayPart );
-            printf("tableRawSet 0 <= %d <= %d\n", keyIndex, capacity);
+            // printf("tableRawSet 0 <= %d <= %d\n", keyIndex, capacity);
             if( 0 <= keyIndex && keyIndex <= capacity ) {                 //in array range, including end (first empty)
-                if( keyIndex == capacity ) {                         //appending, may need to grow array
+                uint size     = arraySize(     heap, arrayPart );
+                bool isFull = size == capacity;
+                if( keyIndex == capacity && isFull ) {                         //appending, may need to grow array
                     //erase is skipped incase it's in the hash part
+                    // printf("Resize rule -> %d\n", resizeRule( capacity ));
                     if( !erase && tableResizeArray( heap, maxHeapSize, tableIndex, resizeRule( capacity ))) {
+                        // printf("table array resized\n");
                         arrayPart = tableGetArrayPart( heap, tableIndex ); // may have changed
                         arraySet( heap, arrayPart, keyIndex, value );
                         return true;
                     } //if resizing fails we'll try the hash part claiming out of memory
-                } else {
+                } else if( keyIndex != capacity ) {
                     arraySet( heap, arrayPart, keyIndex, value ); //in bounds
-                }
+                    return true;
+                } //else not full or key index out of bounds
             } //out of bounds? will use the hash
         }
     }

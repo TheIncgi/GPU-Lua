@@ -353,10 +353,10 @@ public class LuaTests extends KernelTestBase {
 			""", 6000);
 		var results = runAndReturn(events);
 		
-		dumpHeap(heap);
+//		dumpHeap(heap);
 		
 		var table = results[0];
-		System.out.println("T: " + table.allocationIndex());
+//		System.out.println("T: " + table.allocationIndex());
 		
 		var valA = results[1];
 		assertEquals(LuaTypes.INT, valA.type());
@@ -369,5 +369,60 @@ public class LuaTests extends KernelTestBase {
 		var valC = results[3];
 		assertEquals(LuaTypes.INT, valC.type());
 		assertEquals(1, valC.intValue(), "hashed index should not change len");
+	}
+	
+	@Test
+	public void truthy() throws IOException, InterruptedException { 
+		var events = setupProgram("""
+			local a,b,c,d,e,f,g = false, false, false, false, false, false, false
+			
+			-- case 1
+			if false then
+			  a = true
+			end
+			
+			-- case 2
+			if true then
+			  b = true
+			end
+			
+			-- case 3
+			if nil then
+			  c = true
+			end
+			
+			-- case 4
+			if 0 then
+			  d = true
+			end
+			
+			-- case 5
+			if {} then
+			  e = true
+			end
+			
+			-- case 6
+			if "" then
+			  f = true
+			end
+			
+			-- case 7
+			if math.log then
+			  g = true
+			end
+			
+			return a,b,c,d,e,f,g
+			""", 6000);
+		var results = runAndReturn(events);
+		
+//		dumpHeap(heap);
+		
+		boolean[] expected = new boolean[] {false, true, false, true, true, true, true};
+		
+		for(int i = 0; i<expected.length; i++) {
+			var val = results[i];
+			assertEquals(LuaTypes.BOOL, val.type());
+			assertEquals(expected[i], val.boolValue(), "case %d expected %s".formatted(i+1, expected[i]));			
+		}
 	}
 }
