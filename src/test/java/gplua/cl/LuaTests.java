@@ -438,10 +438,10 @@ public class LuaTests extends KernelTestBase {
 			  return ...
 			end
 			
-			local x, y, z = foo( 1, 2, 3, 4, 5, 6, 7 )
+			local x, y, z-- = foo( 1, 2, 3, 4, 5, 6, 7 )
 			local t, u, v = bar( 1, 2, 3, 4, 5, 6, 7 )
 			
-			return x,y,z, t,u,v
+			return foo, bar, x,y,z, t,u,v
 			""", 6000);
 		var results = runAndReturn(events);
 		
@@ -449,13 +449,16 @@ public class LuaTests extends KernelTestBase {
 		
 		Integer[] expected = new Integer[] { 2, 3, null, 2, 3, 4 };
 		
+		var foo = results[0];
+		var bar = results[1];
+		
 		for(int i = 0; i < expected.length; i++) {
-			var val = results[i];
+			var val = results[i+2];
 			if( expected[i] == null ) {
-				assertEquals(LuaTypes.NIL, val.type());
+				assertEquals(LuaTypes.NIL, val.type(), "inded %d failed".formatted(i));
 			} else {
 				assertEquals(LuaTypes.INT, val.type());				
-				assertEquals(expected[i], val.intValue());
+				assertEquals(expected[i], val.intValue(), "index %d failed".formatted(i));
 			}
 		}
 		

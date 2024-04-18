@@ -6,7 +6,7 @@
 #include"errorMsg.cl"
 #include"types.cl"
 #include"closure.h"
-
+#include"array.h"
 
 //prev stack
 //prev pc
@@ -15,10 +15,12 @@
 //closure href
 
 //maxStackSize defined from kernel args
-href allocateLuaStack( struct WorkerEnv* env, href priorStack, uint priorPC, href closure, uint nVarargs ) {
+href allocateLuaStack( struct WorkerEnv* env, href priorStack, uint priorPC, href closure ) {
     uchar* heap = env->heap;
     uint funcIndex = getClosureFunction( env, closure );
     uint maxStackSize = env->maxStackSizes[ funcIndex ];
+    bool isVararg = env->isVararg[ funcIndex ];
+    uint nVarargs = isVararg ? 1 : 0; //only 1 slot used for array;
 
     uint depth = 0;
     if( priorStack != 0 ) {
@@ -66,16 +68,16 @@ uint ls_getFunction( struct WorkerEnv* env, href frame ) {
     return getClosureFunction( env, closure );
 }
 
-sref ls_getVarargSref( struct WorkerEnv* env, href frame, uint varg ) {
-    return STACKFRAME_RESERVE + varg * REGISTER_SIZE;
+sref ls_getVarargArraySref( struct WorkerEnv* env, href frame ) {
+    return STACKFRAME_RESERVE;
 }
 
 sref ls_getRegisterSref( struct WorkerEnv* env, href frame, uint reg ) {
     return getHeapInt( env->heap, frame + 13 ) + reg * REGISTER_SIZE;
 }
 
-href ls_getVarargHref( struct WorkerEnv* env, href frame, uint varg ) {
-    return frame + ls_getVarargSref( env, frame, varg );
+href ls_getVarargArrayHref( struct WorkerEnv* env, href frame ) {
+    return frame + ls_getVarargArraySref( env, frame );
 }
 
 // href top = frame + <sref returned>
@@ -93,7 +95,11 @@ href ls_getRegisterHref( struct WorkerEnv* env, href frame, uint reg ) {
 
 
 href ls_getVararg( struct WorkerEnv* env, href frame, uint varg ) {
-    return getHeapInt( env->heap, ls_getVarargHref( env, frame, varg ) );
+    href vargsArray = getHeapInt( env->heap, ls_getVarargArrayHref( env, frame ) );
+    if(vargsArray == 0) return 0;
+
+    return arrayGet( env->heap, vargsArray, varg );
+    //getHeapInt( env->heap, ls_getVarargHref( env, frame, varg ) );
 }
 
 href ls_getRegister( struct WorkerEnv* env, href frame, uint reg ) {
@@ -104,15 +110,20 @@ href ls_getRegister( struct WorkerEnv* env, href frame, uint reg ) {
     return getHeapInt( env->heap, frame + regPos );
 }
 
-void ls_setVararg( struct WorkerEnv* env, href frame, uint varg, href value ) {
-    href vargPos = ls_getVarargHref( env, frame, varg );
-    putHeapInt( env->heap, vargPos, value );
+// void ls_setVararg( struct WorkerEnv* env, href frame, uint varg, href value ) {
+//     href vargPos = ls_getVarargHref( env, frame, varg );
+//     putHeapInt( env->heap, vargPos, value );
+// }
+
+void ls_setVarargs( struct WorkerEnv* env, href frame, href varargs ) {
+    putHeapInt( env->heap, ls_getVarargArrayHref( env, frame ), varargs );
 }
 
 bool ls_setRegister( struct WorkerEnv* env, href frame, uint reg, href value ) {
     uint maxStk = getHeapInt( env->heap, frame + 21 );
     if( reg >= maxStk ) {
         throwSO( env ); //stack overflow
+        printf("ERR: SO, %d >= %d\n", reg, maxStk);
         return false;
     }
     sref regPos = ls_getRegisterSref( env, frame, reg );
@@ -131,8 +142,11 @@ bool ls_setRegister( struct WorkerEnv* env, href frame, uint reg, href value ) {
 }
 
 uint ls_nVarargs( struct WorkerEnv* env, href frame ) {
-    sref firstReg = ls_getRegisterSref( env, frame, 0 );
-    return (firstReg - STACKFRAME_RESERVE) / REGISTER_SIZE - 1;
+    href vargsArray = getHeapInt( env->heap, ls_getVarargArrayHref( env, frame ) );
+    if(vargsArray == 0) return 0;
+    return arraySize( env->heap, vargsArray );
+    // sref firstReg = ls_getRegisterSref( env, frame, 0 );
+    // return (firstReg - STACKFRAME_RESERVE) / REGISTER_SIZE - 1;
 }
 uint ls_nRegisters( struct WorkerEnv* env, href frame ) {
     sref top = ls_getTopSref( env, frame );
@@ -181,14 +195,14 @@ href cls_getClosure( struct WorkerEnv* env ) {
 uint cls_getFunction( struct WorkerEnv* env ) {
     return ls_getFunction( env, env->luaStack );
 }
-sref cls_getVarargSref( struct WorkerEnv* env, uint varg ) {
-    return ls_getVarargSref( env, env->luaStack, varg );
+sref cls_getVarargArraySref( struct WorkerEnv* env ) {
+    return ls_getVarargArraySref( env, env->luaStack );
 }
 sref cls_getRegisterSref( struct WorkerEnv* env, uint reg ) {
     return ls_getRegisterSref( env, env->luaStack, reg );
 }
-href cls_getVarargHref( struct WorkerEnv* env, uint varg ) {
-    return ls_getVarargHref( env, env->luaStack, varg );
+href cls_getVarargArrayHref( struct WorkerEnv* env ) {
+    return ls_getVarargArrayHref( env, env->luaStack );
 }
 sref cls_getTopSref( struct WorkerEnv* env ) {
     return ls_getTopSref( env, env->luaStack );
@@ -205,8 +219,8 @@ href cls_getVararg( struct WorkerEnv* env, uint varg ) {
 href cls_getRegister( struct WorkerEnv* env, uint reg ) {
     return ls_getRegister( env, env->luaStack, reg );
 }
-void cls_setVararg( struct WorkerEnv* env, uint varg, href value ) {
-    ls_setVararg( env, env->luaStack, varg, value );
+void cls_setVarargs( struct WorkerEnv* env, href varArgs ) {
+    ls_setVarargs( env, env->luaStack, varArgs );
 }
 bool cls_setRegister( struct WorkerEnv* env, uint reg, href value ) {
     return ls_setRegister( env, env->luaStack, reg, value );
@@ -221,17 +235,24 @@ uint cls_nRegisters( struct WorkerEnv* env ) {
 href getReturn( struct WorkerEnv* env, uint r ) {
     if( !env->returnFlag )
         return 0;
-    if( env->nReturn <= r)
+    if( env->nReturn <= r) {
+        if( env->nReturn > 0 ) {
+            href last = env->returnStart + r * REGISTER_SIZE;
+            if( env->heap[last] == T_ARRAY ) { //varargs
+                return arrayGet( env->heap, last, r - env->nReturn );
+            }
+        }
         return 0;
+    }
     return getHeapInt( env->heap, env->returnStart + r * REGISTER_SIZE );
 }
 
-href redefineLuaStack( struct WorkerEnv* env, href closure, uint nVarargs ) {
+href redefineLuaStack( struct WorkerEnv* env, href closure ) {
     href old = env->luaStack;
     return allocateLuaStack( 
         env, 
         ls_getPriorStack( env, old ),
         ls_getPriorPC( env, old ),
-        closure, nVarargs
+        closure
     );
 }

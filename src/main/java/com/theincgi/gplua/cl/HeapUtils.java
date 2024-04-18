@@ -33,18 +33,18 @@ public class HeapUtils {
 	
 	public static TaggedMemory getChunkData( byte[] heap, int allocationIndex ) throws IOException {
 		if(allocationIndex == 0)
-			return new TaggedMemory(0, true, false, new byte[1]);
+			return new TaggedMemory(0, true, false, new byte[1], heap);
 		if(allocationIndex == 1)
-			return new TaggedMemory(1, true, false, new byte[] {LuaTypes.BOOL, 0});
+			return new TaggedMemory(1, true, false, new byte[] {LuaTypes.BOOL, 0}, heap);
 		if(allocationIndex == 3)
-			return new TaggedMemory(1, true, false, new byte[] {LuaTypes.BOOL, 1});
+			return new TaggedMemory(1, true, false, new byte[] {LuaTypes.BOOL, 1}, heap);
 		DataInputStream dis = new DataInputStream(new ByteArrayInputStream(heap));
 		int tagPos = allocationIndex - 4;
 		dis.skip(tagPos);
 		int tag = dis.readInt();
 		int size = chunkSize( tag );
 		var data = dis.readNBytes(size - 4);
-		return new TaggedMemory(allocationIndex, isUseFlag(tag), isMarkFlag(tag), data);
+		return new TaggedMemory(allocationIndex, isUseFlag(tag), isMarkFlag(tag), data, heap);
 	}
 	
 	public static List<TaggedMemory> getAllChunks( byte[] heap ) throws IOException {
@@ -68,7 +68,7 @@ public class HeapUtils {
 		}
 	}
 	
-	public static record TaggedMemory(int allocationIndex, boolean inUse, boolean marked, byte[] data) {
+	public static record TaggedMemory(int allocationIndex, boolean inUse, boolean marked, byte[] data, byte[] heap) {
 		public static final int STACKFRAME_RESERVE = 1 + (7*4);
 		public static final int REGISTER_SIZE = 4;
  
@@ -196,9 +196,18 @@ public class HeapUtils {
 			return readInt( 25 );
 		}
 		
+		public boolean lsHasVarargs() throws IOException {
+			assertType(LuaTypes.LUA_STACK);
+			return 0 < (lsGetFirstRegPos() - STACKFRAME_RESERVE) / REGISTER_SIZE;
+		}
+		
 		public int lsNVarargs() throws IOException {
 			assertType(LuaTypes.LUA_STACK);
-			return (lsGetFirstRegPos() - STACKFRAME_RESERVE) / REGISTER_SIZE;
+			if(!lsHasVarargs()) return 0;
+			int ref = readInt( STACKFRAME_RESERVE );
+			if(ref == 0) return 0;
+			var vargs = getChunkData(heap, ref);
+			return vargs.arraySize();
 		}
 		
 		public int lsNRegisters() throws IOException {
@@ -208,9 +217,11 @@ public class HeapUtils {
 		
 		public int lsGetVararg( int i ) throws IOException {
 			assertType(LuaTypes.LUA_STACK);
-			if( i >= lsNVarargs() )
-				throw new ArrayIndexOutOfBoundsException(i);
-			return readInt( STACKFRAME_RESERVE + i*REGISTER_SIZE );
+			if(!lsHasVarargs()) return 0;
+			int ref = readInt( STACKFRAME_RESERVE );
+			if(ref == 0) return 0;
+			var vargs = getChunkData(heap, ref);
+			return vargs.arrayRef(i);
 		}
 		
 		public int lsGetRegister( int i ) throws IOException {

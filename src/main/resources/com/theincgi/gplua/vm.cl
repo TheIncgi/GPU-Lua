@@ -316,12 +316,9 @@ bool op_call( struct WorkerEnv* env, uchar a, ushort b, ushort c ) {
             uint fID = getClosureFunction( env, func );
             uint namedArgs = env->numParams[ fID ];
             bool isVararg = env->isVararg[ fID ];
-            uint nVarargs = ((!isVararg) || (nargs < namedArgs)) ? 0 : (nargs - namedArgs);
-            printf("Vargs? %d, nargs: %d, named: %d\n", isVararg ? 1 : 0, nargs, namedArgs );
 
-            printf("allocate luaStack for call with %d varargs\n", nVarargs);
             //stores old pc for return, fID = funciton index, func = closure
-            href newStack = allocateLuaStack( env, env->luaStack, env->pc, func, nVarargs );
+            href newStack = allocateLuaStack( env, env->luaStack, env->pc, func );
             if( newStack == 0 ) return false;
             env->func = fID;
             env->pc = 0;
@@ -336,13 +333,16 @@ bool op_call( struct WorkerEnv* env, uchar a, ushort b, ushort c ) {
                     return false;
             }
 
-            if( isVararg ) {                         //if needed
-                for(uint i = 0; i < nVarargs; i++) { //copy additonal args to varargs
+            if( isVararg ) {
+                uint nVarargs = ((!isVararg) || (nargs < namedArgs)) ? 0 : (nargs - namedArgs);
+                printf("Vargs %d\n", nVarargs );
+                href vargs = newArray( env->heap, env->maxHeapSize, nVarargs);
+                for( uint v = 0; v < nVarargs; v++ ) {
                     href argRef = getHeapInt( env->heap, argI );
                     argI += REGISTER_SIZE;
-                printf("Assign varg %d with %d\n", i, argRef);
-                    cls_setVararg( env, i, argRef );
+                    arraySet( env->heap, vargs, v, argRef );
                 }
+                ls_setVarargs( env, newStack, vargs );
             }
 
             //next program step should continue in the new stack frame
@@ -394,10 +394,9 @@ bool op_tailCall( struct WorkerEnv* env, uchar a, ushort b ) {
             uint fID = getClosureFunction( env, func );
             uint namedArgs = env->numParams[ fID ];
             bool isVararg = env->isVararg[ fID ];
-            uint nVarargs = nargs - namedArgs;
 
             //reuse current frame level | fID = function index, func = closure
-            href redefined = redefineLuaStack( env, func, isVararg ? nVarargs : 0 );
+            href redefined = redefineLuaStack( env, func );
             if( redefined == 0 ) return false;
 
             href argI = hrefA + REGISTER_SIZE;
@@ -408,12 +407,16 @@ bool op_tailCall( struct WorkerEnv* env, uchar a, ushort b ) {
                     return false;
             }
 
-            if( isVararg ) {                         //if needed
-                for(uint i = 0; i < nVarargs; i++) { //copy additonal args to varargs
+            if( isVararg ) {
+                uint nVarargs = ((!isVararg) || (nargs < namedArgs)) ? 0 : (nargs - namedArgs);
+                printf("Vargs %d\n", nVarargs );
+                href vargs = newArray( env->heap, env->maxHeapSize, nVarargs);
+                for( uint v = 0; v < nVarargs; v++ ) {
                     href argRef = getHeapInt( env->heap, argI );
                     argI += REGISTER_SIZE;
-                    cls_setVararg( env, i, argRef );
+                    arraySet( env->heap, vargs, v, argRef );
                 }
+                ls_setVarargs( env, redefined, vargs );
             }
 
             env->pc = 0;
@@ -1054,7 +1057,7 @@ bool doOp( struct WorkerEnv* env, LuaInstruction instruction ) {
             uchar  a = getA( instruction );
             ushort b = getB( instruction );
             uint nRegisters;
-            printf(" OP VARART A: %d B: %d\n", a, b);
+            printf(" OP VARARG F: %d A: %d B: %d\n", cls_getFunction(env), a, b);
             if( b == 0 ) {
                 b = cls_nVarargs( env );
             } else {
@@ -1064,8 +1067,10 @@ bool doOp( struct WorkerEnv* env, LuaInstruction instruction ) {
             for( uint i = 0; i < nRegisters; i++ ) {
                 href value = cls_getVararg( env, i );
                 printf("VARARG: varg[%d] %d -> reg[%d]\n", i, value, a+i);
-                if( !cls_setRegister( env, a + i, value ) )
+                if( !cls_setRegister( env, a + i, value ) ) {
+                    printf("FAIL SET REG\n");  
                     return false;
+                }
             }
 
             env->pc++;
@@ -1081,6 +1086,7 @@ bool doOp( struct WorkerEnv* env, LuaInstruction instruction ) {
 }
 
 bool stepProgram( struct WorkerEnv* env ) {
+    printf("Step in func %d\n", env->func);
     LuaInstruction instruction = env->code[ env->codeIndexes[ env->func ] + env->pc ];
     return doOp( env, instruction );
 }
@@ -1100,9 +1106,8 @@ bool setupCallWithArgs( struct WorkerEnv* env, href closure, href* args, uint na
 
     uint namedArgs = env->numParams[ env->func ];
     bool isVararg = env->isVararg[ env->func ];
-    uint nVarargs = nargs - namedArgs;
-
-    href ls = allocateLuaStack( env, env->luaStack, env->pc, closure, nVarargs );
+    
+    href ls = allocateLuaStack( env, env->luaStack, env->pc, closure );
     if( ls == 0 ) return false;
     ls_push( env, ls );
 
@@ -1111,11 +1116,15 @@ bool setupCallWithArgs( struct WorkerEnv* env, href closure, href* args, uint na
             if(!cls_setRegister( env, n, args[n] ))
                 return false;
         }
+
         if( isVararg ) {
-            uint a = namedArgs;
-            for(uint v = 0; v < nVarargs; v++) {
-                cls_setVararg( env, v, args[a] );
+            uint nVarargs = ((!isVararg) || (nargs < namedArgs)) ? 0 : (nargs - namedArgs);
+            printf("Vargs %d\n", nVarargs );
+            href vargs = newArray( env->heap, env->maxHeapSize, nVarargs);
+            for( uint v = 0; v < nVarargs; v++ ) {
+                arraySet( env->heap, vargs, v, args[v] );
             }
+            ls_setVarargs( env, ls, vargs );
         }
     }
     
