@@ -19,5 +19,6 @@ public class LuaTypes {
 		NATIVE_FUNC = 0x56,
 		ERROR = 0x57, //deprecated
 	    LUA_STACK = 0x58,
-	    UPVAL = 0x59;
+	    UPVAL = 0x59,
+	    VARARGS = 0x5A;
 }

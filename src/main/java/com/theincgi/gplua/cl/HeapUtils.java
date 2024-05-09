@@ -69,7 +69,7 @@ public class HeapUtils {
 	}
 	
 	public static record TaggedMemory(int allocationIndex, boolean inUse, boolean marked, byte[] data, byte[] heap) {
-		public static final int STACKFRAME_RESERVE = 1 + (7*4);
+		public static final int STACKFRAME_RESERVE = 1 + (8*4);
 		public static final int REGISTER_SIZE = 4;
  
 		public int readInt(int offset) throws IOException {
@@ -196,6 +196,11 @@ public class HeapUtils {
 			return readInt( 25 );
 		}
 		
+		public int lsGetV() throws IOException {
+			assertType(LuaTypes.LUA_STACK);
+			return readInt( 29 );
+		}
+		
 		public boolean lsHasVarargs() throws IOException {
 			assertType(LuaTypes.LUA_STACK);
 			return 0 < (lsGetFirstRegPos() - STACKFRAME_RESERVE) / REGISTER_SIZE;
@@ -207,6 +212,7 @@ public class HeapUtils {
 			int ref = readInt( STACKFRAME_RESERVE );
 			if(ref == 0) return 0;
 			var vargs = getChunkData(heap, ref);
+			if(vargs.type() == LuaTypes.NIL) return 0;
 			return vargs.arraySize();
 		}
 		
@@ -231,6 +237,30 @@ public class HeapUtils {
 			if( pos >= lsGetTop() )
 				throw new ArrayIndexOutOfBoundsException( i );
 			return readInt( pos );
+		}
+		
+		public int varargsSize() throws IOException {
+			assertType(LuaTypes.VARARGS);
+			int nReg = data[6];
+			int more = readInt(7);
+			if( more != 0 )
+				return getChunkData(heap, more).arraySize() + nReg;
+			return nReg;
+		}
+		
+		public int varargGet(int i) throws IOException {
+			assertType(LuaTypes.VARARGS);
+			int nReg = data[6];
+			if( i < nReg ) {
+				int luaStackHref = readInt( 1 );
+				int regStart = data[5];
+				var stack = getChunkData(heap, luaStackHref);
+				return stack.lsGetRegister( regStart + i );
+			}
+			int moreHref = readInt(7);
+			if( moreHref == 0 ) return 0;
+			var array = getChunkData(heap, moreHref);
+			return array.arrayRef(i - nReg);
 		}
 		
 		public int upvalStack() throws IOException {
@@ -345,6 +375,7 @@ public class HeapUtils {
 						.append("\n  Closure:    ").append( lsGetClosure() )
 						.append("\n  maxStack:   ").append( lsGetMaxStackSize() )
 						.append("\n  depth:      ").append( lsGetDepth() )
+						.append("\n  \"v\":        ").append( lsGetV() )
 						.append("\n  Varargs: ("+ lsNVarargs() +")\n");
 					for(int v = 0; v < lsNVarargs(); v++) {
 						builder.append("    [%3d] %d\n".formatted(v, lsGetVararg(v)));
@@ -360,6 +391,15 @@ public class HeapUtils {
 					builder.append("UPVAL:\n")
 					.append(  "  Stack:     ").append(upvalStack())
 					.append("\n  Register:  ").append(upvalRegister());
+					break;
+				}
+				
+				case LuaTypes.VARARGS: {
+					builder.append("Varargs:\n");
+					
+					for(int v = 0; v < varargsSize(); v++)
+						builder.append("  %3d: %d\n".formatted(v, varargGet(v)));
+					
 					break;
 				}
 				default:

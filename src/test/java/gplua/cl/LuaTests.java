@@ -67,19 +67,29 @@ public class LuaTests extends KernelTestBase {
 		heap = args.heap.readData(queue);
 		var returnRange = args.returnInfo.readData(queue);
 		
-		int errHref = returnRange[0];
-		int returnStart = returnRange[1];
-		int nReturn = returnRange[2];
+		int errHref     = returnRange[0];
+		int returnValue = returnRange[1];
+		int nReturn     = returnRange[2];
 		
 		if( errHref > 0 ) {
 			throw new CLLuaException( getChunkData(heap, errHref) );
 		}
 		
 		var values = new TaggedMemory[ nReturn ];
-		for(int i = 0; i < values.length; i++) {
-			int href = readIntAt(heap, returnStart + i * REGISTER_SIZE);
-			values[i] = getChunkData(heap, href);
+		
+		if( nReturn == 0 )
+			return values;
+		
+		if( heap[returnValue] == LuaTypes.VARARGS ) {
+			var varargs = getChunkData(heap, returnValue);
+			for(int i = 0; i < values.length; i++) {
+				int href = varargs.lsGetVararg(i);
+				values[i] = getChunkData(heap, href);
+			}
+			return values;
 		}
+		
+		values[0] = getChunkData(heap, returnValue);
 		return values;
 	}
 	

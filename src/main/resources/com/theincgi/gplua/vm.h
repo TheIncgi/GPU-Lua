@@ -38,12 +38,13 @@ struct WorkerEnv {
     //vm
     uint func;
     uint pc;
+    //href varargs; //used when vararg op b=0 & return b=0 & tailcall & call & tforcall, setlist, ...
 
     href error; //0 is ok
     
     bool returnFlag;
-    uint returnStart;
-    ushort nReturn;
+    // uint returnStart;
+    href returnValue;
 };
 
 void getConstDataRange( struct WorkerEnv* env, uint index, uint* start, uint* len );
@@ -58,8 +59,10 @@ bool op_settabup( struct WorkerEnv* env, uchar a, ushort b, ushort c );
 bool op_settable( struct WorkerEnv* env, uchar a, ushort b, ushort c );
 char _settable( struct WorkerEnv* env, href table, ushort b, ushort c );
 
-void returnRange( struct WorkerEnv* env, uchar a, uchar b);
+bool returnRange( struct WorkerEnv* env, uchar a, uchar b);
 bool isTruthy( href value );
+uint vm_nVarargs( struct WorkerEnv* env );
+
 bool doOp( struct WorkerEnv* env, LuaInstruction instruction );
 
 bool _readAsDouble( uchar* dataSource, uint start, double* result );

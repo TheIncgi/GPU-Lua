@@ -13,7 +13,7 @@
 #include"luaStack.h"
 #include"comparison.h"
 #include"upval.h"
-
+#include"varargs.h"
 
 //manually include .cl for headers since openCL doesn't do that
 #include"vm.cl"
@@ -27,6 +27,7 @@
 #include"luaStack.cl"
 #include"comparison.cl"
 #include"upval.cl"
+#include"varargs.cl"
 			
 
 __kernel void exec(
@@ -128,16 +129,16 @@ __kernel void exec(
 
     if( ok && workerEnv.returnFlag ) {
         returnInfo[ 0 ] = 0; //no err
-        returnInfo[ 1 ] = workerEnv.returnStart;
-        returnInfo[ 2 ] = workerEnv.nReturn;
+        returnInfo[ 1 ] = workerEnv.returnValue;
+        returnInfo[ 2 ] = varg_size( &workerEnv, workerEnv.returnValue );
     } else if( workerEnv.error ) {
         returnInfo[ 0 ] = workerEnv.error;
-        returnInfo[ 1 ] = 0;
-        returnInfo[ 2 ] = 0;
+        returnInfo[ 1 ] = 0; //no return value href
+        returnInfo[ 2 ] = 0; //no return values
     } else {
-        returnInfo[ 0 ] = 0;
-        returnInfo[ 1 ] = 0;
-        returnInfo[ 2 ] = 0;
+        returnInfo[ 0 ] = 0; //no err
+        returnInfo[ 1 ] = 0; //no return href
+        returnInfo[ 2 ] = 0; //0 return values
     }
 }
 
