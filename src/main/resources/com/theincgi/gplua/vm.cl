@@ -695,7 +695,9 @@ bool doOp( struct WorkerEnv* env, LuaInstruction instruction ) {
             uchar a = getA( instruction );
             ushort b = getB( instruction );
             if( !returnRange( env, a, b ) ) return false;
+            printf("ok, return, pop next\n");
             ls_pop( env ); //pc, func, env->luaStack all updated
+            printf("return pop ok\n");
             //frame popped, don't care about pc++
             return true;
         }
@@ -1176,9 +1178,10 @@ bool callWithArgs( struct WorkerEnv* env, href closure, href* args, uint nargs )
 
     while( (env->luaStack != 0) && (callDepth <= cls_getDepth( env )) ) { //wait till popped
         if( (!stepProgram( env )) || hasError( env )) {
+            printf("callWithArgs -> false\n");
             return false;
         } 
     }
-    
+    printf("callWithArgs -> exit");
     return true;
 }

@@ -75,21 +75,23 @@ public class LuaTests extends KernelTestBase {
 			throw new CLLuaException( getChunkData(heap, errHref) );
 		}
 		
-		var values = new TaggedMemory[ nReturn ];
-		
 		if( nReturn == 0 )
-			return values;
+			return new TaggedMemory[0];
 		
 		if( heap[returnValue] == LuaTypes.VARARGS ) {
 			var varargs = getChunkData(heap, returnValue);
+			var size = varargs.varargsSize();
+			var values = new TaggedMemory[ size ];
 			for(int i = 0; i < values.length; i++) {
-				int href = varargs.lsGetVararg(i);
+				int href = varargs.varargGet(i);
 				values[i] = getChunkData(heap, href);
 			}
 			return values;
 		}
 		
-		values[0] = getChunkData(heap, returnValue);
+		var values = new TaggedMemory[] {
+			getChunkData(heap, returnValue)				
+		};
 		return values;
 	}
 	
@@ -429,6 +431,8 @@ public class LuaTests extends KernelTestBase {
 		
 		boolean[] expected = new boolean[] {false, true, false, true, true, true, true};
 		
+		assertEquals(expected.length, results.length);
+		
 		for(int i = 0; i<expected.length; i++) {
 			var val = results[i];
 			assertEquals(LuaTypes.BOOL, val.type());
@@ -457,11 +461,15 @@ public class LuaTests extends KernelTestBase {
 		
 		dumpHeap(heap);
 		
-		Integer[] expected = new Integer[] { 2, 3, null, 2, 3, 4 };
+		assertEquals(8, results.length, "Incorrect number of return values");
 		
 		var foo = results[0];
 		var bar = results[1];
+		assertEquals(LuaTypes.FUNC, foo.type());
+		assertEquals(LuaTypes.FUNC, bar.type());
 		
+		
+		Integer[] expected = new Integer[] { 2, 3, null, 2, 3, 4 };
 		for(int i = 0; i < expected.length; i++) {
 			var val = results[i+2];
 			if( expected[i] == null ) {

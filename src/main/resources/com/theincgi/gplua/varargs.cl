@@ -33,9 +33,13 @@ uchar varg_nRegisters( struct WorkerEnv* env, href vararg ) {
 }
 
 uint varg_size( struct WorkerEnv* env, href vararg ) {
+    printf("varargs.cl varg_size...");
+    printf("%d is href for varg\n", vararg);
     href more = getHeapInt( env->heap, vararg + 7 );
+    printf("Href of more: %d\n", more);
     if( more != 0 )
         return arraySize( env->heap, more ) + varg_nRegisters( env, vararg );
+    printf("nReg()\n");
     return varg_nRegisters( env, vararg );
 }
 

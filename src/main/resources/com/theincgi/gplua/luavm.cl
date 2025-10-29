@@ -126,11 +126,18 @@ __kernel void exec(
     setClosureUpval( &workerEnv, mainClosure, 0, workerEnv.globals );
 
     bool ok = call( &workerEnv, mainClosure ); //callWithArgs is also available as an option
+    printf("luavm.cl Call result time\n");
+    if(ok)
+        printf("OK\n");
+    if(workerEnv.returnFlag)
+        printf("RETURN FLAG\n");
 
     if( ok && workerEnv.returnFlag ) {
         returnInfo[ 0 ] = 0; //no err
         returnInfo[ 1 ] = workerEnv.returnValue;
-        returnInfo[ 2 ] = varg_size( &workerEnv, workerEnv.returnValue );
+        printf("varg_size...\n");
+        returnInfo[ 2 ] = 1; // varg_size( &workerEnv, workerEnv.returnValue );
+        printf("  = %d\n", returnInfo[2]);
     } else if( workerEnv.error ) {
         returnInfo[ 0 ] = workerEnv.error;
         returnInfo[ 1 ] = 0; //no return value href

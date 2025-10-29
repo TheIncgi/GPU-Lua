@@ -36,6 +36,8 @@ href allocateLuaStack( struct WorkerEnv* env, href priorStack, uint priorPC, hre
     );
     if( stack == 0 ) return 0;
 
+    printf("Allocated lua stack with varargs? %d\n", nVarargs);
+
     heap[stack] = T_LUA_STACK;
     putHeapInt( heap, stack +  1, priorStack ); //0 if none
     putHeapInt( heap, stack +  5, priorPC    ); // 0 if none
@@ -73,6 +75,13 @@ uint ls_getFunction( struct WorkerEnv* env, href frame ) {
     return getClosureFunction( env, closure );
 }
 
+bool ls_hasVarargs( struct WorkerEnv* env, href frame ) {
+    uint funcIndex = ls_getFunction( env, frame );
+    printf("ls_hasVarargs? %d\n", env->isVararg[funcIndex] ? 1 : 0);
+    return env->isVararg[ funcIndex ];
+}
+
+//No check if valid, just where it *would* be if it did exist
 sref ls_getVarargArraySref( struct WorkerEnv* env, href frame ) {
     return STACKFRAME_RESERVE + REGISTER_SIZE;
 }
@@ -86,6 +95,7 @@ sref ls_getVSref( struct WorkerEnv* env, href frame ) {
 }
 
 href ls_getVarargArrayHref( struct WorkerEnv* env, href frame ) {
+    if(!ls_hasVarargs( env, frame )) return 0;
     return frame + ls_getVarargArraySref( env, frame );
 }
 
@@ -106,6 +116,7 @@ href ls_getRegisterHref( struct WorkerEnv* env, href frame, uint reg ) {
 }
 
 href ls_getVararg( struct WorkerEnv* env, href frame, uint varg ) {
+    if(!ls_hasVarargs( env, frame )) return 0;
     href vargsArray = getHeapInt( env->heap, ls_getVarargArrayHref( env, frame ) );
     if(vargsArray == 0) return 0;
 
@@ -138,6 +149,10 @@ href ls_getRegister( struct WorkerEnv* env, href frame, uint reg ) {
 // }
 
 void ls_setVarargs( struct WorkerEnv* env, href frame, href varargs ) {
+    if(!ls_hasVarargs( env, frame )) {
+        printf("WARNING: attempt to set varargs value on a function without varargs!\n");
+        return;
+    }
     putHeapInt( env->heap, ls_getVarargArrayHref( env, frame ), varargs );
 }
 
@@ -168,6 +183,7 @@ bool ls_setRegister( struct WorkerEnv* env, href frame, uint reg, href value ) {
 }
 
 uint ls_nVarargs( struct WorkerEnv* env, href frame ) {
+    if(!ls_hasVarargs( env, frame )) return 0;
     href vargsArray = getHeapInt( env->heap, ls_getVarargArrayHref( env, frame ) );
     if(vargsArray == 0) return 0;
     return arraySize( env->heap, vargsArray );
@@ -238,6 +254,9 @@ href cls_getClosure( struct WorkerEnv* env ) {
 }
 uint cls_getFunction( struct WorkerEnv* env ) {
     return ls_getFunction( env, env->luaStack );
+}
+bool cls_hasVarargs( struct WorkerEnv* env ) {
+    return ls_hasVarargs( env, env->luaStack );
 }
 sref cls_getVarargArraySref( struct WorkerEnv* env ) {
     return ls_getVarargArraySref( env, env->luaStack );

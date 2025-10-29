@@ -16,6 +16,7 @@ uint ls_getDepth( struct WorkerEnv* env, href frame );
 href ls_getClosure( struct WorkerEnv* env, href frame );
 uint ls_getFunction( struct WorkerEnv* env, href frame );
 
+bool ls_hasVarargs( struct WorkerEnv* env, href frame );
 //vararg is call varargs, v is temp result from a returned value added to this stack
 
 sref ls_getVarargArraySref( struct WorkerEnv* env, href frame );
@@ -50,6 +51,7 @@ uint cls_getPriorPC( struct WorkerEnv* env );
 uint cls_getDepth( struct WorkerEnv* env );
 href cls_getClosure( struct WorkerEnv* env );
 uint cls_getFunction( struct WorkerEnv* env );
+bool cls_hasVarargs( struct WorkerEnv* env );
 sref cls_getVarargArraySref( struct WorkerEnv* env );
 sref cls_getRegisterSref( struct WorkerEnv* env, uint reg );
 href cls_getVarargArrayHref( struct WorkerEnv* env );
@@ -60,7 +62,7 @@ href cls_getVararg( struct WorkerEnv* env, uint varg );
 href cls_getRegister( struct WorkerEnv* env, uint reg );
 void cls_setVarargs( struct WorkerEnv* env, href varArgs );
 bool cls_setRegister( struct WorkerEnv* env, uint reg, href value );
-uint cls_nVarargs( struct WorkerEnv* env );
+uint cls_nVarargs( struct WorkerEnv* env ); 
 uint cls_nRegisters( struct WorkerEnv* env );
 void cls_setV( struct WorkerEnv* env, href v );
 href cls_getVHref( struct WorkerEnv* env );
